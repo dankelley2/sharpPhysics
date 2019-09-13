@@ -11,5 +11,15 @@ namespace physics.Engine.Structs
         public Vec2 Min;
         public Vec2 Max;
 
+        public static bool operator ==(AABB left, AABB right)
+        {
+            return left.Min == right.Min && left.Max == right.Max;
+        }
+
+        public static bool operator !=(AABB left, AABB right)
+        {
+            return left.Min != right.Min || left.Max != right.Max;
+        }
+
     }
 }

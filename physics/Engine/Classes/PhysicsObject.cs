@@ -14,7 +14,6 @@ namespace physics.Engine.Classes
         }
 
         public bool Locked;
-        public bool Moved;
         public AABB Aabb;
         public Vec2 Velocity;
         public Vec2 Center;

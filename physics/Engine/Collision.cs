@@ -6,6 +6,16 @@ namespace physics.Engine
 {
     internal static class Collision
     {
+
+        public static bool AABBvsAABB(AABB a, AABB b)
+        {
+            // Exit with no intersection if found separated along an axis
+            if (a.Max.X < b.Min.X || a.Min.X > b.Max.X) return false;
+            if (a.Max.Y < b.Min.Y || a.Min.Y > b.Max.Y) return false;
+
+            // No separating axis found, therefor there is at least one overlapping axis
+            return true;
+        }
         public static bool AABBvsAABB(ref Manifold m)
         {
             // Setup a couple pointers to each object
@@ -72,48 +82,6 @@ namespace physics.Engine
             }
 
             return false;
-        }
-
-        public static void ResolveCollision(ref Manifold m)
-        {
-            var rv = m.B.Velocity - m.A.Velocity;
-
-            if (float.IsNaN(m.Normal.X) || float.IsNaN(m.Normal.Y))
-            {
-                return;
-            }
-
-            var velAlongNormal = Vec2.DotProduct(rv, m.Normal);
-
-            if (velAlongNormal > 0)
-            {
-                return;
-            }
-
-            var e = Math.Min(m.A.Restitution, m.B.Restitution);
-
-            var j = -(1 + e) * velAlongNormal;
-            j = j / (m.A.IMass + m.B.IMass);
-
-            var impulse = m.Normal * j;
-
-            m.A.Velocity = !m.A.Locked ? m.A.Velocity - impulse * m.A.IMass : m.A.Velocity;
-            m.B.Velocity = !m.B.Locked ? m.B.Velocity + impulse * m.B.IMass : m.B.Velocity;
-        }
-
-        public static void PositionalCorrection(ref Manifold m)
-        {
-            var percent = 0.5F; // usually 20% to 80%
-            var correction = m.Normal * (percent * (m.Penetration / (m.A.IMass + m.B.IMass)));
-            if (m.A.Mass < 10000)
-            {
-                m.A.Move(-correction * m.A.IMass);
-            }
-
-            if (m.B.Mass < 10000)
-            {
-                m.B.Move(correction * m.B.IMass);
-            }
         }
 
         public static bool CirclevsCircle(ref Manifold m)
@@ -245,6 +213,48 @@ namespace physics.Engine
             }
 
             return true;
+        }
+
+        public static void ResolveCollision(ref Manifold m)
+        {
+            var rv = m.B.Velocity - m.A.Velocity;
+
+            if (float.IsNaN(m.Normal.X) || float.IsNaN(m.Normal.Y))
+            {
+                return;
+            }
+
+            var velAlongNormal = Vec2.DotProduct(rv, m.Normal);
+
+            if (velAlongNormal > 0)
+            {
+                return;
+            }
+
+            var e = Math.Min(m.A.Restitution, m.B.Restitution);
+
+            var j = -(1 + e) * velAlongNormal;
+            j = j / (m.A.IMass + m.B.IMass);
+
+            var impulse = m.Normal * j;
+
+            m.A.Velocity = !m.A.Locked ? m.A.Velocity - impulse * m.A.IMass : m.A.Velocity;
+            m.B.Velocity = !m.B.Locked ? m.B.Velocity + impulse * m.B.IMass : m.B.Velocity;
+        }
+
+        public static void PositionalCorrection(ref Manifold m)
+        {
+            var percent = 0.5F; // usually 20% to 80%
+            var correction = m.Normal * (percent * (m.Penetration / (m.A.IMass + m.B.IMass)));
+            if (m.A.Mass < 10000)
+            {
+                m.A.Move(-correction * m.A.IMass);
+            }
+
+            if (m.B.Mass < 10000)
+            {
+                m.B.Move(correction * m.B.IMass);
+            }
         }
 
         private static float Clamp(float low, float high, float val)

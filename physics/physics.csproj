@@ -46,6 +46,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Engine\Classes\CollisionPair.cs" />
     <Compile Include="Engine\Structs\Vec2.cs" />
     <Compile Include="Engine\Collision.cs" />
     <Compile Include="Engine\PhysicsSystem.cs" />

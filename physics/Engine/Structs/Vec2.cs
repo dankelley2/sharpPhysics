@@ -39,7 +39,7 @@ namespace physics.Engine.Structs
 
         public static bool operator !=(Vec2 left, Vec2 right)
         {
-            return !(left.X == right.X && left.Y == right.Y);
+            return left.X != right.X || left.Y != right.Y;
         }
 
         public static Vec2 operator +(Vec2 left, Vec2 right)

@@ -46,10 +46,11 @@ namespace physics
             RefreshTimer.Enabled = true;
             RefreshTimer.Interval = 1000 / 60;
             RefreshTimer.Tick += RefreshTimer_Tick;
+            RefreshTimer.Tick += PhysicsTimer_Tick;
 
-            PhysicsTimer.Enabled = true;
-            PhysicsTimer.Interval = 1000 / 100;
-            PhysicsTimer.Tick += PhysicsTimer_Tick;
+            //PhysicsTimer.Enabled = true;
+            //PhysicsTimer.Interval = 1000 / 60;
+            //PhysicsTimer.Tick += PhysicsTimer_Tick;
             stopWatch.Start();
         }
 
@@ -99,7 +100,7 @@ namespace physics
                 new PointF(10, 30));
             e.Graphics.DrawString("frame rate: " + 1000 / Math.Max(msFrameTime, 1), DefaultFont,
                 new SolidBrush(Color.Black), new PointF(10, 50));
-            e.Graphics.DrawString("num objects: " + physicsSystem.staticObjects.Count, DefaultFont,
+            e.Graphics.DrawString("num objects: " + physicsSystem.StaticObjects.Count, DefaultFont,
                 new SolidBrush(Color.Black), new PointF(10, 70));
             if (grabbing)
             {
@@ -115,16 +116,16 @@ namespace physics
                 e.Graphics.DrawEllipse(new Pen(Color.DarkBlue), (int)(StartPointF.X-Radius), (int)(StartPointF.Y-Radius), Radius*2, Radius*2);
             }
 
-            var penVelocity = new Pen(Color.White, 1);
+            var penVelocity = new Pen(Color.Red, 1);
             penVelocity.EndCap = LineCap.ArrowAnchor;
 
-            foreach (var o in physicsSystem.staticObjects.Where(x => x.ShapeType == PhysicsObject.Type.Circle))
+            foreach (var o in physicsSystem.StaticObjects.Where(x => x.ShapeType == PhysicsObject.Type.Circle))
             {
                 var origin = o.Aabb.Min;
                 e.Graphics.FillEllipse(new SolidBrush(Color.FromArgb(100,50,50,50)), origin.X+3, origin.Y+5, o.Width-2, o.Height-2);
             }
 
-            foreach (var o in physicsSystem.staticObjects.Where( a => a.Locked == false))
+            foreach (var o in physicsSystem.StaticObjects.Where( a => a.Locked == false))
             {
                 var origin = o.Aabb.Min;
                 switch (o.ShapeType)
@@ -134,8 +135,9 @@ namespace physics
                         e.Graphics.FillRectangle(new SolidBrush(Color.DimGray), origin.X, origin.Y, o.Width, o.Height);
                         break;
                     case PhysicsObject.Type.Circle:
-                        //e.Graphics.FillEllipse(new SolidBrush(Color.Aqua), origin.X, origin.Y, o.Width, o.Height);
-                        e.Graphics.DrawImage(poolBall, new PointF(o.Pos.X, o.Pos.Y));
+                        e.Graphics.FillEllipse(new SolidBrush(Color.LightGray), origin.X, origin.Y, o.Width, o.Height);
+                        e.Graphics.FillEllipse(new SolidBrush(Color.White), origin.X + o.Width * .1F, origin.Y + o.Height * .1F, o.Width*.6F, o.Height*.6F);
+                        //e.Graphics.DrawImage(poolBall, new PointF(o.Pos.X, o.Pos.Y));
                         e.Graphics.DrawLine(penVelocity, o.Center.X, o.Center.Y, o.Center.X + o.Velocity.X * 10, o.Center.Y + o.Velocity.Y * 10);
                         break;
                 }
@@ -196,8 +198,8 @@ namespace physics
                 Max = new Vec2 { X = loc.X + size, Y = loc.Y + size }
             };
             PhysMath.CorrectBoundingBox(ref aabb);
-            var obj = new PhysicsObject(aabb, type, .92F, mass , false);
-            physicsSystem.staticObjects.Add(obj);
+            var obj = new PhysicsObject(aabb, type, .94F, mass , false);
+            physicsSystem.StaticObjects.Add(obj);
         }
         private void CreatePhysicsObject(PhysicsObject.Type type, PointF start, PointF end, int mass, bool locked)
         {
@@ -207,8 +209,8 @@ namespace physics
                 Max = new Vec2 { X = end.X, Y = end.Y }
             };
             PhysMath.CorrectBoundingBox(ref aabb);
-            var obj = new PhysicsObject(aabb, type, .75F, 5000, locked);
-            physicsSystem.staticObjects.Add(obj);
+            var obj = new PhysicsObject(aabb, type, .9F, 5000, locked);
+            physicsSystem.StaticObjects.Add(obj);
         }
 
         private void DragObject(PointF location)
@@ -271,14 +273,15 @@ namespace physics
             //}
 
 
-            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(60, 0), new PointF(0, pictureBox1.Height), 5000, true);
-            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(pictureBox1.Width, 0), new PointF(pictureBox1.Width - 60, pictureBox1.Height), 5000, true);
-            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, 0), new PointF(pictureBox1.Width, 60), 5000, true);
-            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, pictureBox1.Height), new PointF(pictureBox1.Width, pictureBox1.Height - 60), 5000, true);
-
-            //for (int i = 0; i < 500; i += 40)
+            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(65, 0), new PointF(0, pictureBox1.Height), 5000, true);
+            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(pictureBox1.Width, 0), new PointF(pictureBox1.Width - 65, pictureBox1.Height), 5000, true);
+            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, 0), new PointF(pictureBox1.Width, 65), 5000, true);
+            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, pictureBox1.Height), new PointF(pictureBox1.Width, pictureBox1.Height - 65), 5000, true);
+            
+            CreatePhysicsObject(PhysicsObject.Type.Circle, new PointF(300, 100), 40, 2000, false);
+            //for (int i = 0; i < 500; i += 30)
             //{
-            //    for (int j = 0; j < 200; j += 40)
+            //    for (int j = 0; j < 200; j += 30)
             //    {
             //        CreatePhysicsObject(PhysicsObject.Type.Circle, new PointF(i + 300, j + 100), Radius, 500, false);
             //    }
