@@ -88,13 +88,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\felt.jpg" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\blackPoolBall_40px.png" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Resources\poolTable.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\blackPoolBall_30px.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

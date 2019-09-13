@@ -63,19 +63,9 @@ namespace physics.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap blackPoolBall_40px {
+        internal static System.Drawing.Bitmap blackPoolBall_30px {
             get {
-                object obj = ResourceManager.GetObject("blackPoolBall_40px", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap felt {
-            get {
-                object obj = ResourceManager.GetObject("felt", resourceCulture);
+                object obj = ResourceManager.GetObject("blackPoolBall_30px", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

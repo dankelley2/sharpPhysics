@@ -35,10 +35,9 @@ namespace physics
         private long msPerDrawCycle;
         private long msPhysics;
         private long msThisFrame;
-        private int Radius = 10;
-        private Bitmap poolBall = new Bitmap(physics.Properties.Resources.blackPoolBall_40px);
+        private int Radius = 15;
+        private Bitmap poolBall = new Bitmap(physics.Properties.Resources.blackPoolBall_30px);
         private Bitmap poolTable = new Bitmap(physics.Properties.Resources.poolTable);
-
 
         public FormMainWindow()
         {
@@ -63,8 +62,8 @@ namespace physics
                 DragObject(MousePos);
             }
 
-            physicsSystem.UsePointGravity = false;
-            physicsSystem.gravityPoint = new Vec2 { X = MousePos.X, Y = MousePos.Y};
+            //physicsSystem.UsePointGravity = false;
+            //physicsSystem.gravityPoint = new Vec2 { X = MousePos.X, Y = MousePos.Y};
 
         physicsSystem.Tick(stopWatch.ElapsedMilliseconds);
             msPhysics = stopWatch.ElapsedMilliseconds - msElapsed;
@@ -83,19 +82,15 @@ namespace physics
         private void RefreshScreen()
         {
             pictureBox1.Invalidate();
-            //foreach (var o in system.staticObjects)
-            //{
-            //    panel1.Invalidate(new Region(new RectangleF(o.aabb.Min.X - 20, o.aabb.Min.Y - 20, o.width + 40, o.height + 40)));
-            //}
         }
 
         private void panel1_Paint(object sender, PaintEventArgs e)
         {
             SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
             e.Graphics.CompositingMode = CompositingMode.SourceOver;
-            e.Graphics.CompositingQuality = CompositingQuality.HighQuality;
-            e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            e.Graphics.PixelOffsetMode = PixelOffsetMode.Default;
+            e.Graphics.CompositingQuality = CompositingQuality.HighSpeed;
+            e.Graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
+            e.Graphics.PixelOffsetMode = PixelOffsetMode.Half;
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
             e.Graphics.DrawString("ms per physics cycle: " + msPhysics, DefaultFont, new SolidBrush(Color.Black),
@@ -129,7 +124,7 @@ namespace physics
                 e.Graphics.FillEllipse(new SolidBrush(Color.FromArgb(100,50,50,50)), origin.X+3, origin.Y+5, o.Width-2, o.Height-2);
             }
 
-            foreach (var o in physicsSystem.staticObjects)
+            foreach (var o in physicsSystem.staticObjects.Where( a => a.Locked == false))
             {
                 var origin = o.Aabb.Min;
                 switch (o.ShapeType)
@@ -139,12 +134,13 @@ namespace physics
                         e.Graphics.FillRectangle(new SolidBrush(Color.DimGray), origin.X, origin.Y, o.Width, o.Height);
                         break;
                     case PhysicsObject.Type.Circle:
+                        //e.Graphics.FillEllipse(new SolidBrush(Color.Aqua), origin.X, origin.Y, o.Width, o.Height);
+                        e.Graphics.DrawImage(poolBall, new PointF(o.Pos.X, o.Pos.Y));
                         e.Graphics.DrawLine(penVelocity, o.Center.X, o.Center.Y, o.Center.X + o.Velocity.X * 10, o.Center.Y + o.Velocity.Y * 10);
-                        e.Graphics.FillEllipse(new SolidBrush(Color.Aqua), origin.X, origin.Y, o.Width, o.Height);
-                        //e.Graphics.DrawImage(poolBall, new PointF(o.Pos.X, o.Pos.Y));
                         break;
                 }
             }
+            
         }
 
         private void panel1_MouseDown(object sender, MouseEventArgs e)
@@ -239,6 +235,7 @@ namespace physics
                                  new Vec2 {X = StartPointF.X, Y = StartPointF.Y}) / 10;
                     physicsSystem.AddVelocityToActive(-delta);
                     DrawLeftMouse = false;
+
                 }
             }
 
@@ -279,9 +276,9 @@ namespace physics
             CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, 0), new PointF(pictureBox1.Width, 60), 5000, true);
             CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, pictureBox1.Height), new PointF(pictureBox1.Width, pictureBox1.Height - 60), 5000, true);
 
-            //for (int i = 0; i < 500; i += 20)
+            //for (int i = 0; i < 500; i += 40)
             //{
-            //    for (int j = 0; j < 200; j += 20)
+            //    for (int j = 0; j < 200; j += 40)
             //    {
             //        CreatePhysicsObject(PhysicsObject.Type.Circle, new PointF(i + 300, j + 100), Radius, 500, false);
             //    }

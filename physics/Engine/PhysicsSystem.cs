@@ -49,6 +49,12 @@ namespace physics.Engine
 
         private void UpdatePhysics(float timeDelta)
         {
+            //reset moved state
+            for (int i = 0; i < staticObjects.Count; i++)
+            {
+                staticObjects[i].Moved = false;
+            }
+
             foreach (var objA in staticObjects)
             {
                 foreach (var objB in staticObjects.Where(a => !a.Equals(objA)))
@@ -102,6 +108,7 @@ namespace physics.Engine
                     //Resolve Collision
                     if (collision)
                     {
+
                         Collision.ResolveCollision(ref m);
                         Collision.PositionalCorrection(ref m);
                     }
@@ -109,19 +116,21 @@ namespace physics.Engine
 
                 ApplyConstants(objA);
                 objA.Move();
+                objA.Moved = true;
             }
 
             if (removalQueue.Count > 0)
             {
                 staticObjects.Remove(removalQueue.Dequeue());
             }
+            
         }
 
         private void ApplyConstants(PhysicsObject obj)
         {
             if (obj.Locked) { return;}
             
-            AddGravity(obj);
+            //AddGravity(obj);
             obj.Velocity *= friction;
             if (obj.Center.Y > 2000 || obj.Center.Y < -2000 || obj.Center.X > 2000 || obj.Center.X < -2000)
             {
@@ -142,7 +151,7 @@ namespace physics.Engine
         public bool ActivateAtPoint(PointF p)
         {
             activeObject = CheckObjectAtPoint(p);
-            return activeObject != null;
+            return activeObject != null && activeObject.Locked == false;
         }
 
         public void ReleaseActiveObject()

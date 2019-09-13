@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Runtime.CompilerServices;
 using physics.Engine.Structs;
 
 namespace physics.Engine.Classes
@@ -13,6 +14,7 @@ namespace physics.Engine.Classes
         }
 
         public bool Locked;
+        public bool Moved;
         public AABB Aabb;
         public Vec2 Velocity;
         public Vec2 Center;
@@ -59,11 +61,20 @@ namespace physics.Engine.Classes
             {
                 return;
             }
+            RoundSpeedToZero();
 
             var p1 = Aabb.Min + Velocity;
             var p2 = Aabb.Max + Velocity;
             Aabb = new AABB { Min = p1, Max = p2 };
             Recalculate();
+        }
+
+        private void RoundSpeedToZero()
+        {
+            if (Math.Abs(this.Velocity.X) + Math.Abs(this.Velocity.Y) < .01F)
+            {
+                Velocity = new Vec2(0,0);
+            }
         }
 
         private void Recalculate()
