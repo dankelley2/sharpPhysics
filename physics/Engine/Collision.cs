@@ -59,7 +59,7 @@ namespace physics.Engine
                         }
                         else
                         {
-                            m.Normal = new Vec2 {X = 0, Y = 0};
+                            m.Normal = new Vec2 {X = 1, Y = 0};
                         }
 
                         m.Penetration = x_overlap;

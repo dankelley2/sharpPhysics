@@ -279,7 +279,7 @@ namespace physics
             CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(pictureBox1.Width, 0), new PointF(pictureBox1.Width - 65, pictureBox1.Height), 5000, true);
             CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, 0), new PointF(pictureBox1.Width, 65), 5000, true);
             CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, pictureBox1.Height), new PointF(pictureBox1.Width, pictureBox1.Height - 65), 5000, true);
-            
+
             CreatePhysicsObject(PhysicsObject.Type.Circle, new PointF(300, 100), 40, 2000, false);
             //for (int i = 0; i < 500; i += 30)
             //{
