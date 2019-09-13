@@ -39,6 +39,9 @@ namespace physics
         private Bitmap poolBall = new Bitmap(physics.Properties.Resources.blackPoolBall_30px);
         private Bitmap poolTable = new Bitmap(physics.Properties.Resources.poolTable);
 
+        Font debugFont = new Font(FontFamily.GenericMonospace, 10);
+        SolidBrush debugBrush = new SolidBrush(Color.WhiteSmoke);
+
         public FormMainWindow()
         {
             InitializeComponent();
@@ -46,11 +49,10 @@ namespace physics
             RefreshTimer.Enabled = true;
             RefreshTimer.Interval = 1000 / 60;
             RefreshTimer.Tick += RefreshTimer_Tick;
-            RefreshTimer.Tick += PhysicsTimer_Tick;
 
-            //PhysicsTimer.Enabled = true;
-            //PhysicsTimer.Interval = 1000 / 60;
-            //PhysicsTimer.Tick += PhysicsTimer_Tick;
+            PhysicsTimer.Enabled = true;
+            PhysicsTimer.Interval = 1000 / 100;
+            PhysicsTimer.Tick += PhysicsTimer_Tick;
             stopWatch.Start();
         }
 
@@ -94,14 +96,14 @@ namespace physics
             e.Graphics.PixelOffsetMode = PixelOffsetMode.Half;
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            e.Graphics.DrawString("ms per physics cycle: " + msPhysics, DefaultFont, new SolidBrush(Color.Black),
-                new PointF(10, 10));
-            e.Graphics.DrawString("ms total draw time: " + msPerDrawCycle, DefaultFont, new SolidBrush(Color.Black),
-                new PointF(10, 30));
-            e.Graphics.DrawString("frame rate: " + 1000 / Math.Max(msFrameTime, 1), DefaultFont,
-                new SolidBrush(Color.Black), new PointF(10, 50));
-            e.Graphics.DrawString("num objects: " + physicsSystem.StaticObjects.Count, DefaultFont,
-                new SolidBrush(Color.Black), new PointF(10, 70));
+            e.Graphics.DrawString("ms per physics cycle: " + msPhysics, debugFont, debugBrush,
+                new PointF(80, 70));
+            e.Graphics.DrawString("ms total draw time: " + msPerDrawCycle, debugFont, debugBrush,
+                new PointF(80, 90));
+            e.Graphics.DrawString("frame rate: " + 1000 / Math.Max(msFrameTime, 1), debugFont,
+                debugBrush, new PointF(80, 110));
+            e.Graphics.DrawString("num objects: " + physicsSystem.StaticObjects.Count, debugFont,
+                debugBrush, new PointF(80, 130));
             if (grabbing)
             {
                 e.Graphics.DrawLine(new Pen(Color.DarkGreen), MousePos, physicsSystem.getActiveObjectCenter());
