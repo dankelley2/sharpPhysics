@@ -12,20 +12,16 @@ namespace physics.Engine.Classes
             Circle
         }
 
-        private AABB _aabb;
-
-
-        private Vec2 _velocity;
+        public bool Locked;
+        public AABB Aabb;
+        public Vec2 Velocity;
         public Vec2 Center;
         public Vec2 Pos;
         public float Width;
         public float Height;
-        public float IMass;
-
-        public bool Locked;
-        public float Mass;
-
         public float Restitution;
+        public float Mass;
+        public float IMass;
 
         public PhysicsObject(AABB boundingBox, Type t, float r, float m, bool locked)
         {
@@ -43,30 +39,6 @@ namespace physics.Engine.Classes
         }
 
         public Type ShapeType { get; set; }
-
-        public AABB Aabb
-        {
-            get { return _aabb; }
-            set
-            {
-                if (!Locked)
-                {
-                    _aabb = value;
-                }
-            }
-        }
-
-        public Vec2 Velocity
-        {
-            get { return _velocity; }
-            set
-            {
-                if (!Locked)
-                {
-                    _velocity = value;
-                }
-            }
-        }
 
         public bool Contains(PointF p)
         {
@@ -96,7 +68,6 @@ namespace physics.Engine.Classes
 
         private void Recalculate()
         {
-
             Width = Aabb.Max.X - Aabb.Min.X;
             Height = Aabb.Max.Y - Aabb.Min.Y;
             Pos = new Vec2(Aabb.Min.X, Aabb.Min.Y);
@@ -113,6 +84,7 @@ namespace physics.Engine.Classes
             var p1 = Aabb.Min + dVector;
             var p2 = Aabb.Max + dVector;
             Aabb = new AABB { Min = p1, Max = p2 };
+            Recalculate();
         }
     }
 }

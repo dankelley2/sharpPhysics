@@ -8,8 +8,6 @@ namespace physics.Engine.Structs
     {
         public PhysicsObject A;
         public PhysicsObject B;
-        public Vec2 ANewVelocity;
-        public Vec2 BNewVelocity;
         public float Penetration;
         public Vec2 Normal;
 

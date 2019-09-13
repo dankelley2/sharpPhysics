@@ -97,16 +97,23 @@ namespace physics.Engine
 
             var impulse = m.Normal * j;
 
-            m.A.Velocity = m.A.Velocity - impulse * m.A.IMass;
-            m.B.Velocity = m.B.Velocity + impulse * m.B.IMass;
+            m.A.Velocity = !m.A.Locked ? m.A.Velocity - impulse * m.A.IMass : m.A.Velocity;
+            m.B.Velocity = !m.B.Locked ? m.B.Velocity + impulse * m.B.IMass : m.B.Velocity;
         }
 
         public static void PositionalCorrection(ref Manifold m)
         {
             var percent = 0.5F; // usually 20% to 80%
             var correction = m.Normal * (percent * (m.Penetration / (m.A.IMass + m.B.IMass)));
-            m.A.Move(-correction * m.A.IMass);
-            m.B.Move(correction * m.B.IMass);
+            if (m.A.Mass < 10000)
+            {
+                m.A.Move(-correction * m.A.IMass);
+            }
+
+            if (m.B.Mass < 10000)
+            {
+                m.B.Move(correction * m.B.IMass);
+            }
         }
 
         public static bool CirclevsCircle(ref Manifold m)
@@ -181,7 +188,7 @@ namespace physics.Engine
                 inside = true;
 
                 // Find closest axis
-                if (Math.Abs(n.X) > Math.Abs(n.Y))
+                if (Math.Abs(n.X) < Math.Abs(n.Y))
                 {
                     // Clamp to closest extent
                     if (closest.X > 0)
@@ -227,11 +234,12 @@ namespace physics.Engine
             // inside the AABB
             if (inside)
             {
-                m.Normal = Vec2.Normalize(-n);
+                m.Normal = Vec2.Normalize(-normal);
                 m.Penetration = r - d;
             }
             else
             {
+                //If pushing up at all, go straight up (gravity hack)
                 m.Normal = Vec2.Normalize(normal);
                 m.Penetration = r - d;
             }

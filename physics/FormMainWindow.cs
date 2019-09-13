@@ -35,7 +35,7 @@ namespace physics
         private long msPerDrawCycle;
         private long msPhysics;
         private long msThisFrame;
-        private int Radius = 20;
+        private int Radius = 10;
         private Bitmap poolBall = new Bitmap(physics.Properties.Resources.blackPoolBall_40px);
         private Bitmap poolTable = new Bitmap(physics.Properties.Resources.poolTable);
 
@@ -247,7 +247,8 @@ namespace physics
                 if (DrawRightMouse)
                 {
                     EndPointF = e.Location;
-                    CreatePhysicsObject(PhysicsObject.Type.Box, StartPointF, EndPointF, 2000, false);
+                    var mass = (EndPointF.X - StartPointF.X * EndPointF.Y - StartPointF.Y) / 10;
+                    CreatePhysicsObject(PhysicsObject.Type.Box, StartPointF, EndPointF, (int)mass, false);
                 }
             }
         }
@@ -261,30 +262,30 @@ namespace physics
         private void Form1_Load(object sender, EventArgs e)
         {
 
-            Size size = new Size(10, 10);
-            for (var a = 0; a <= 180; a += 5)
-            {
-                var x = 200 * Math.Cos(a * Math.PI / 180) + 300;
-                var y = 200 * Math.Sin(a * Math.PI / 180) + 300;
+            //Size size = new Size(10, 10);
+            //for (var a = 0; a <= 180; a += 5)
+            //{
+            //    var x = 200 * Math.Cos(a * Math.PI / 180) + 300;
+            //    var y = 200 * Math.Sin(a * Math.PI / 180) + 300;
 
-                var p = new PointF((float)x, (float)y);
+            //    var p = new PointF((float)x, (float)y);
 
-                CreatePhysicsObject(PhysicsObject.Type.Box, p, Radius, 1000, true);
-            }
+            //    CreatePhysicsObject(PhysicsObject.Type.Box, p, Radius, 1000, true);
+            //}
 
 
             CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(60, 0), new PointF(0, pictureBox1.Height), 5000, true);
-            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(pictureBox1.Width, 0), new PointF(pictureBox1.Width-60, pictureBox1.Height), 5000, true);
+            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(pictureBox1.Width, 0), new PointF(pictureBox1.Width - 60, pictureBox1.Height), 5000, true);
             CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, 0), new PointF(pictureBox1.Width, 60), 5000, true);
-            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, pictureBox1.Height), new PointF(pictureBox1.Width, pictureBox1.Height-60), 5000, true);
+            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, pictureBox1.Height), new PointF(pictureBox1.Width, pictureBox1.Height - 60), 5000, true);
 
-            for (int i = 0; i < 500; i += 40)
-            {
-                for (int j = 0; j < 200; j += 40)
-                {
-                    CreatePhysicsObject(PhysicsObject.Type.Circle, new PointF(i + 300, j + 100), Radius, 500, false);
-                }
-            }
+            //for (int i = 0; i < 500; i += 20)
+            //{
+            //    for (int j = 0; j < 200; j += 20)
+            //    {
+            //        CreatePhysicsObject(PhysicsObject.Type.Circle, new PointF(i + 300, j + 100), Radius, 500, false);
+            //    }
+            //}
 
         }
 

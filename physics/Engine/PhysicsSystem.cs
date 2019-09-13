@@ -72,11 +72,11 @@ namespace physics.Engine
                     {
                         if (m.B.ShapeType == PhysicsObject.Type.Box)
                         {
-                            ////continue;
-                            //if (Collision.AABBvsAABB(ref m))
-                            //{
-                            //    collision = true;
-                            //}
+                            //continue;
+                            if (Collision.AABBvsAABB(ref m))
+                            {
+                                collision = true;
+                            }
                         }
 
                         if (m.B.ShapeType == PhysicsObject.Type.Circle)
