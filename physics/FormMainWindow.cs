@@ -127,7 +127,7 @@ namespace physics
                 e.Graphics.FillEllipse(new SolidBrush(Color.FromArgb(100,50,50,50)), origin.X+3, origin.Y+5, o.Width-2, o.Height-2);
             }
 
-            foreach (var o in physicsSystem.StaticObjects.Where( a => a.Locked == false))
+            foreach (var o in physicsSystem.StaticObjects.Where(a => a.Locked == false))
             {
                 var origin = o.Aabb.Min;
                 switch (o.ShapeType)
@@ -275,19 +275,19 @@ namespace physics
             //}
 
 
-            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(65, 0), new PointF(0, pictureBox1.Height), 5000, true);
-            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(pictureBox1.Width, 0), new PointF(pictureBox1.Width - 65, pictureBox1.Height), 5000, true);
-            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, 0), new PointF(pictureBox1.Width, 65), 5000, true);
-            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, pictureBox1.Height), new PointF(pictureBox1.Width, pictureBox1.Height - 65), 5000, true);
+            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(65, 0), new PointF(0, pictureBox1.Height), 1000000, true);
+            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(pictureBox1.Width, 0), new PointF(pictureBox1.Width - 65, pictureBox1.Height), 1000000, true);
+            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, 0), new PointF(pictureBox1.Width, 65), 1000000, true);
+            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, pictureBox1.Height), new PointF(pictureBox1.Width, pictureBox1.Height - 65), 1000000, true);
 
-            CreatePhysicsObject(PhysicsObject.Type.Circle, new PointF(300, 100), 40, 2000, false);
-            //for (int i = 0; i < 500; i += 30)
-            //{
-            //    for (int j = 0; j < 200; j += 30)
-            //    {
-            //        CreatePhysicsObject(PhysicsObject.Type.Circle, new PointF(i + 300, j + 100), Radius, 500, false);
-            //    }
-            //}
+            CreatePhysicsObject(PhysicsObject.Type.Circle, new PointF(300, 100), 40, 10000, false);
+            for (int i = 0; i < 500; i += 30)
+            {
+                for (int j = 0; j < 200; j += 30)
+                {
+                    CreatePhysicsObject(PhysicsObject.Type.Circle, new PointF(i + 300, j + 100), Radius, 500, false);
+                }
+            }
 
         }
 

@@ -162,7 +162,7 @@ namespace physics.Engine
         {
             if (obj.Locked) { return;}
             
-            //AddGravity(obj);
+            AddGravity(obj);
             obj.Velocity *= Friction;
             if (obj.Center.Y > 2000 || obj.Center.Y < -2000 || obj.Center.X > 2000 || obj.Center.X < -2000)
             {

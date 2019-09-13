@@ -246,12 +246,12 @@ namespace physics.Engine
         {
             var percent = 0.5F; // usually 20% to 80%
             var correction = m.Normal * (percent * (m.Penetration / (m.A.IMass + m.B.IMass)));
-            if (m.A.Mass < 10000)
+            if (!m.A.Locked)
             {
                 m.A.Move(-correction * m.A.IMass);
             }
 
-            if (m.B.Mass < 10000)
+            if (!m.B.Locked)
             {
                 m.B.Move(correction * m.B.IMass);
             }
