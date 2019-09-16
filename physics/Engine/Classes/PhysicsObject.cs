@@ -62,8 +62,8 @@ namespace physics.Engine.Classes
             }
             RoundSpeedToZero();
 
-            var p1 = Aabb.Min + Velocity;
-            var p2 = Aabb.Max + Velocity;
+            var p1 = Aabb.Min + (Velocity/2);
+            var p2 = Aabb.Max + (Velocity/2);
             Aabb = new AABB { Min = p1, Max = p2 };
             Recalculate();
         }

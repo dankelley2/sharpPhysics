@@ -47,12 +47,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Engine\Classes\CollisionPair.cs" />
+    <Compile Include="Engine\Classes\Controller.cs" />
     <Compile Include="Engine\Structs\Vec2.cs" />
     <Compile Include="Engine\Collision.cs" />
     <Compile Include="Engine\PhysicsSystem.cs" />
     <Compile Include="Engine\Helpers\PhysMath.cs" />
     <Compile Include="Engine\Classes\PhysicsObject.cs" />
-    <Compile Include="Engine\Structs\Manifold.cs" />
+    <Compile Include="Engine\Classes\Manifold.cs" />
     <Compile Include="FormMainWindow.cs">
       <SubType>Form</SubType>
     </Compile>

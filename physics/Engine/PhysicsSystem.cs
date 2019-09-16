@@ -148,8 +148,7 @@ namespace physics.Engine
                 StaticObjects[i].Move();
             }
         }
-
-
+        
         private void RemoveOutOfScopeObjects()
         {
             if (RemovalQueue.Count > 0)
@@ -185,7 +184,13 @@ namespace physics.Engine
         public bool ActivateAtPoint(PointF p)
         {
             ActiveObject = CheckObjectAtPoint(p);
-            return ActiveObject != null && ActiveObject.Locked == false;
+            if (ActiveObject == null || ActiveObject.Locked)
+            {
+                ActiveObject = null;
+                return false;
+            }
+
+            return true;
         }
 
         public void ReleaseActiveObject()
@@ -202,11 +207,6 @@ namespace physics.Engine
 
             var delta = ActiveObject.Center - point;
             AddVelocityToActive(-delta / 100);
-        }
-
-        public void SetGravityPoint(Vec2 point)
-        {
-            GravityPoint = point;
         }
 
         public PointF getActiveObjectCenter()

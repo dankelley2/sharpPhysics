@@ -28,45 +28,45 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.pictureBox1 = new System.Windows.Forms.PictureBox();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+            this.GameCanvas = new System.Windows.Forms.PictureBox();
+            ((System.ComponentModel.ISupportInitialize)(this.GameCanvas)).BeginInit();
             this.SuspendLayout();
             // 
-            // pictureBox1
+            // GameCanvas
             // 
-            this.pictureBox1.BackColor = System.Drawing.SystemColors.ButtonHighlight;
-            this.pictureBox1.BackgroundImage = global::physics.Properties.Resources.poolTable;
-            this.pictureBox1.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.pictureBox1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.pictureBox1.Location = new System.Drawing.Point(0, 0);
-            this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(971, 566);
-            this.pictureBox1.TabIndex = 0;
-            this.pictureBox1.TabStop = false;
-            this.pictureBox1.Paint += new System.Windows.Forms.PaintEventHandler(this.panel1_Paint);
-            this.pictureBox1.MouseDown += new System.Windows.Forms.MouseEventHandler(this.panel1_MouseDown);
-            this.pictureBox1.MouseMove += new System.Windows.Forms.MouseEventHandler(this.pictureBox1_MouseMove);
-            this.pictureBox1.MouseUp += new System.Windows.Forms.MouseEventHandler(this.panel1_MouseUp);
+            this.GameCanvas.BackColor = System.Drawing.SystemColors.ButtonHighlight;
+            this.GameCanvas.BackgroundImage = global::physics.Properties.Resources.poolTable;
+            this.GameCanvas.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+            this.GameCanvas.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.GameCanvas.Location = new System.Drawing.Point(0, 0);
+            this.GameCanvas.Name = "GameCanvas";
+            this.GameCanvas.Size = new System.Drawing.Size(971, 566);
+            this.GameCanvas.TabIndex = 0;
+            this.GameCanvas.TabStop = false;
+            this.GameCanvas.Paint += new System.Windows.Forms.PaintEventHandler(this.GameCanvas_DrawGame);
+            this.GameCanvas.MouseDown += new System.Windows.Forms.MouseEventHandler(this.GameCanvas_MouseDown);
+            this.GameCanvas.MouseMove += new System.Windows.Forms.MouseEventHandler(this.GameCanvas_MouseMove);
+            this.GameCanvas.MouseUp += new System.Windows.Forms.MouseEventHandler(this.GameCanvas_MouseUp);
             // 
             // FormMainWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(971, 566);
-            this.Controls.Add(this.pictureBox1);
+            this.Controls.Add(this.GameCanvas);
             this.DoubleBuffered = true;
             this.Name = "FormMainWindow";
             this.Text = "Form1";
-            this.Load += new System.EventHandler(this.Form1_Load);
-            this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+            this.Load += new System.EventHandler(this.FormMainWindow_Load);
+            this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.FormMainWindow_KeyDown);
+            ((System.ComponentModel.ISupportInitialize)(this.GameCanvas)).EndInit();
             this.ResumeLayout(false);
 
         }
 
         #endregion
 
-        private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.PictureBox GameCanvas;
     }
 }
 

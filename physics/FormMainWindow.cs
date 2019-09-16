@@ -15,29 +15,29 @@ namespace physics
 {
     public partial class FormMainWindow : Form
     {
-        private readonly Timer PhysicsTimer = new Timer();
-        private readonly Timer RefreshTimer = new Timer();
-        private readonly Stopwatch stopWatch = new Stopwatch();
+        private readonly Timer _physicsTimer = new Timer();
+        private readonly Timer _refreshTimer = new Timer();
+        private readonly Stopwatch _stopwatch = new Stopwatch();
 
-        private PhysicsSystem physicsSystem = new PhysicsSystem();
-        private bool DrawLeftMouse = false;
-        private bool DrawRightMouse = false;
+        private PhysicsSystem _physicsSystem = new PhysicsSystem();
+        private bool _drawLeftMouse = false;
+        private bool _drawRightMouse = false;
         private PointF StartPointF { get; set; }
         private PointF EndPointF { get; set; }
 
-        private bool grabbing;
-        private PointF MousePos;
+        private bool _grabbing;
+        private PointF _mousePos;
 
 
-        private PointF mouseThen;
-        private long msFrameTime;
-        private long msLastFrame;
-        private long msPerDrawCycle;
-        private long msPhysics;
-        private long msThisFrame;
-        private int Radius = 15;
-        private Bitmap poolBall = new Bitmap(physics.Properties.Resources.blackPoolBall_30px);
-        private Bitmap poolTable = new Bitmap(physics.Properties.Resources.poolTable);
+        private PointF _mouseThen;
+        private long _msFrameTime;
+        private long _msLastFrame;
+        private long _msPerDrawCycle;
+        private long _msPhysics;
+        private long _msThisFrame;
+        private int _radius = 10;
+        private Bitmap _poolBall = new Bitmap(physics.Properties.Resources.blackPoolBall_30px);
+        private Bitmap _poolTable = new Bitmap(physics.Properties.Resources.poolTable);
 
         Font debugFont = new Font(FontFamily.GenericMonospace, 10);
         SolidBrush debugBrush = new SolidBrush(Color.WhiteSmoke);
@@ -45,49 +45,65 @@ namespace physics
         public FormMainWindow()
         {
             InitializeComponent();
-            poolBall.MakeTransparent();
-            RefreshTimer.Enabled = true;
-            RefreshTimer.Interval = 1000 / 60;
-            RefreshTimer.Tick += RefreshTimer_Tick;
+            _poolBall.MakeTransparent();
+            _refreshTimer.Enabled = true;
+            _refreshTimer.Interval = 1000 / 60;
+            _refreshTimer.Tick += RefreshTimer_Tick;
 
-            PhysicsTimer.Enabled = true;
-            PhysicsTimer.Interval = 1000 / 100;
-            PhysicsTimer.Tick += PhysicsTimer_Tick;
-            stopWatch.Start();
+            _physicsTimer.Enabled = true;
+            _physicsTimer.Interval = 1000 / 100;
+            _physicsTimer.Tick += PhysicsTimer_Tick;
+            _stopwatch.Start();
+        }
+
+        private void FormMainWindow_Load(object sender, EventArgs e)
+        {
+
+            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(65, 0), new PointF(0, GameCanvas.Height), 1000000, true);
+            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(GameCanvas.Width, 0), new PointF(GameCanvas.Width - 65, GameCanvas.Height), 1000000, true);
+            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, 0), new PointF(GameCanvas.Width, 65), 1000000, true);
+            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, GameCanvas.Height), new PointF(GameCanvas.Width, GameCanvas.Height - 65), 1000000, true);
+
+            //CreatePhysicsObject(PhysicsObject.Type.Circle, new PointF(300, 100), 40, 200, false);
+            for (int i = 0; i < 300; i += 30)
+            {
+                for (int j = 0; j < 200; j += 30)
+                {
+                    CreatePhysicsObject(PhysicsObject.Type.Circle, new PointF(i + 100, j + 150), 20, 500, false);
+                }
+            }
+
         }
 
         private void PhysicsTimer_Tick(object sender, EventArgs e)
         {
-            var msElapsed = stopWatch.ElapsedMilliseconds;
+            var msElapsed = _stopwatch.ElapsedMilliseconds;
 
-            if (grabbing)
+            if (_grabbing)
             {
-                DragObject(MousePos);
+                DragObject(_mousePos);
             }
 
-            //physicsSystem.UsePointGravity = false;
-            //physicsSystem.gravityPoint = new Vec2 { X = MousePos.X, Y = MousePos.Y};
-
-        physicsSystem.Tick(stopWatch.ElapsedMilliseconds);
-            msPhysics = stopWatch.ElapsedMilliseconds - msElapsed;
+        _physicsSystem.Tick(_stopwatch.ElapsedMilliseconds);
+            _msPhysics = _stopwatch.ElapsedMilliseconds - msElapsed;
         }
 
         private void RefreshTimer_Tick(object sender, EventArgs e)
         {
-            var msElapsed = stopWatch.ElapsedMilliseconds;
-            RefreshScreen();
-            msPerDrawCycle = stopWatch.ElapsedMilliseconds - msElapsed;
-            msLastFrame = msThisFrame;
-            msThisFrame = stopWatch.ElapsedMilliseconds;
-            msFrameTime = msThisFrame - msLastFrame;
+            var msElapsed = _stopwatch.ElapsedMilliseconds;
+            InvalidateWindow();
+            _msPerDrawCycle = _stopwatch.ElapsedMilliseconds - msElapsed;
+            _msLastFrame = _msThisFrame;
+            _msThisFrame = _stopwatch.ElapsedMilliseconds;
+            _msFrameTime = _msThisFrame - _msLastFrame;
         }
 
-        private void RefreshScreen()
+        private void InvalidateWindow()
         {
-            pictureBox1.Invalidate();
+            GameCanvas.Invalidate();
         }
 
-        private void panel1_Paint(object sender, PaintEventArgs e)
+        private void GameCanvas_DrawGame(object sender, PaintEventArgs e)
         {
             SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
             e.Graphics.CompositingMode = CompositingMode.SourceOver;
@@ -96,100 +112,70 @@ namespace physics
             e.Graphics.PixelOffsetMode = PixelOffsetMode.Half;
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            e.Graphics.DrawString("ms per physics cycle: " + msPhysics, debugFont, debugBrush,
+            e.Graphics.DrawString("ms per physics cycle: " + _msPhysics, debugFont, debugBrush,
                 new PointF(80, 70));
-            e.Graphics.DrawString("ms total draw time: " + msPerDrawCycle, debugFont, debugBrush,
+            e.Graphics.DrawString("ms total draw time: " + _msPerDrawCycle, debugFont, debugBrush,
                 new PointF(80, 90));
-            e.Graphics.DrawString("frame rate: " + 1000 / Math.Max(msFrameTime, 1), debugFont,
+            e.Graphics.DrawString("frame rate: " + 1000 / Math.Max(_msFrameTime, 1), debugFont,
                 debugBrush, new PointF(80, 110));
-            e.Graphics.DrawString("num objects: " + physicsSystem.StaticObjects.Count, debugFont,
+            e.Graphics.DrawString("num objects: " + _physicsSystem.StaticObjects.Count, debugFont,
                 debugBrush, new PointF(80, 130));
-            if (grabbing)
+            if (_grabbing)
             {
-                e.Graphics.DrawLine(new Pen(Color.DarkGreen), MousePos, physicsSystem.getActiveObjectCenter());
+                e.Graphics.DrawLine(new Pen(Color.DarkGreen), _mousePos, _physicsSystem.getActiveObjectCenter());
             }
 
-            if (DrawLeftMouse)
+            if (_drawLeftMouse)
             {
                 var penArrow = new Pen(Color.Green,2);
                 penArrow.EndCap = LineCap.ArrowAnchor;
                 penArrow.StartCap = LineCap.Round;
-                e.Graphics.DrawLine(penArrow, MousePos, StartPointF);
-                e.Graphics.DrawEllipse(new Pen(Color.DarkBlue), (int)(StartPointF.X-Radius), (int)(StartPointF.Y-Radius), Radius*2, Radius*2);
+                e.Graphics.DrawLine(penArrow, _mousePos, StartPointF);
+                e.Graphics.DrawEllipse(new Pen(Color.DarkBlue), (int)(StartPointF.X-_radius), (int)(StartPointF.Y-_radius), _radius*2, _radius*2);
             }
 
             var penVelocity = new Pen(Color.Red, 1);
             penVelocity.EndCap = LineCap.ArrowAnchor;
 
-            foreach (var o in physicsSystem.StaticObjects.Where(x => x.ShapeType == PhysicsObject.Type.Circle))
+            foreach (var o in _physicsSystem.StaticObjects.Where(x => x.ShapeType == PhysicsObject.Type.Circle))
             {
                 var origin = o.Aabb.Min;
                 e.Graphics.FillEllipse(new SolidBrush(Color.FromArgb(100,50,50,50)), origin.X+3, origin.Y+5, o.Width-2, o.Height-2);
             }
 
-            foreach (var o in physicsSystem.StaticObjects.Where(a => a.Locked == false))
+            foreach (var o in _physicsSystem.StaticObjects.Where(a => a.Locked == false))
             {
                 var origin = o.Aabb.Min;
                 switch (o.ShapeType)
                 {
 
                     case PhysicsObject.Type.Box:
-                        e.Graphics.FillRectangle(new SolidBrush(Color.DimGray), origin.X, origin.Y, o.Width, o.Height);
+                        e.Graphics.DrawRectangle(new Pen(Color.Maroon), origin.X, origin.Y, o.Width, o.Height);
+                        e.Graphics.DrawLine(new Pen(Color.Maroon), origin.X, origin.Y, origin.X + o.Width, origin.Y + o.Height);
+                        e.Graphics.DrawLine(new Pen(Color.Maroon), origin.X + o.Width, origin.Y, origin.X, origin.Y + o.Height);
                         break;
                     case PhysicsObject.Type.Circle:
                         e.Graphics.FillEllipse(new SolidBrush(Color.LightGray), origin.X, origin.Y, o.Width, o.Height);
                         e.Graphics.FillEllipse(new SolidBrush(Color.White), origin.X + o.Width * .1F, origin.Y + o.Height * .1F, o.Width*.6F, o.Height*.6F);
                         //e.Graphics.DrawImage(poolBall, new PointF(o.Pos.X, o.Pos.Y));
-                        e.Graphics.DrawLine(penVelocity, o.Center.X, o.Center.Y, o.Center.X + o.Velocity.X * 10, o.Center.Y + o.Velocity.Y * 10);
+                        //e.Graphics.DrawLine(penVelocity, o.Center.X, o.Center.Y, o.Center.X + o.Velocity.X * 10, o.Center.Y + o.Velocity.Y * 10);
                         break;
                 }
             }
             
         }
 
-        private void panel1_MouseDown(object sender, MouseEventArgs e)
+
+        #region EngineBindings
+        private void DragObject(PointF location)
         {
-            if (e.Button == MouseButtons.Left)
-            {
-                if (physicsSystem.ActivateAtPoint(e.Location))
-                {
-                    grabbing = true;
-                    return;
-                }
-
-                StartPointF = e.Location;
-                DrawLeftMouse = true;
-            }
-
-            if (e.Button == MouseButtons.Right)
-            {
-                if (physicsSystem.ActivateAtPoint(e.Location))
-                {
-                    physicsSystem.removeActiveObject();
-                    return;
-                }
-
-                StartPointF = e.Location;
-                DrawRightMouse = true;
-            }
+            _physicsSystem.MoveActiveTowardsPoint(new Vec2 {X = location.X, Y = location.Y});
         }
 
-        private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
+        private void stopDragObject()
         {
-            MousePos = e.Location;
-            //if (e.Button == MouseButtons.Right)
-            //{
-            //    if (Math.Abs(e.X - mouseThen.X) > 5 || Math.Abs(e.Y - mouseThen.Y) > 5)
-            //    {
-            //        mouseThen = e.Location;
-            //        CreatePhysicsObject(PhysicsObject.Type.Box, e.Location, Radius, 999999);
-            //    }
-            //}
-        }
-
-        private PointF SnapPointToGrid(PointF p1)
-        {
-            return p1; //new PointF(((int) p1.X / (Radius*2)) * (Radius * 2), ((int)p1.Y / (Radius * 2)) * (Radius * 2));
+            _physicsSystem.ReleaseActiveObject();
+            _grabbing = false;
         }
 
         private void CreatePhysicsObject(PhysicsObject.Type type, PointF loc, int size, int mass, bool locked)
@@ -200,9 +186,10 @@ namespace physics
                 Max = new Vec2 { X = loc.X + size, Y = loc.Y + size }
             };
             PhysMath.CorrectBoundingBox(ref aabb);
-            var obj = new PhysicsObject(aabb, type, .94F, mass , false);
-            physicsSystem.StaticObjects.Add(obj);
+            var obj = new PhysicsObject(aabb, type, .94F, mass, locked);
+            _physicsSystem.StaticObjects.Add(obj);
         }
+
         private void CreatePhysicsObject(PhysicsObject.Type type, PointF start, PointF end, int mass, bool locked)
         {
             var aabb = new AABB
@@ -212,92 +199,94 @@ namespace physics
             };
             PhysMath.CorrectBoundingBox(ref aabb);
             var obj = new PhysicsObject(aabb, type, .9F, 5000, locked);
-            physicsSystem.StaticObjects.Add(obj);
+            _physicsSystem.StaticObjects.Add(obj);
         }
+        #endregion
 
-        private void DragObject(PointF location)
-        {
-            physicsSystem.MoveActiveTowardsPoint(new Vec2 {X = location.X, Y = location.Y});
-        }
 
-        private void panel1_MouseUp(object sender, MouseEventArgs e)
+        #region MouseEvents
+        private void GameCanvas_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
             {
-                if (grabbing)
+                if (_physicsSystem.ActivateAtPoint(e.Location))
+                {
+                    _grabbing = true;
+                    return;
+                }
+
+                StartPointF = e.Location;
+                _drawLeftMouse = true;
+            }
+
+            if (e.Button == MouseButtons.Right)
+            {
+                if (_physicsSystem.ActivateAtPoint(e.Location))
+                {
+                    _physicsSystem.removeActiveObject();
+                    return;
+                }
+
+                StartPointF = e.Location;
+                _drawRightMouse = true;
+            }
+        }
+
+        private void GameCanvas_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                if (_grabbing)
                 {
                     stopDragObject();
                     return;
                 }
 
-                if (DrawLeftMouse)
+                if (_drawLeftMouse)
                 {
                     EndPointF = e.Location;
-                    CreatePhysicsObject(PhysicsObject.Type.Circle, StartPointF, Radius, 500, false);
-                    physicsSystem.ActivateAtPoint(StartPointF);
-                    Vec2 delta = (new Vec2 {X = EndPointF.X, Y = EndPointF.Y} -
-                                 new Vec2 {X = StartPointF.X, Y = StartPointF.Y}) / 10;
-                    physicsSystem.AddVelocityToActive(-delta);
-                    DrawLeftMouse = false;
+                    CreatePhysicsObject(PhysicsObject.Type.Circle, StartPointF, _radius, 3000, false);
+                    _physicsSystem.ActivateAtPoint(StartPointF);
+                    Vec2 delta = (new Vec2 { X = EndPointF.X, Y = EndPointF.Y } -
+                                 new Vec2 { X = StartPointF.X, Y = StartPointF.Y }) / 10;
+                    _physicsSystem.AddVelocityToActive(-delta);
+                    _drawLeftMouse = false;
 
                 }
             }
 
             if (e.Button == MouseButtons.Right)
             {
-                if (DrawRightMouse)
+                if (_drawRightMouse)
                 {
                     EndPointF = e.Location;
                     var mass = (EndPointF.X - StartPointF.X * EndPointF.Y - StartPointF.Y) / 10;
                     CreatePhysicsObject(PhysicsObject.Type.Box, StartPointF, EndPointF, (int)mass, false);
+                    _drawRightMouse = false;
                 }
             }
         }
 
-        private void stopDragObject()
+        private void GameCanvas_MouseMove(object sender, MouseEventArgs e)
         {
-            physicsSystem.ReleaseActiveObject();
-            grabbing = false;
+            _mousePos = e.Location;
         }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-
-            //Size size = new Size(10, 10);
-            //for (var a = 0; a <= 180; a += 5)
-            //{
-            //    var x = 200 * Math.Cos(a * Math.PI / 180) + 300;
-            //    var y = 200 * Math.Sin(a * Math.PI / 180) + 300;
-
-            //    var p = new PointF((float)x, (float)y);
-
-            //    CreatePhysicsObject(PhysicsObject.Type.Box, p, Radius, 1000, true);
-            //}
+        #endregion
 
 
-            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(65, 0), new PointF(0, pictureBox1.Height), 1000000, true);
-            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(pictureBox1.Width, 0), new PointF(pictureBox1.Width - 65, pictureBox1.Height), 1000000, true);
-            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, 0), new PointF(pictureBox1.Width, 65), 1000000, true);
-            CreatePhysicsObject(PhysicsObject.Type.Box, new PointF(0, pictureBox1.Height), new PointF(pictureBox1.Width, pictureBox1.Height - 65), 1000000, true);
-
-            CreatePhysicsObject(PhysicsObject.Type.Circle, new PointF(300, 100), 40, 10000, false);
-            for (int i = 0; i < 500; i += 30)
-            {
-                for (int j = 0; j < 200; j += 30)
-                {
-                    CreatePhysicsObject(PhysicsObject.Type.Circle, new PointF(i + 300, j + 100), Radius, 500, false);
-                }
-            }
-
-        }
-
-        private void Form_KeyDown(object sender, KeyEventArgs e)
+        #region KeyboardEvents
+        private void FormMainWindow_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Space)
             {
-                physicsSystem.freezeAll();
+                _physicsSystem.freezeAll();
+            }
+            if (e.KeyCode == Keys.W)
+            {
+                _physicsSystem.freezeAll();
             }
         }
+        #endregion
         
     }
 }

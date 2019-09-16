@@ -1,10 +1,9 @@
-﻿using System.Drawing;
-using physics.Engine.Classes;
+﻿using physics.Engine.Structs;
 
-namespace physics.Engine.Structs
+namespace physics.Engine.Classes
 {
     
-    public struct Manifold
+    public class Manifold
     {
         public PhysicsObject A;
         public PhysicsObject B;
