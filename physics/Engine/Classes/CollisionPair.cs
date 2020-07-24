@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace physics.Engine.Classes
 {
-    class CollisionPair
+    public class CollisionPair
     {
         public readonly PhysicsObject A;
         public readonly PhysicsObject B;

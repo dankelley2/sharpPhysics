@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.1082
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "physics", "physics\physics.csproj", "{394D2D64-62E0-419A-966E-0C6E8CA39F73}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ARNet.Physics", "physics\ARNet.Physics.csproj", "{394D2D64-62E0-419A-966E-0C6E8CA39F73}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,5 +18,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9BFC699D-1151-4628-8F6E-B30C6938869D}
 	EndGlobalSection
 EndGlobal

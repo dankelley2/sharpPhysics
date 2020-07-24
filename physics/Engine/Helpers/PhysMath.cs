@@ -35,6 +35,26 @@ namespace physics.Engine.Helpers
             p2 = new_p2;
         }
 
+        public static void Clamp(ref Vec2 vector, Vec2 min, Vec2 max)
+        {
+            vector.X = Math.Max(min.X, Math.Min(max.X, vector.X));
+            vector.Y = Math.Max(min.Y, Math.Min(max.Y, vector.Y));
+        }
+
+        public static void RoundToZero(ref Vec2 vector, float cutoff)
+        {
+            if (vector.Length < cutoff)
+            {
+                vector.X = 0;
+                vector.Y = 0;
+            }
+        }
+
+        public static float RadiansToDegrees(this float rads)
+        {
+            return (float)(180 / Math.PI) * rads;
+        }
+
     }
 
 }

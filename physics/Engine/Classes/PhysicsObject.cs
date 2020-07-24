@@ -13,6 +13,7 @@ namespace physics.Engine.Classes
             Circle
         }
 
+        public aShader Shader;
         public bool Locked;
         public AABB Aabb;
         public Vec2 Velocity;
@@ -24,7 +25,7 @@ namespace physics.Engine.Classes
         public float Mass;
         public float IMass;
 
-        public PhysicsObject(AABB boundingBox, Type t, float r, float m, bool locked)
+        public PhysicsObject(AABB boundingBox, Type t, float r, bool locked, aShader shader, float m = 0)
         {
             Velocity = new Vec2(0, 0);
             Aabb = boundingBox;
@@ -34,12 +35,14 @@ namespace physics.Engine.Classes
             Center = new Vec2(Pos.X + Width / 2, Pos.Y + Height / 2);
             ShapeType = t;
             Restitution = r;
-            Mass = m;
+            Mass = (int)m == 0 ? Aabb.Area : m;
             IMass = 1 / Mass;
             Locked = locked;
+            Shader = shader;
         }
 
         public Type ShapeType { get; set; }
+        public Manifold LastCollision { get; internal set; }
 
         public bool Contains(PointF p)
         {

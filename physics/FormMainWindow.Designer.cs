@@ -34,13 +34,12 @@
             // 
             // GameCanvas
             // 
-            this.GameCanvas.BackColor = System.Drawing.SystemColors.ButtonHighlight;
-            this.GameCanvas.BackgroundImage = global::physics.Properties.Resources.poolTable;
+            this.GameCanvas.BackColor = System.Drawing.SystemColors.ActiveCaptionText;
             this.GameCanvas.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
             this.GameCanvas.Dock = System.Windows.Forms.DockStyle.Fill;
             this.GameCanvas.Location = new System.Drawing.Point(0, 0);
             this.GameCanvas.Name = "GameCanvas";
-            this.GameCanvas.Size = new System.Drawing.Size(971, 566);
+            this.GameCanvas.Size = new System.Drawing.Size(822, 719);
             this.GameCanvas.TabIndex = 0;
             this.GameCanvas.TabStop = false;
             this.GameCanvas.Paint += new System.Windows.Forms.PaintEventHandler(this.GameCanvas_DrawGame);
@@ -52,7 +51,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(971, 566);
+            this.ClientSize = new System.Drawing.Size(822, 719);
             this.Controls.Add(this.GameCanvas);
             this.DoubleBuffered = true;
             this.Name = "FormMainWindow";

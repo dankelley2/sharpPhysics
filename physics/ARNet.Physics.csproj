@@ -8,7 +8,7 @@
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>physics</RootNamespace>
-    <AssemblyName>physics</AssemblyName>
+    <AssemblyName>ARNet.Physics</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -48,6 +48,9 @@
   <ItemGroup>
     <Compile Include="Engine\Classes\CollisionPair.cs" />
     <Compile Include="Engine\Classes\Controller.cs" />
+    <Compile Include="Engine\Classes\Templates\ActionTemplates.cs" />
+    <Compile Include="Engine\Classes\Templates\ObjectTemplates.cs" />
+    <Compile Include="Engine\Shader.cs" />
     <Compile Include="Engine\Structs\Vec2.cs" />
     <Compile Include="Engine\Collision.cs" />
     <Compile Include="Engine\PhysicsSystem.cs" />
@@ -95,6 +98,7 @@
   <ItemGroup>
     <None Include="Resources\blackPoolBall_30px.png" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

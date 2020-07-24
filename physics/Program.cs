@@ -18,5 +18,9 @@ namespace physics
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new FormMainWindow());
         }
+
+        
+
+
     }
 }

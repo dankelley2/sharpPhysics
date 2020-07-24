@@ -1,88 +1,230 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
 using physics.Engine.Classes;
+using physics.Engine.Helpers;
 using physics.Engine.Structs;
 
 namespace physics.Engine
 {
-    internal class PhysicsSystem
+    public class PhysicsSystem
     {
-
-        public const float FPS = 10;
-        private const float _dt = 1 / FPS;
-        private float accumulator = 0;
-        private long frameStart = 0;
-
-        public PhysicsObject ActiveObject;
-        public Queue<PhysicsObject> RemovalQueue = new Queue<PhysicsObject>();
-        public List<PhysicsObject> StaticObjects = new List<PhysicsObject>();
-        public List<CollisionPair> Pairs = new List<CollisionPair>();
+        #region Public Properties
 
         public Vec2 Gravity { get; set; }
-        public Vec2 GravityPoint { get; set; }
-        public bool UsePointGravity { get; set; }
+
         public float Friction { get; set; }
+
+        #endregion
+
+        #region Local Declarations
+
+        public static PhysicsObject ActiveObject;
+
+        public static readonly List<aShader> ListShaders = new List<aShader>();
+
+        public static readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
+               
+        public static readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
+               
+        public static readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
+               
+        public static readonly Queue<PhysicsObject> RemovalQueue = new Queue<PhysicsObject>();
+
+        #endregion
+
+        #region Constructors
 
         public PhysicsSystem()
         {
-            Gravity = new Vec2 { X = 0, Y = .2F };
-            Friction = .99F;
+            Gravity = new Vec2 {X = 0, Y = .1F};
+            Friction = .995F;
+        }
+
+        #endregion
+
+        #region Public Methods
+
+
+        public static PhysicsObject CreateStaticCircle(Vec2 loc, int radius, float restitution, bool locked, aShader shader)
+        {
+            var oAabb = new AABB
+            {
+                Min = new Vec2 { X = loc.X - radius, Y = loc.Y - radius },
+                Max = new Vec2 { X = loc.X + radius, Y = loc.Y + radius }
+            };
+            PhysMath.CorrectBoundingBox(ref oAabb);
+            var obj = new PhysicsObject(oAabb, PhysicsObject.Type.Circle, restitution, locked, shader);
+            ListStaticObjects.Add(obj);
+            return obj;
+        }
+
+        public static PhysicsObject CreateStaticBox(Vec2 start, Vec2 end, bool locked, aShader shader, float mass)
+        {
+            var oAabb = new AABB
+            {
+                Min = new Vec2 { X = start.X, Y = start.Y },
+                Max = new Vec2 { X = end.X, Y = end.Y }
+            };
+            PhysMath.CorrectBoundingBox(ref oAabb);
+            var obj = new PhysicsObject(oAabb, PhysicsObject.Type.Box, .95F, locked, shader, mass);
+            ListStaticObjects.Add(obj);
+            return obj;
+        }
+
+        public bool ActivateAtPoint(PointF p)
+        {
+            ActiveObject = CheckObjectAtPoint(p);
+
+            if (ActiveObject == null || ActiveObject.Locked)
+            {
+                ActiveObject = null;
+                return false;
+            }
+
+            return true;
+        }
+
+        public void AddVelocityToActive(Vec2 velocityDelta)
+        {
+            if (ActiveObject == null)
+            {
+                return;
+            }
+
+            ActiveObject.Velocity += velocityDelta;
+        }
+
+        public void FreezeStaticObjects()
+        {
+            foreach (var physicsObject in ListStaticObjects)
+            {
+                physicsObject.Velocity = new Vec2 {X = 0, Y = 0};
+            }
+        }
+
+        public PointF GetActiveObjectCenter()
+        {
+            if (ActiveObject == null)
+            {
+                return new PointF();
+            }
+
+            return new PointF(ActiveObject.Center.X, ActiveObject.Center.Y);
+        }
+
+        public void MoveActiveTowardsPoint(Vec2 point)
+        {
+            if (ActiveObject == null)
+            {
+                return;
+            }
+
+            var delta = ActiveObject.Center - point;
+            AddVelocityToActive(-delta / 100);
+        }
+
+        public void ReleaseActiveObject()
+        {
+            ActiveObject = null;
+        }
+
+        public void RemoveActiveObject()
+        {
+            ListStaticObjects.Remove(ActiveObject);
+            ActiveObject = null;
         }
 
         public void Tick(long elapsedTime)
         {
-            //accumulator += elapsedTime - frameStart;
-            //frameStart = elapsedTime;
-
-            ////Avoid accumulator spiral of death by clamping
-            //if (accumulator > 0.2f)
-            //    accumulator = 0.2f;
-
-            //while (accumulator > _dt)
-            //{
             BroadPhase_GeneratePairs();
-            UpdatePhysics(_dt);
+            UpdatePhysics();
             RemoveOutOfScopeObjects();
-            //    accumulator -= _dt;
-            //}
         }
 
-        private void BroadPhase_GeneratePairs()
+        #endregion
+
+        #region Private Methods
+
+        private void AddGravity(PhysicsObject obj)
         {
-            Pairs.Clear();
+            obj.Velocity += GetGravityVector(obj);
+        }
 
-            AABB a_bb;
-            AABB b_bb;
-
-            PhysicsObject A;
-            PhysicsObject B;
-
-            for (int i = 0; i < StaticObjects.Count; i++)
+        private void ApplyConstants(PhysicsObject obj)
+        {
+            if (obj.Locked)
             {
-                for (int j = i; j < StaticObjects.Count; j++)
-                {
-                    if (j == i) { continue; }
+                return;
+            }
 
-                    A = StaticObjects[i];
-                    B = StaticObjects[j];
+            AddGravity(obj);
+            obj.Velocity *= Friction;
 
-                    a_bb = A.Aabb;
-                    b_bb = B.Aabb;
-
-                    if (Collision.AABBvsAABB(a_bb, b_bb))
-                    {
-                        Pairs.Add(new CollisionPair(A,B));
-                    }
-                }
+            if (obj.Center.Y > 2000 || obj.Center.Y < -2000 || obj.Center.X > 2000 || obj.Center.X < -2000)
+            {
+                RemovalQueue.Enqueue(obj);
             }
         }
 
-        private void UpdatePhysics(float timeDelta)
+        private Vec2 CalculatePointGravity(PhysicsObject obj)
         {
-            foreach (var pair in Pairs)
+            var forces = new Vec2(0, 0);
+
+            if (obj.Locked)
+            {
+                return forces;
+            }
+
+            foreach (var gpt in ListGravityObjects)
+            {
+                var diff = gpt.Center - obj.Center;
+                PhysMath.RoundToZero(ref diff, 5F);
+
+                //apply inverse square law
+                var falloffMultiplier = (gpt.Mass / 1000) / diff.LengthSquared;
+
+                diff.X = (int) diff.X == 0 ? 0 : diff.X * falloffMultiplier;
+                diff.Y = (int) diff.Y == 0 ? 0 : diff.Y * falloffMultiplier;
+
+                if (diff.Length > .005F)
+                {
+                    forces += diff;
+                }
+            }
+
+            return forces;
+        }
+
+        private PhysicsObject CheckObjectAtPoint(PointF p)
+        {
+            foreach (var physicsObject in ListStaticObjects)
+            {
+                if (physicsObject.Contains(p))
+                {
+                    return physicsObject;
+                }
+            }
+
+            return null;
+        }
+
+        private Vec2 GetGravityVector(PhysicsObject obj)
+        {
+            return CalculatePointGravity(obj) + Gravity;
+        }
+
+        private void RemoveOutOfScopeObjects()
+        {
+            if (RemovalQueue.Count > 0)
+            {
+                ListStaticObjects.Remove(RemovalQueue.Dequeue());
+            }
+        }
+
+        private void UpdatePhysics()
+        {
+            foreach (var pair in ListCollisionPairs)
             {
                 var objA = pair.A;
                 var objB = pair.B;
@@ -121,6 +263,7 @@ namespace physics.Engine
                         }
                     }
                 }
+
                 //Circle Circle
                 else
                 {
@@ -132,131 +275,62 @@ namespace physics.Engine
                         }
                     }
                 }
-                
-                    //Resolve Collision
+
+                //Resolve Collision
                 if (collision)
                 {
-
                     Collision.ResolveCollision(ref m);
                     Collision.PositionalCorrection(ref m);
+                    objA.LastCollision = m;
+                    objB.LastCollision = m;
                 }
             }
 
-            for (int i = 0; i < StaticObjects.Count; i++)
+            for (var i = 0; i < ListStaticObjects.Count; i++)
             {
-                ApplyConstants(StaticObjects[i]);
-                StaticObjects[i].Move();
-            }
-        }
-        
-        private void RemoveOutOfScopeObjects()
-        {
-            if (RemovalQueue.Count > 0)
-            {
-                StaticObjects.Remove(RemovalQueue.Dequeue());
+                ApplyConstants(ListStaticObjects[i]);
+                ListStaticObjects[i].Move();
             }
         }
 
-        private void ApplyConstants(PhysicsObject obj)
+        #endregion
+
+        #region Private Events
+
+        private void BroadPhase_GeneratePairs()
         {
-            if (obj.Locked) { return;}
-            
-            AddGravity(obj);
-            obj.Velocity *= Friction;
-            if (obj.Center.Y > 2000 || obj.Center.Y < -2000 || obj.Center.X > 2000 || obj.Center.X < -2000)
+            ListCollisionPairs.Clear();
+
+            AABB a_bb;
+            AABB b_bb;
+
+            PhysicsObject A;
+            PhysicsObject B;
+
+            for (var i = 0; i < ListStaticObjects.Count; i++)
             {
-                RemovalQueue.Enqueue(obj);
-            }
-        }
-
-        private void AddGravity(PhysicsObject obj)
-        {
-            obj.Velocity = obj.Velocity + GetGravityVector(obj);
-        }
-
-        #region NonEssentials
-
-        private Vec2 GetGravityVector(PhysicsObject obj)
-        {
-            return UsePointGravity ? (GravityPoint - obj.Center) / 100 : Gravity;
-        }
-
-        public bool ActivateAtPoint(PointF p)
-        {
-            ActiveObject = CheckObjectAtPoint(p);
-            if (ActiveObject == null || ActiveObject.Locked)
-            {
-                ActiveObject = null;
-                return false;
-            }
-
-            return true;
-        }
-
-        public void ReleaseActiveObject()
-        {
-            ActiveObject = null;
-        }
-
-        public void MoveActiveTowardsPoint(Vec2 point)
-        {
-            if (ActiveObject == null)
-            {
-                return;
-            }
-
-            var delta = ActiveObject.Center - point;
-            AddVelocityToActive(-delta / 100);
-        }
-
-        public PointF getActiveObjectCenter()
-        {
-            if (ActiveObject == null)
-            {
-                return new PointF();
-            }
-
-            return new PointF(ActiveObject.Center.X, ActiveObject.Center.Y);
-        }
-
-        public void removeActiveObject()
-        {
-            StaticObjects.Remove(ActiveObject);
-            ActiveObject = null;
-        }
-
-        public void freezeAll()
-        {
-            foreach (var physicsObject in StaticObjects)
-            {
-                physicsObject.Velocity = new Vec2 { X = 0, Y = 0 };
-            }
-        }
-
-        public void AddVelocityToActive(Vec2 velocityDelta)
-        {
-            if (ActiveObject == null)
-            {
-                return;
-            }
-
-            ActiveObject.Velocity += velocityDelta;
-        }
-
-        private PhysicsObject CheckObjectAtPoint(PointF p)
-        {
-            foreach (var physicsObject in StaticObjects)
-            {
-                if (physicsObject.Contains(p))
+                ListStaticObjects[i].LastCollision = null;
+                for (var j = i; j < ListStaticObjects.Count; j++)
                 {
-                    return physicsObject;
+                    if (j == i)
+                    {
+                        continue;
+                    }
+
+                    A = ListStaticObjects[i];
+                    B = ListStaticObjects[j];
+
+                    a_bb = A.Aabb;
+                    b_bb = B.Aabb;
+
+                    if (Collision.AABBvsAABB(a_bb, b_bb))
+                    {
+                        ListCollisionPairs.Add(new CollisionPair(A, B));
+                    }
                 }
             }
-
-            return null;
         }
 
         #endregion
     }
-
 }
