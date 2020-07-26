@@ -24,6 +24,12 @@ namespace physics.Engine.Classes.ObjectTemplates
         {
             return PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), 5, .95F, false, shaderBallVelocity);
         }
+        public static PhysicsObject CreateSmallBall_Magnet(float originX, float originY)
+        {
+            var oPhysicsObject = PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), 5, .95F, false, shaderBallVelocity);
+            PhysicsSystem.ListGravityObjects.Add(oPhysicsObject);
+            return oPhysicsObject;
+        }
 
         public static PhysicsObject CreateMedBall(float originX, float originY)
         {

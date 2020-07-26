@@ -74,7 +74,7 @@ namespace physics.Engine.Structs
 
         public static Vec2 operator *(Vec2 left, float right)
         {
-            return new Vec2 {X = left.X * right, Y = left.Y * right};
+            return new Vec2 { X = left.X * right, Y = left.Y * right };
         }
 
         public static Vec2 operator /(Vec2 left, Vec2 right)

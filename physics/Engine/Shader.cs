@@ -90,7 +90,7 @@ namespace physics.Engine
         {
             var origin = obj.Aabb.Min;
             int r, gee, b;
-            double particleSpeed = 220 - Math.Min((int)obj.Velocity.LengthSquared, 220);
+            double particleSpeed = 220 - Math.Min((int)obj.Velocity.Length, 220);
             ColorUtil.HsvToRgb(particleSpeed, 1, 1, out r, out gee, out b);
             g.FillEllipse(new SolidBrush(Color.FromArgb(255, r, gee, b)), origin.X, origin.Y, obj.Width, obj.Height);
         }
@@ -135,7 +135,7 @@ namespace physics.Engine
             Path.Reset();
 
             // calculate stretch and rotation
-            var stretchFactor = Math.Max(1,obj.Velocity.Length/5);
+            var stretchFactor = Math.Max(1,obj.Velocity.Length/50);
             Rotation =((float)Math.Atan2(obj.Velocity.Y, obj.Velocity.X)).RadiansToDegrees();
 
             // Transform identity mtx to position

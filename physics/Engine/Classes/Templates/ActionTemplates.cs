@@ -15,7 +15,7 @@ namespace physics.Engine.Classes.ObjectTemplates
         {
             physSystem.ActivateAtPoint(StartPointF);
             Vec2 delta = (new Vec2 { X = EndPointF.X, Y = EndPointF.Y } -
-                          new Vec2 { X = StartPointF.X, Y = StartPointF.Y }) / 10;
+                          new Vec2 { X = StartPointF.X, Y = StartPointF.Y });
             physSystem.AddVelocityToActive(-delta);
         }
     }

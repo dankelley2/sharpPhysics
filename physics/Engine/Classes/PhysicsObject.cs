@@ -57,16 +57,16 @@ namespace physics.Engine.Classes
             return false;
         }
 
-        public void Move()
+        public void Move(float dt)
         {
-            if (Locked)
+            if (Mass >= 1000000)
             {
                 return;
             }
             RoundSpeedToZero();
 
-            var p1 = Aabb.Min + (Velocity/2);
-            var p2 = Aabb.Max + (Velocity/2);
+            var p1 = Aabb.Min + (Velocity * dt);
+            var p2 = Aabb.Max + (Velocity * dt);
             Aabb = new AABB { Min = p1, Max = p2 };
             Recalculate();
         }
@@ -75,7 +75,8 @@ namespace physics.Engine.Classes
         {
             if (Math.Abs(this.Velocity.X) + Math.Abs(this.Velocity.Y) < .01F)
             {
-                Velocity = new Vec2(0,0);
+                Velocity.X = 0;
+                Velocity.Y = 0;
             }
         }
 
@@ -83,8 +84,10 @@ namespace physics.Engine.Classes
         {
             Width = Aabb.Max.X - Aabb.Min.X;
             Height = Aabb.Max.Y - Aabb.Min.Y;
-            Pos = new Vec2(Aabb.Min.X, Aabb.Min.Y);
-            Center = new Vec2(Pos.X + Width / 2, Pos.Y + Height / 2);
+            Pos.X = Aabb.Min.X;
+            Pos.Y = Aabb.Min.Y;
+            Center.X = Pos.X + Width / 2;
+            Center.Y = Pos.Y + Height / 2;
         }
 
         public void Move(Vec2 dVector)
@@ -94,9 +97,8 @@ namespace physics.Engine.Classes
                 return;
             }
 
-            var p1 = Aabb.Min + dVector;
-            var p2 = Aabb.Max + dVector;
-            Aabb = new AABB { Min = p1, Max = p2 };
+            Aabb.Min = Aabb.Min + dVector;
+            Aabb.Max = Aabb.Max + dVector;
             Recalculate();
         }
     }

@@ -20,7 +20,7 @@ namespace physics
         private readonly Timer _physicsTimer = new Timer();
         private readonly Timer _refreshTimer = new Timer();
         private readonly Stopwatch _stopwatch = new Stopwatch();
-        private readonly PreciseTimer GameLoopTimer = new PreciseTimer();
+        private readonly FastLoop _fastLoop;
 
         private PhysicsSystem _physicsSystem = new PhysicsSystem();
         private bool MOUSE_PRESSED_LEFT = false;
@@ -36,7 +36,6 @@ namespace physics
         private long _msFrameTime;
         private long _msLastFrame;
         private long _msPerDrawCycle;
-        private long _msPhysics;
         private long _msThisFrame;
         private int _radius = 10;
 
@@ -54,22 +53,22 @@ namespace physics
             //_physicsTimer.Enabled = true;
             //_physicsTimer.Interval = 1000 / 90;
             //_physicsTimer.Tick += PhysicsTimer_Tick;
+            _fastLoop = new FastLoop(GameLoop);
             _stopwatch.Start();
         }
 
         private void FormMainWindow_Load(object sender, EventArgs e)
         {
-            System.Windows.Forms.Application.Idle += OnApplicationIdle;
             ObjectTemplates.CreateWall(0, 0, 65, GameCanvas.Height);
             ObjectTemplates.CreateWall(GameCanvas.Width - 65, 0, GameCanvas.Width, GameCanvas.Height);
             ObjectTemplates.CreateWall(0, 0, GameCanvas.Width, 65);
             ObjectTemplates.CreateWall(0, GameCanvas.Height - 65, GameCanvas.Width, GameCanvas.Height);
 
-            for (int i = 0; i < 300; i += 10)
+            for (int i = 0; i < 300; i += 20)
             {
-                for (int j = 0; j < 200; j += 10)
+                for (int j = 0; j < 200; j += 20)
                 {
-                    ObjectTemplates.CreateWater(i + 200, j + 150);
+                    ObjectTemplates.CreateMedBall(i + 200, j + 150);
                 }
             }
 
@@ -91,8 +90,8 @@ namespace physics
             e.Graphics.PixelOffsetMode = PixelOffsetMode.Half;
             e.Graphics.SmoothingMode = SmoothingMode.HighSpeed;
 
-            e.Graphics.DrawString("ms per physics cycle: " + _msPhysics, debugFont, debugBrush,
-                new PointF(80, 70));
+            //e.Graphics.DrawString("ms per physics cycle: " + _msPhysics, debugFont, debugBrush,
+            //    new PointF(80, 70));
             e.Graphics.DrawString("ms total draw time: " + _msPerDrawCycle, debugFont, debugBrush,
                 new PointF(80, 90));
             e.Graphics.DrawString("frame rate: " + 1000 / Math.Max(_msFrameTime, 1), debugFont,
@@ -132,11 +131,12 @@ namespace physics
         #region EngineBindings
         private void DragObject(PointF location)
         {
-            _physicsSystem.MoveActiveTowardsPoint(new Vec2 { X = location.X, Y = location.Y });
+            _physicsSystem.HoldActiveAtPoint(new Vec2 { X = location.X, Y = location.Y });
         }
 
         private void stopDragObject()
         {
+            _physicsSystem.SetVelocityOfActive(new Vec2 { X = 0F, Y = 0F });
             _physicsSystem.ReleaseActiveObject();
             _grabbing = false;
         }
@@ -235,62 +235,18 @@ namespace physics
 
 
 
-        //And the declarations for those two native methods members:        
-        [StructLayout(LayoutKind.Sequential)]
-        public struct Message
-        {
-            public IntPtr hWnd;
-            public IntPtr wParam;
-            public IntPtr lParam;
-            public uint time;
-            public System.Drawing.Point p;
-        }
-
-        //[System.Security.SuppressUnmanagedCodeSecurity] // We won’t use this maliciously
-        //[DllImport("User32.dll", CharSet = CharSet.Auto)]
-        //public static extern bool PeekMessage(ref Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
-
-        //private bool IsAppStillIdle()
-        //{
-        //    Message msg = new Message();
-        //    return !PeekMessage(ref msg, IntPtr.Zero, 0, 0, 0);
-        //}
-
-        const uint QS_MASK = 0x1FF;
-
-        [System.Security.SuppressUnmanagedCodeSecurity] // We won’t use this maliciously
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        static extern uint GetQueueStatus(uint flags);
-
-        private void OnApplicationIdle(object sender, EventArgs e)
-        {
-            while (IsApplicationIdle())
-            {
-                _callback(_timer.GetElapsedTime());
-                GameLoop();
-            }
-        }
-
         private void GameLoop(double elapsedTime)
         {
+            RunEngine(elapsedTime);
+
             if (_stopwatch.ElapsedMilliseconds - _frameTime > 1000 / 60)
             {
                 _frameTime = _stopwatch.ElapsedMilliseconds;
-                RunEngineLoop();
-                RunRenderLoop();
+                Render();
             }
         }
 
-        //https://stackoverflow.com/questions/21692790/code-optimization-causes-null-reference-exception-when-using-peekmessage
-        public static bool IsApplicationIdle()
-        {
-            // The high-order word of the return value indicates
-            // the types of messages currently in the queue. 
-            return 0 == (GetQueueStatus(QS_MASK) >> 16 & QS_MASK);
-        }
-
-
-        private void RunRenderLoop()
+        private void Render()
         {
             InvalidateWindow();
             _msPerDrawCycle = _stopwatch.ElapsedMilliseconds - _frameTime;
@@ -299,14 +255,13 @@ namespace physics
             _msFrameTime = _msThisFrame - _msLastFrame;
         }
 
-        private void RunEngineLoop()
+        private void RunEngine(double elapsedTime)
         {
             if (_grabbing)
             {
                 DragObject(_mousePos);
             }
-            _physicsSystem.Tick(_stopwatch.ElapsedMilliseconds);
-            _msPhysics = _stopwatch.ElapsedMilliseconds - _frameTime;
+            _physicsSystem.Tick(elapsedTime);
         }
     }
 }

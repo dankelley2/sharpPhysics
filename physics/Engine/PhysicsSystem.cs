@@ -11,6 +11,8 @@ namespace physics.Engine
     {
         #region Public Properties
 
+        public float GravityScale = 0.0F;
+
         public Vec2 Gravity { get; set; }
 
         public float Friction { get; set; }
@@ -18,6 +20,12 @@ namespace physics.Engine
         #endregion
 
         #region Local Declarations
+
+
+        public const float FPS = 60;
+        private const float _dt = 1 / FPS;
+        private double accumulator = 0;
+
 
         public static PhysicsObject ActiveObject;
 
@@ -37,8 +45,8 @@ namespace physics.Engine
 
         public PhysicsSystem()
         {
-            Gravity = new Vec2 {X = 0, Y = .1F};
-            Friction = .995F;
+            Gravity = new Vec2 {X = 0, Y = 10F * GravityScale};
+            Friction = 1F;
         }
 
         #endregion
@@ -76,7 +84,7 @@ namespace physics.Engine
         {
             ActiveObject = CheckObjectAtPoint(p);
 
-            if (ActiveObject == null || ActiveObject.Locked)
+            if (ActiveObject == null)
             {
                 ActiveObject = null;
                 return false;
@@ -87,12 +95,21 @@ namespace physics.Engine
 
         public void AddVelocityToActive(Vec2 velocityDelta)
         {
-            if (ActiveObject == null)
+            if (ActiveObject == null || ActiveObject.Mass >= 1000000)
             {
                 return;
             }
 
             ActiveObject.Velocity += velocityDelta;
+        }
+        public void SetVelocityOfActive(Vec2 velocityDelta)
+        {
+            if (ActiveObject == null || ActiveObject.Mass >= 1000000)
+            {
+                return;
+            }
+
+            ActiveObject.Velocity = velocityDelta;
         }
 
         public void FreezeStaticObjects()
@@ -121,7 +138,18 @@ namespace physics.Engine
             }
 
             var delta = ActiveObject.Center - point;
-            AddVelocityToActive(-delta / 100);
+            AddVelocityToActive(-delta / 10000);
+        }
+
+        public void HoldActiveAtPoint(Vec2 point)
+        {
+            if (ActiveObject == null)
+            {
+                return;
+            }
+
+            var delta = ActiveObject.Center - point;
+            SetVelocityOfActive(-delta*10);
         }
 
         public void ReleaseActiveObject()
@@ -135,31 +163,42 @@ namespace physics.Engine
             ActiveObject = null;
         }
 
-        public void Tick(long elapsedTime)
+        public void Tick(double elapsedTime)
         {
-            BroadPhase_GeneratePairs();
-            UpdatePhysics();
-            RemoveOutOfScopeObjects();
+
+            accumulator += elapsedTime;
+
+            //Avoid accumulator spiral of death by clamping
+            if (accumulator > 0.2f)
+                accumulator = 0.2f;
+
+            while (accumulator > _dt)
+            {
+                BroadPhase_GeneratePairs();
+                UpdatePhysics(_dt);
+                RemoveOutOfScopeObjects();
+                accumulator -= _dt;
+            }
         }
 
         #endregion
 
         #region Private Methods
 
-        private void AddGravity(PhysicsObject obj)
+        private void AddGravity(PhysicsObject obj, float dt)
         {
-            obj.Velocity += GetGravityVector(obj);
+            obj.Velocity += GetGravityVector(obj) * dt;
         }
 
-        private void ApplyConstants(PhysicsObject obj)
+        private void ApplyConstants(PhysicsObject obj, float dt)
         {
             if (obj.Locked)
             {
                 return;
             }
 
-            AddGravity(obj);
-            obj.Velocity *= Friction;
+            AddGravity(obj, dt);
+            obj.Velocity -= Friction * dt;
 
             if (obj.Center.Y > 2000 || obj.Center.Y < -2000 || obj.Center.X > 2000 || obj.Center.X < -2000)
             {
@@ -182,7 +221,7 @@ namespace physics.Engine
                 PhysMath.RoundToZero(ref diff, 5F);
 
                 //apply inverse square law
-                var falloffMultiplier = (gpt.Mass / 1000) / diff.LengthSquared;
+                var falloffMultiplier = gpt.Mass / diff.LengthSquared;
 
                 diff.X = (int) diff.X == 0 ? 0 : diff.X * falloffMultiplier;
                 diff.Y = (int) diff.Y == 0 ? 0 : diff.Y * falloffMultiplier;
@@ -222,7 +261,7 @@ namespace physics.Engine
             }
         }
 
-        private void UpdatePhysics()
+        private void UpdatePhysics(float dt)
         {
             foreach (var pair in ListCollisionPairs)
             {
@@ -288,8 +327,8 @@ namespace physics.Engine
 
             for (var i = 0; i < ListStaticObjects.Count; i++)
             {
-                ApplyConstants(ListStaticObjects[i]);
-                ListStaticObjects[i].Move();
+                ApplyConstants(ListStaticObjects[i], dt);
+                ListStaticObjects[i].Move(dt);
             }
         }
 
@@ -309,7 +348,7 @@ namespace physics.Engine
 
             for (var i = 0; i < ListStaticObjects.Count; i++)
             {
-                ListStaticObjects[i].LastCollision = null;
+                //ListStaticObjects[i].LastCollision = null;
                 for (var j = i; j < ListStaticObjects.Count; j++)
                 {
                     if (j == i)
