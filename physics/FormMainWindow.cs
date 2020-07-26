@@ -20,6 +20,7 @@ namespace physics
         private readonly Timer _physicsTimer = new Timer();
         private readonly Timer _refreshTimer = new Timer();
         private readonly Stopwatch _stopwatch = new Stopwatch();
+        private readonly PreciseTimer GameLoopTimer = new PreciseTimer();
 
         private PhysicsSystem _physicsSystem = new PhysicsSystem();
         private bool MOUSE_PRESSED_LEFT = false;
@@ -42,7 +43,6 @@ namespace physics
         Font debugFont = new Font(FontFamily.GenericMonospace, 10);
         SolidBrush debugBrush = new SolidBrush(Color.WhiteSmoke);
         private long _frameTime;
-        private long _engineTime;
 
         public FormMainWindow()
         {
@@ -106,11 +106,11 @@ namespace physics
 
             if (MOUSE_PRESSED_LEFT)
             {
-                var penArrow = new Pen(Color.Green,2);
+                var penArrow = new Pen(Color.Green, 2);
                 penArrow.EndCap = LineCap.ArrowAnchor;
                 penArrow.StartCap = LineCap.Round;
                 e.Graphics.DrawLine(penArrow, _mousePos, StartPointF);
-                e.Graphics.DrawEllipse(new Pen(Color.DarkBlue), (int)(StartPointF.X-_radius), (int)(StartPointF.Y-_radius), _radius*2, _radius*2);
+                e.Graphics.DrawEllipse(new Pen(Color.DarkBlue), (int)(StartPointF.X - _radius), (int)(StartPointF.Y - _radius), _radius * 2, _radius * 2);
             }
 
             foreach (var o in PhysicsSystem.ListStaticObjects)
@@ -132,7 +132,7 @@ namespace physics
         #region EngineBindings
         private void DragObject(PointF location)
         {
-            _physicsSystem.MoveActiveTowardsPoint(new Vec2 {X = location.X, Y = location.Y});
+            _physicsSystem.MoveActiveTowardsPoint(new Vec2 { X = location.X, Y = location.Y });
         }
 
         private void stopDragObject()
@@ -246,32 +246,49 @@ namespace physics
             public System.Drawing.Point p;
         }
 
+        //[System.Security.SuppressUnmanagedCodeSecurity] // We won’t use this maliciously
+        //[DllImport("User32.dll", CharSet = CharSet.Auto)]
+        //public static extern bool PeekMessage(ref Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
+
+        //private bool IsAppStillIdle()
+        //{
+        //    Message msg = new Message();
+        //    return !PeekMessage(ref msg, IntPtr.Zero, 0, 0, 0);
+        //}
+
+        const uint QS_MASK = 0x1FF;
+
         [System.Security.SuppressUnmanagedCodeSecurity] // We won’t use this maliciously
-        [DllImport("User32.dll", CharSet = CharSet.Auto)]
-        public static extern bool PeekMessage(out Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        static extern uint GetQueueStatus(uint flags);
 
         private void OnApplicationIdle(object sender, EventArgs e)
         {
-            while (IsAppStillIdle())
+            while (IsApplicationIdle())
             {
-                if (_stopwatch.ElapsedMilliseconds - _frameTime > 1000 / 45)
-                {
-                    _frameTime = _stopwatch.ElapsedMilliseconds;
-                    RunRenderLoop();
-                }
-
-                if (_stopwatch.ElapsedMilliseconds - _engineTime > 1000 / 100)
-                {
-                    _engineTime = _stopwatch.ElapsedMilliseconds;
-                    RunEngineLoop();
-                }
+                _callback(_timer.GetElapsedTime());
+                GameLoop();
             }
         }
-        private bool IsAppStillIdle()
+
+        private void GameLoop(double elapsedTime)
         {
-            Message msg;
-            return !PeekMessage(out msg, IntPtr.Zero, 0, 0, 0);
+            if (_stopwatch.ElapsedMilliseconds - _frameTime > 1000 / 60)
+            {
+                _frameTime = _stopwatch.ElapsedMilliseconds;
+                RunEngineLoop();
+                RunRenderLoop();
+            }
         }
+
+        //https://stackoverflow.com/questions/21692790/code-optimization-causes-null-reference-exception-when-using-peekmessage
+        public static bool IsApplicationIdle()
+        {
+            // The high-order word of the return value indicates
+            // the types of messages currently in the queue. 
+            return 0 == (GetQueueStatus(QS_MASK) >> 16 & QS_MASK);
+        }
+
 
         private void RunRenderLoop()
         {
@@ -282,7 +299,6 @@ namespace physics
             _msFrameTime = _msThisFrame - _msLastFrame;
         }
 
-
         private void RunEngineLoop()
         {
             if (_grabbing)
@@ -290,7 +306,7 @@ namespace physics
                 DragObject(_mousePos);
             }
             _physicsSystem.Tick(_stopwatch.ElapsedMilliseconds);
-            _msPhysics = _stopwatch.ElapsedMilliseconds - _engineTime;
+            _msPhysics = _stopwatch.ElapsedMilliseconds - _frameTime;
         }
     }
 }

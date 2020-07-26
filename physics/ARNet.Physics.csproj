@@ -26,7 +26,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
+    <Optimize>false</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
@@ -50,6 +50,7 @@
     <Compile Include="Engine\Classes\Controller.cs" />
     <Compile Include="Engine\Classes\Templates\ActionTemplates.cs" />
     <Compile Include="Engine\Classes\Templates\ObjectTemplates.cs" />
+    <Compile Include="Engine\Helpers\AccurateTimer.cs" />
     <Compile Include="Engine\Shader.cs" />
     <Compile Include="Engine\Structs\Vec2.cs" />
     <Compile Include="Engine\Collision.cs" />
