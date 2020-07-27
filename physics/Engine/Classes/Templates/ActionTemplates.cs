@@ -18,5 +18,13 @@ namespace physics.Engine.Classes.ObjectTemplates
                           new Vec2 { X = StartPointF.X, Y = StartPointF.Y });
             physSystem.AddVelocityToActive(-delta);
         }
+
+        public static void changeShader(PhysicsSystem physSystem, aShader shader)
+        {
+            foreach(PhysicsObject obj in physSystem.GetMoveableObjects())
+            {
+                obj.Shader = shader;
+            }
+        }
     }
 }

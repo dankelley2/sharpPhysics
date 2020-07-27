@@ -46,13 +46,6 @@ namespace physics
         public FormMainWindow()
         {
             InitializeComponent();
-            //_refreshTimer.Enabled = true;
-            //_refreshTimer.Interval = 1000 / 60;
-            //_refreshTimer.Tick += RefreshTimer_Tick;
-
-            //_physicsTimer.Enabled = true;
-            //_physicsTimer.Interval = 1000 / 90;
-            //_physicsTimer.Tick += PhysicsTimer_Tick;
             _fastLoop = new FastLoop(GameLoop);
             _stopwatch.Start();
         }
@@ -64,16 +57,15 @@ namespace physics
             ObjectTemplates.CreateWall(0, 0, GameCanvas.Width, 65);
             ObjectTemplates.CreateWall(0, GameCanvas.Height - 65, GameCanvas.Width, GameCanvas.Height);
 
-            for (int i = 0; i < 300; i += 20)
+            for (int i = 0; i < 400; i += 10)
             {
-                for (int j = 0; j < 200; j += 20)
+                for (int j = 0; j < 200; j += 10)
                 {
-                    ObjectTemplates.CreateMedBall(i + 200, j + 150);
+                    ObjectTemplates.CreateSmallBall(i + 200, j + 150);
                 }
             }
 
-            //CreatePhysicsObject(PhysicsObject.Type.Circle, new PointF(200, 150), 10, false);
-
+            ObjectTemplates.CreateAttractor(400, 450);
         }
 
         private void InvalidateWindow()
@@ -222,11 +214,39 @@ namespace physics
             {
                 _physicsSystem.FreezeStaticObjects();
             }
+
+            //Change to info Shader
+            if (e.KeyCode == Keys.I)
+            {
+                ActionTemplates.changeShader(_physicsSystem, new ShaderInfo());
+            }
+
+            //Change to PoolBall
+            if (e.KeyCode == Keys.P)
+            {
+                ActionTemplates.changeShader(_physicsSystem, new ShaderBall());
+            }
+
+            //Change to Water
             if (e.KeyCode == Keys.W)
             {
-                _physicsSystem.FreezeStaticObjects();
+                ActionTemplates.changeShader(_physicsSystem, new ShaderWater());
             }
-            if (e.KeyCode == Keys.P)
+
+            //Change to Velocity Shader
+            if (e.KeyCode == Keys.V)
+            {
+                ActionTemplates.changeShader(_physicsSystem, new ShaderBallVelocity());
+            }
+
+            //Create Gravity Ball
+            if (e.KeyCode == Keys.G)
+            {
+                ObjectTemplates.CreateAttractor(_mousePos.X, _mousePos.Y);
+            }
+
+            //Create Gravity Ball
+            if (e.KeyCode == Keys.G)
             {
                 ObjectTemplates.CreateAttractor(_mousePos.X, _mousePos.Y);
             }
@@ -241,13 +261,13 @@ namespace physics
 
             if (_stopwatch.ElapsedMilliseconds - _frameTime > 1000 / 60)
             {
-                _frameTime = _stopwatch.ElapsedMilliseconds;
                 Render();
             }
         }
 
         private void Render()
         {
+            _frameTime = _stopwatch.ElapsedMilliseconds;
             InvalidateWindow();
             _msPerDrawCycle = _stopwatch.ElapsedMilliseconds - _frameTime;
             _msLastFrame = _msThisFrame;

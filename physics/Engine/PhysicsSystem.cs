@@ -11,7 +11,7 @@ namespace physics.Engine
     {
         #region Public Properties
 
-        public float GravityScale = 0.0F;
+        public float GravityScale = 10F;
 
         public Vec2 Gravity { get; set; }
 
@@ -32,7 +32,19 @@ namespace physics.Engine
         public static readonly List<aShader> ListShaders = new List<aShader>();
 
         public static readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
-               
+
+        internal IEnumerable<PhysicsObject> GetMoveableObjects()
+        {
+            for(int i = ListStaticObjects.Count-1; i >= 0; i--)
+            {
+                var obj = ListStaticObjects[i];
+                if (! obj.Locked && obj.Mass < 1000000)
+                {
+                    yield return obj;
+                }
+            }
+        }
+
         public static readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
                
         public static readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
@@ -159,8 +171,20 @@ namespace physics.Engine
 
         public void RemoveActiveObject()
         {
+            if (ListGravityObjects.Contains(ActiveObject))
+            {
+                ListGravityObjects.Remove(ActiveObject);
+            }
             ListStaticObjects.Remove(ActiveObject);
             ActiveObject = null;
+        }
+
+        public void RemoveAllMoveableObjects()
+        {
+            foreach (PhysicsObject obj in GetMoveableObjects())
+            {
+                RemovalQueue.Enqueue(obj);
+            }
         }
 
         public void Tick(double elapsedTime)
@@ -176,7 +200,7 @@ namespace physics.Engine
             {
                 BroadPhase_GeneratePairs();
                 UpdatePhysics(_dt);
-                RemoveOutOfScopeObjects();
+                ProcessRemovalQueue();
                 accumulator -= _dt;
             }
         }
@@ -253,11 +277,13 @@ namespace physics.Engine
             return CalculatePointGravity(obj) + Gravity;
         }
 
-        private void RemoveOutOfScopeObjects()
+        private void ProcessRemovalQueue()
         {
             if (RemovalQueue.Count > 0)
             {
-                ListStaticObjects.Remove(RemovalQueue.Dequeue());
+                var obj = RemovalQueue.Dequeue();
+                ListStaticObjects.Remove(obj);
+                ListGravityObjects.Remove(obj);
             }
         }
 

@@ -43,11 +43,11 @@ namespace physics.Engine
 
         public override void Draw(PhysicsObject obj, Graphics g)
         {
-            g.FillRectangle(RedPen, obj.Aabb.Min.X, obj.Aabb.Min.Y, obj.Aabb.Max.X - obj.Aabb.Min.X, obj.Aabb.Max.Y - obj.Aabb.Min.Y);
         }
 
         public override void PostDraw(PhysicsObject obj, Graphics g)
         {
+            g.FillRectangle(RedPen, obj.Aabb.Min.X, obj.Aabb.Min.Y, obj.Aabb.Max.X - obj.Aabb.Min.X, obj.Aabb.Max.Y - obj.Aabb.Min.Y);
         }
     }
 
@@ -55,7 +55,7 @@ namespace physics.Engine
     {
         public static readonly SolidBrush BrushLightGray = new SolidBrush(Color.LightGray);
         public static readonly SolidBrush BrushWhite = new SolidBrush(Color.White);
-        public static readonly Pen PenVelocity = new Pen(Color.Red) { Color = Color.FromArgb(50, 255, 0, 0), Width = 1, EndCap = LineCap.ArrowAnchor };
+        public static readonly Pen PenVelocity = new Pen(Color.Red) { Color = Color.FromArgb(150, 255, 0, 0), Width = 2, EndCap = LineCap.ArrowAnchor };
 
         public override void PreDraw(PhysicsObject obj, Graphics g)
         {
@@ -68,11 +68,40 @@ namespace physics.Engine
             var origin = obj.Aabb.Min;
             g.FillEllipse(BrushLightGray, origin.X, origin.Y, obj.Width, obj.Height);
             g.FillEllipse(BrushWhite, origin.X + obj.Width * .1F, origin.Y + obj.Height * .1F, obj.Width * .6F, obj.Height * .6F);
-            g.DrawLine(PenVelocity, obj.Center.X, obj.Center.Y, obj.Center.X + obj.Velocity.X * 10, obj.Center.Y + obj.Velocity.Y * 10);
+            g.DrawLine(PenVelocity, obj.Center.X, obj.Center.Y, obj.Center.X + obj.Velocity.X / 10, obj.Center.Y + obj.Velocity.Y / 10);
         }
 
         public override void PostDraw(PhysicsObject obj, Graphics g)
         {
+        }
+    }
+
+    public class ShaderInfo : aShader
+    {
+        private static readonly Pen PenWhite = new Pen(Color.White);
+        private static readonly Pen PenBlue = new Pen(Color.Blue);
+        private static readonly Pen PenVelocity = new Pen(Color.Red) { Color = Color.FromArgb(200, 255, 0, 0), Width = 2, EndCap = LineCap.ArrowAnchor };
+        private static readonly SolidBrush BrushTransparentBlack = new SolidBrush(Color.FromArgb(150, 0, 0, 0));
+        private static readonly Font font = new Font(FontFamily.GenericSansSerif, 7);
+        private static readonly SolidBrush fontBrush = new SolidBrush(Color.Green);
+        public override void PreDraw(PhysicsObject obj, Graphics g)
+        {
+            g.DrawRectangle(PenBlue, obj.Aabb.Min.X, obj.Aabb.Min.Y, obj.Width, obj.Height);
+        }
+
+        public override void Draw(PhysicsObject obj, Graphics g)
+        {
+            var origin = obj.Aabb.Min;
+            g.DrawEllipse(PenWhite, origin.X, origin.Y, obj.Width, obj.Height);
+            g.DrawLine(PenVelocity, obj.Center.X, obj.Center.Y, obj.Center.X + obj.Velocity.X / 5, obj.Center.Y + obj.Velocity.Y / 5);
+        }
+
+        public override void PostDraw(PhysicsObject obj, Graphics g)
+        {
+            var info = $"{obj.GetHashCode()}{(char)10}vX:{obj.Velocity.X}{(char)10}vY:{obj.Velocity.Y}{(char)10}";
+            var fontSize = g.MeasureString(info, font);
+            g.FillRectangle(BrushTransparentBlack, obj.Aabb.Min.X - 2, obj.Aabb.Min.Y - 52, fontSize.Width + 4, fontSize.Height + 4);
+            g.DrawString(info, font, fontBrush, new PointF(obj.Aabb.Min.X, obj.Aabb.Min.Y - 52));
         }
     }
 
