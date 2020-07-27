@@ -48,7 +48,12 @@ namespace physics.Engine
         public static readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
                
         public static readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
-               
+
+        internal void SetVelocity(PhysicsObject physicsObject, Vec2 velocity)
+        {
+            physicsObject.Velocity = velocity;
+        }
+
         public static readonly Queue<PhysicsObject> RemovalQueue = new Queue<PhysicsObject>();
 
         #endregion
@@ -193,8 +198,8 @@ namespace physics.Engine
             accumulator += elapsedTime;
 
             //Avoid accumulator spiral of death by clamping
-            if (accumulator > 0.2f)
-                accumulator = 0.2f;
+            if (accumulator > 0.1f)
+                accumulator = 0.1f;
 
             while (accumulator > _dt)
             {

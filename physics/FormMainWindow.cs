@@ -17,8 +17,6 @@ namespace physics
 {
     public partial class FormMainWindow : Form
     {
-        private readonly Timer _physicsTimer = new Timer();
-        private readonly Timer _refreshTimer = new Timer();
         private readonly Stopwatch _stopwatch = new Stopwatch();
         private readonly FastLoop _fastLoop;
 
@@ -245,10 +243,10 @@ namespace physics
                 ObjectTemplates.CreateAttractor(_mousePos.X, _mousePos.Y);
             }
 
-            //Create Gravity Ball
-            if (e.KeyCode == Keys.G)
+            //Pop
+            if (e.KeyCode == Keys.OemSemicolon)
             {
-                ObjectTemplates.CreateAttractor(_mousePos.X, _mousePos.Y);
+                ActionTemplates.PopAndMultiply(_physicsSystem);
             }
         }
         #endregion

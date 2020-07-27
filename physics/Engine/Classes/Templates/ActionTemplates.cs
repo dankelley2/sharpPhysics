@@ -26,5 +26,18 @@ namespace physics.Engine.Classes.ObjectTemplates
                 obj.Shader = shader;
             }
         }
+
+        public static void PopAndMultiply(PhysicsSystem physSystem)
+        {
+            foreach(PhysicsObject obj in physSystem.GetMoveableObjects())
+            {
+                physSystem.ActivateAtPoint(new PointF(obj.Center.X, obj.Center.Y));
+                var velocity = obj.Velocity;
+                var origin = obj.Center;
+                physSystem.RemoveActiveObject();
+                physSystem.SetVelocity(ObjectTemplates.CreateSmallBall(origin.X, origin.Y), velocity);
+                physSystem.SetVelocity(ObjectTemplates.CreateSmallBall(origin.X, origin.Y), velocity);
+            }
+        }
     }
 }
