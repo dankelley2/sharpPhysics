@@ -27,9 +27,7 @@ namespace physics.Engine.Structs
 
         public static float DotProduct(Vec2 left, Vec2 right)
         {
-            float[] a = {left.X, left.Y};
-            float[] b = {right.X, right.Y};
-            return a.Zip(b, (x, y) => x * y).Sum();
+            return left.X * right.X + left.Y * right.Y;
         }
 
         public static bool operator ==(Vec2 left, Vec2 right)
