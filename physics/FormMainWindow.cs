@@ -29,8 +29,10 @@ namespace physics
         private bool _grabbing;
         private PointF _mousePos;
 
+        //private FormState formState = new FormState();
+        private Graphics gfxBuffer;
+        private Bitmap bmpBuffer;
 
-        private PointF _mouseThen;
         private long _msFrameTime;
         private long _msLastFrame;
         private long _msPerDrawCycle;
@@ -44,53 +46,59 @@ namespace physics
         public FormMainWindow()
         {
             InitializeComponent();
+            DoubleBuffered = true;
+
+            bmpBuffer = new Bitmap(Size.Width, Size.Height);
+            gfxBuffer = Graphics.FromImage(bmpBuffer);
+
+            SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
+            gfxBuffer.CompositingMode = CompositingMode.SourceOver;
+            gfxBuffer.CompositingQuality = CompositingQuality.HighSpeed;
+            gfxBuffer.InterpolationMode = InterpolationMode.NearestNeighbor;
+            gfxBuffer.PixelOffsetMode = PixelOffsetMode.Half;
+            gfxBuffer.SmoothingMode = SmoothingMode.HighSpeed;
+
             _fastLoop = new FastLoop(GameLoop);
             _stopwatch.Start();
         }
 
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            Render();
+            e.Graphics.DrawImage(bmpBuffer, new Point(0, 0));
+        }
+
         private void FormMainWindow_Load(object sender, EventArgs e)
         {
-            ObjectTemplates.CreateWall(0, 0, 65, GameCanvas.Height);
-            ObjectTemplates.CreateWall(GameCanvas.Width - 65, 0, GameCanvas.Width, GameCanvas.Height);
-            ObjectTemplates.CreateWall(0, 0, GameCanvas.Width, 65);
-            ObjectTemplates.CreateWall(0, GameCanvas.Height - 65, GameCanvas.Width, GameCanvas.Height);
+            ObjectTemplates.CreateWall(0, 0, 20, this.Height);
+            ObjectTemplates.CreateWall(this.Width - 20, 0, this.Width, this.Height);
+            ObjectTemplates.CreateWall(0, 0, this.Width, 20);
+            ObjectTemplates.CreateWall(0, this.Height - 20, this.Width, this.Height);
 
-            for (int i = 0; i < 400; i += 10)
+            for (int i = 0; i < 400; i += 20)
             {
-                for (int j = 0; j < 200; j += 10)
+                for (int j = 0; j < 200; j += 20)
                 {
-                    ObjectTemplates.CreateSmallBall(i + 200, j + 150);
+                    ObjectTemplates.CreateMedBall(i + 200, j + 150);
                 }
             }
 
             ObjectTemplates.CreateAttractor(400, 450);
         }
 
-        private void InvalidateWindow()
+        private void Render()
         {
-            GameCanvas.Refresh();
-        }
+            gfxBuffer.Clear(Color.Black);
 
-        private void GameCanvas_DrawGame(object sender, PaintEventArgs e)
-        {
-            SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
-            e.Graphics.CompositingMode = CompositingMode.SourceOver;
-            e.Graphics.CompositingQuality = CompositingQuality.HighSpeed;
-            e.Graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
-            e.Graphics.PixelOffsetMode = PixelOffsetMode.Half;
-            e.Graphics.SmoothingMode = SmoothingMode.HighSpeed;
-
-            //e.Graphics.DrawString("ms per physics cycle: " + _msPhysics, debugFont, debugBrush,
-            //    new PointF(80, 70));
-            e.Graphics.DrawString("ms total draw time: " + _msPerDrawCycle, debugFont, debugBrush,
+            gfxBuffer.DrawString("ms total draw time: " + _msPerDrawCycle, debugFont, debugBrush,
                 new PointF(80, 90));
-            e.Graphics.DrawString("frame rate: " + 1000 / Math.Max(_msFrameTime, 1), debugFont,
+            gfxBuffer.DrawString("frame rate: " + 1000 / Math.Max(_msFrameTime, 1), debugFont,
                 debugBrush, new PointF(80, 110));
-            e.Graphics.DrawString("num objects: " + PhysicsSystem.ListStaticObjects.Count, debugFont,
+            gfxBuffer.DrawString("num objects: " + PhysicsSystem.ListStaticObjects.Count, debugFont,
                 debugBrush, new PointF(80, 130));
             if (_grabbing)
             {
-                e.Graphics.DrawLine(new Pen(Color.DarkGreen), _mousePos, _physicsSystem.GetActiveObjectCenter());
+                gfxBuffer.DrawLine(new Pen(Color.DarkGreen), _mousePos, _physicsSystem.GetActiveObjectCenter());
             }
 
             if (MOUSE_PRESSED_LEFT)
@@ -98,21 +106,21 @@ namespace physics
                 var penArrow = new Pen(Color.Green, 2);
                 penArrow.EndCap = LineCap.ArrowAnchor;
                 penArrow.StartCap = LineCap.Round;
-                e.Graphics.DrawLine(penArrow, _mousePos, StartPointF);
-                e.Graphics.DrawEllipse(new Pen(Color.DarkBlue), (int)(StartPointF.X - _radius), (int)(StartPointF.Y - _radius), _radius * 2, _radius * 2);
+                gfxBuffer.DrawLine(penArrow, _mousePos, StartPointF);
+                gfxBuffer.DrawEllipse(new Pen(Color.DarkBlue), (int)(StartPointF.X - _radius), (int)(StartPointF.Y - _radius), _radius * 2, _radius * 2);
             }
 
             foreach (var o in PhysicsSystem.ListStaticObjects)
             {
-                o.Shader.PreDraw(o, e.Graphics);
+                o.Shader.PreDraw(o, gfxBuffer);
             }
             foreach (var o in PhysicsSystem.ListStaticObjects)
             {
-                o.Shader.Draw(o, e.Graphics);
+                o.Shader.Draw(o, gfxBuffer);
             }
             foreach (var o in PhysicsSystem.ListStaticObjects)
             {
-                o.Shader.PostDraw(o, e.Graphics);
+                o.Shader.PostDraw(o, gfxBuffer);
             }
 
         }
@@ -134,7 +142,7 @@ namespace physics
 
 
         #region MouseEvents
-        private void GameCanvas_MouseDown(object sender, MouseEventArgs e)
+        private void this_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
             {
@@ -160,7 +168,7 @@ namespace physics
             }
         }
 
-        private void GameCanvas_MouseUp(object sender, MouseEventArgs e)
+        private void this_MouseUp(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
             {
@@ -190,7 +198,7 @@ namespace physics
             }
         }
 
-        private void GameCanvas_MouseMove(object sender, MouseEventArgs e)
+        private void this_MouseMove(object sender, MouseEventArgs e)
         {
             _mousePos = e.Location;
 
@@ -237,6 +245,12 @@ namespace physics
                 ActionTemplates.changeShader(_physicsSystem, new ShaderBallVelocity());
             }
 
+            //Change to Velocity Shader
+            if (e.KeyCode == Keys.F)
+            {
+                ActionTemplates.changeShader(_physicsSystem, new ShaderBallFast());
+            }
+
             //Create Gravity Ball
             if (e.KeyCode == Keys.G)
             {
@@ -248,6 +262,18 @@ namespace physics
             {
                 ActionTemplates.PopAndMultiply(_physicsSystem);
             }
+
+            //Pop
+            if (e.KeyCode == Keys.Escape)
+            {
+                Exit();
+            }
+        }
+
+        private void Exit()
+        {
+            this.Close();
+            this.Dispose();
         }
         #endregion
 
@@ -259,14 +285,16 @@ namespace physics
 
             if (_stopwatch.ElapsedMilliseconds - _frameTime > 1000 / 60)
             {
-                Render();
+                StartTimedRender();
             }
         }
 
-        private void Render()
+        private void StartTimedRender()
         {
             _frameTime = _stopwatch.ElapsedMilliseconds;
-            InvalidateWindow();
+
+            this.Refresh();
+
             _msPerDrawCycle = _stopwatch.ElapsedMilliseconds - _frameTime;
             _msLastFrame = _msThisFrame;
             _msThisFrame = _stopwatch.ElapsedMilliseconds;

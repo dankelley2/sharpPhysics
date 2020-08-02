@@ -50,7 +50,7 @@ namespace physics.Engine.Helpers
 
         private void OnApplicationEnterIdle(object sender, EventArgs e)
         {
-            while (CInterop.IsApplicationIdle())
+            while (CInterop.IsApplicationIdle_Peek())
             {
                 _callback(_timer.GetElapsedTime());
             }
@@ -84,6 +84,30 @@ namespace physics.Engine.Helpers
             // the types of messages currently in the queue. 
             return 0 == (GetQueueStatus(QS_MASK) >> 16 & QS_MASK);
         }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct NativeMessage
+        {
+            public IntPtr hwnd;
+            public uint message;
+            public IntPtr wParam;
+            public IntPtr lParam;
+            public uint time;
+            public System.Drawing.Point point;
+        }
+
+        
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool PeekMessage(ref NativeMessage lpMsg, IntPtr hwnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
+
+
+        public static bool IsApplicationIdle_Peek()
+        {
+            NativeMessage msg = new NativeMessage();
+            return !PeekMessage(ref msg, IntPtr.Zero, 0, 0, 0);
+        }
+
     }
 }
             

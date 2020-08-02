@@ -10,30 +10,40 @@ namespace physics.Engine.Classes.ObjectTemplates
 {
     public static class ObjectTemplates
     {
-        private static ShaderDefault shaderDefault = new ShaderDefault();
+        private static aShader shaderDefault = new ShaderDefault();
 
-        private static ShaderWall shaderWall = new ShaderWall();
+        private static aShader shaderWall = new ShaderWall();
 
-        private static ShaderBall shaderBall = new ShaderBall();
+        private static aShader shaderBall = new ShaderBall();
 
-        private static ShaderBallVelocity shaderBallVelocity = new ShaderBallVelocity();
+        private static aShader shaderBallFast = new ShaderBallFast();
 
-        private static ShaderWater shaderWater = new ShaderWater();
+        private static aShader shaderBallVelocity = new ShaderBallVelocity();
+
+        private static aShader shaderWater = new ShaderWater();
+
+        private static Random r = new Random();
 
         public static PhysicsObject CreateSmallBall(float originX, float originY)
         {
             return PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), 5, .7F, false, shaderBallVelocity);
         }
+
+        public static PhysicsObject CreateSizedBall(float originX, float originY)
+        {
+            return PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), r.Next(5,15), .7F, false, shaderBallVelocity);
+        }
+
         public static PhysicsObject CreateSmallBall_Magnet(float originX, float originY)
         {
-            var oPhysicsObject = PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), 5, .95F, false, shaderBallVelocity);
+            var oPhysicsObject = PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), 5, .7F, false, shaderBallVelocity);
             PhysicsSystem.ListGravityObjects.Add(oPhysicsObject);
             return oPhysicsObject;
         }
 
         public static PhysicsObject CreateMedBall(float originX, float originY)
         {
-            return PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), 10, .95F, false, shaderBallVelocity);
+            return PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), 10, .7F, false, shaderBallVelocity);
         }
 
         public static PhysicsObject CreateWater(float originX, float originY)

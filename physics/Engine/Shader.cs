@@ -55,12 +55,12 @@ namespace physics.Engine
     {
         public static readonly SolidBrush BrushLightGray = new SolidBrush(Color.LightGray);
         public static readonly SolidBrush BrushWhite = new SolidBrush(Color.White);
-        public static readonly Pen PenVelocity = new Pen(Color.Red) { Color = Color.FromArgb(150, 255, 0, 0), Width = 2, EndCap = LineCap.ArrowAnchor };
+        public static readonly SolidBrush BrushShadow = new SolidBrush(Color.FromArgb(100, 50, 50, 50));
 
         public override void PreDraw(PhysicsObject obj, Graphics g)
         {
             var origin = obj.Aabb.Min;
-            g.FillEllipse(new SolidBrush(Color.FromArgb(100, 50, 50, 50)), origin.X + 3, origin.Y + 5, obj.Width - 2, obj.Height - 2);
+            g.FillEllipse(BrushShadow, origin.X + 3, origin.Y + 5, obj.Width - 2, obj.Height - 2);
         }
 
         public override void Draw(PhysicsObject obj, Graphics g)
@@ -68,7 +68,25 @@ namespace physics.Engine
             var origin = obj.Aabb.Min;
             g.FillEllipse(BrushLightGray, origin.X, origin.Y, obj.Width, obj.Height);
             g.FillEllipse(BrushWhite, origin.X + obj.Width * .1F, origin.Y + obj.Height * .1F, obj.Width * .6F, obj.Height * .6F);
-            g.DrawLine(PenVelocity, obj.Center.X, obj.Center.Y, obj.Center.X + obj.Velocity.X / 10, obj.Center.Y + obj.Velocity.Y / 10);
+        }
+
+        public override void PostDraw(PhysicsObject obj, Graphics g)
+        {
+        }
+    }
+
+    public class ShaderBallFast : aShader
+    {
+        public static readonly SolidBrush BrushWhite = new SolidBrush(Color.White);
+
+        public override void PreDraw(PhysicsObject obj, Graphics g)
+        {
+        }
+
+        public override void Draw(PhysicsObject obj, Graphics g)
+        {
+            var origin = obj.Aabb.Min;
+            g.FillEllipse(BrushWhite, origin.X, origin.Y, obj.Width, obj.Height);
         }
 
         public override void PostDraw(PhysicsObject obj, Graphics g)
@@ -108,8 +126,8 @@ namespace physics.Engine
     public class ShaderBallVelocity : aShader
     {
         public static readonly SolidBrush BrushLightGray = new SolidBrush(Color.LightGray);
-        public static readonly SolidBrush BrushWhite = new SolidBrush(Color.White);
-        public static readonly Pen PenVelocity = new Pen(Color.Red) { Color = Color.FromArgb(50, 255, 0, 0), Width = 1, EndCap = LineCap.ArrowAnchor };
+        public static readonly SolidBrush BrushVelocity = new SolidBrush(Color.White);
+        public static readonly Pen PenVelocity = new Pen(Color.Red) { Color = Color.FromArgb(200, 255, 0, 0), Width = 1, EndCap = LineCap.ArrowAnchor };
 
         public override void PreDraw(PhysicsObject obj, Graphics g)
         {
@@ -121,7 +139,11 @@ namespace physics.Engine
             int r, gee, b;
             double particleSpeed = 220 - Math.Min((int)obj.Velocity.Length, 220);
             ColorUtil.HsvToRgb(particleSpeed, 1, 1, out r, out gee, out b);
-            g.FillEllipse(new SolidBrush(Color.FromArgb(255, r, gee, b)), origin.X, origin.Y, obj.Width, obj.Height);
+
+            BrushVelocity.Color = Color.FromArgb(255, r, gee, b);
+            PenVelocity.Color = Color.FromArgb(255, r, gee, b);
+            g.FillEllipse(BrushVelocity, origin.X, origin.Y, obj.Width, obj.Height);
+            g.DrawLine(PenVelocity, obj.Center.X, obj.Center.Y, obj.Center.X + obj.Velocity.X / 10, obj.Center.Y + obj.Velocity.Y / 10);
         }
 
         public override void PostDraw(PhysicsObject obj, Graphics g)

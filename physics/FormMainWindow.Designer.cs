@@ -28,44 +28,29 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.GameCanvas = new System.Windows.Forms.PictureBox();
-            ((System.ComponentModel.ISupportInitialize)(this.GameCanvas)).BeginInit();
             this.SuspendLayout();
-            // 
-            // GameCanvas
-            // 
-            this.GameCanvas.BackColor = System.Drawing.SystemColors.ActiveCaptionText;
-            this.GameCanvas.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.GameCanvas.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.GameCanvas.Location = new System.Drawing.Point(0, 0);
-            this.GameCanvas.Name = "GameCanvas";
-            this.GameCanvas.Size = new System.Drawing.Size(822, 719);
-            this.GameCanvas.TabIndex = 0;
-            this.GameCanvas.TabStop = false;
-            this.GameCanvas.Paint += new System.Windows.Forms.PaintEventHandler(this.GameCanvas_DrawGame);
-            this.GameCanvas.MouseDown += new System.Windows.Forms.MouseEventHandler(this.GameCanvas_MouseDown);
-            this.GameCanvas.MouseMove += new System.Windows.Forms.MouseEventHandler(this.GameCanvas_MouseMove);
-            this.GameCanvas.MouseUp += new System.Windows.Forms.MouseEventHandler(this.GameCanvas_MouseUp);
             // 
             // FormMainWindow
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(822, 719);
-            this.Controls.Add(this.GameCanvas);
+            this.ClientSize = new System.Drawing.Size(1889, 1351);
             this.DoubleBuffered = true;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+            this.Margin = new System.Windows.Forms.Padding(6);
             this.Name = "FormMainWindow";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Form1";
             this.Load += new System.EventHandler(this.FormMainWindow_Load);
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.FormMainWindow_KeyDown);
-            ((System.ComponentModel.ISupportInitialize)(this.GameCanvas)).EndInit();
+            this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.this_MouseDown);
+            this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.this_MouseMove);
+            this.MouseUp += new System.Windows.Forms.MouseEventHandler(this.this_MouseUp);
             this.ResumeLayout(false);
 
         }
 
         #endregion
-
-        private System.Windows.Forms.PictureBox GameCanvas;
     }
 }
 

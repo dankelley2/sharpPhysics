@@ -11,7 +11,7 @@ namespace physics.Engine
     {
         #region Public Properties
 
-        public float GravityScale = 10F;
+        public float GravityScale = 20F;
 
         public Vec2 Gravity { get; set; }
 
@@ -24,6 +24,7 @@ namespace physics.Engine
 
         public const float FPS = 60;
         private const float _dt = 1 / FPS;
+        private const int PHYSICS_ITERATIONS = 2;
         private double accumulator = 0;
 
 
@@ -294,65 +295,70 @@ namespace physics.Engine
 
         private void UpdatePhysics(float dt)
         {
-            foreach (var pair in ListCollisionPairs)
+            for (int i = 0; i < PHYSICS_ITERATIONS; i++)
             {
-                var objA = pair.A;
-                var objB = pair.B;
 
-                var m = new Manifold();
-                var collision = false;
 
-                if (objA.ShapeType == PhysicsObject.Type.Circle && objB.ShapeType == PhysicsObject.Type.Box)
+                foreach (var pair in ListCollisionPairs)
                 {
-                    m.A = objB;
-                    m.B = objA;
-                }
-                else
-                {
-                    m.A = objA;
-                    m.B = objB;
-                }
+                    var objA = pair.A;
+                    var objB = pair.B;
 
-                //Box vs anything
-                if (m.A.ShapeType == PhysicsObject.Type.Box)
-                {
-                    if (m.B.ShapeType == PhysicsObject.Type.Box)
+                    var m = new Manifold();
+                    var collision = false;
+
+                    if (objA.ShapeType == PhysicsObject.Type.Circle && objB.ShapeType == PhysicsObject.Type.Box)
                     {
-                        //continue;
-                        if (Collision.AABBvsAABB(ref m))
+                        m.A = objB;
+                        m.B = objA;
+                    }
+                    else
+                    {
+                        m.A = objA;
+                        m.B = objB;
+                    }
+
+                    //Box vs anything
+                    if (m.A.ShapeType == PhysicsObject.Type.Box)
+                    {
+                        if (m.B.ShapeType == PhysicsObject.Type.Box)
                         {
-                            collision = true;
+                            //continue;
+                            if (Collision.AABBvsAABB(ref m))
+                            {
+                                collision = true;
+                            }
+                        }
+
+                        if (m.B.ShapeType == PhysicsObject.Type.Circle)
+                        {
+                            if (Collision.AABBvsCircle(ref m))
+                            {
+                                collision = true;
+                            }
                         }
                     }
 
-                    if (m.B.ShapeType == PhysicsObject.Type.Circle)
+                    //Circle Circle
+                    else
                     {
-                        if (Collision.AABBvsCircle(ref m))
+                        if (m.B.ShapeType == PhysicsObject.Type.Circle)
                         {
-                            collision = true;
+                            if (Collision.CirclevsCircle(ref m))
+                            {
+                                collision = true;
+                            }
                         }
                     }
-                }
 
-                //Circle Circle
-                else
-                {
-                    if (m.B.ShapeType == PhysicsObject.Type.Circle)
+                    //Resolve Collision
+                    if (collision)
                     {
-                        if (Collision.CirclevsCircle(ref m))
-                        {
-                            collision = true;
-                        }
+                        Collision.ResolveCollision(ref m);
+                        Collision.PositionalCorrection(ref m);
+                        objA.LastCollision = m;
+                        objB.LastCollision = m;
                     }
-                }
-
-                //Resolve Collision
-                if (collision)
-                {
-                    Collision.ResolveCollision(ref m);
-                    Collision.PositionalCorrection(ref m);
-                    objA.LastCollision = m;
-                    objB.LastCollision = m;
                 }
             }
 
