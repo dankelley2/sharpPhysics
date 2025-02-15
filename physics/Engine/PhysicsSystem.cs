@@ -11,7 +11,7 @@ namespace physics.Engine
     {
         #region Public Properties
 
-        public float GravityScale = 20F;
+        public float GravityScale = 10F;
 
         public Vec2 Gravity { get; set; }
 
@@ -27,7 +27,7 @@ namespace physics.Engine
 
         public const float FPS = 60;
         private const float _dt = 1 / FPS;
-        private const int PHYSICS_ITERATIONS = 8;
+        private const int PHYSICS_ITERATIONS = 4;
         private double accumulator = 0;
 
 

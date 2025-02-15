@@ -257,6 +257,35 @@ namespace physics.Engine
             }
         }
 
+        public static void ResolveCollisionFast(ref Manifold m)
+        {
+            // Simply reduce the velocities of both objects to simulate energy loss.
+            // Adjust the damping factor as needed.
+            const float damping = 0.999f; // 80% of the original velocity is retained.
+
+            if (!m.A.Locked)
+                m.A.Velocity *= damping;
+
+            if (!m.B.Locked)
+                m.B.Velocity *= damping;
+        }
+
+        public static void PositionalCorrectionFast(ref Manifold m)
+        {
+            // If there is penetration, push the objects apart along the collision normal.
+            // We move each object by half of the penetration distance.
+            if (m.Penetration <= 0)
+                return;
+
+            Vec2 correction = m.Normal * (m.Penetration * 0.5f);
+
+            if (!m.A.Locked)
+                m.A.Move(-correction);
+
+            if (!m.B.Locked)
+                m.B.Move(correction);
+        }
+
         private static float Clamp(float low, float high, float val)
         {
             return Math.Max(low, Math.Min(val, high));
