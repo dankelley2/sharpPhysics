@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
@@ -37,6 +38,7 @@ namespace physics
         private long _msLastFrame;
         private long _msPerDrawCycle;
         private long _msThisFrame;
+        private long _msPhysicsTime;
         private int _radius = 10;
 
         Font debugFont = new Font(FontFamily.GenericMonospace, 10);
@@ -56,7 +58,7 @@ namespace physics
             gfxBuffer.CompositingQuality = CompositingQuality.HighSpeed;
             gfxBuffer.InterpolationMode = InterpolationMode.NearestNeighbor;
             gfxBuffer.PixelOffsetMode = PixelOffsetMode.Half;
-            gfxBuffer.SmoothingMode = SmoothingMode.HighSpeed;
+            gfxBuffer.SmoothingMode = SmoothingMode.HighQuality;
 
             _fastLoop = new FastLoop(GameLoop);
             _stopwatch.Start();
@@ -90,6 +92,8 @@ namespace physics
         {
             gfxBuffer.Clear(Color.Black);
 
+            gfxBuffer.DrawString("ms physics time: " + _msPhysicsTime, debugFont,
+                debugBrush, new PointF(80, 70));
             gfxBuffer.DrawString("ms total draw time: " + _msPerDrawCycle, debugFont, debugBrush,
                 new PointF(80, 90));
             gfxBuffer.DrawString("frame rate: " + 1000 / Math.Max(_msFrameTime, 1), debugFont,
@@ -281,7 +285,9 @@ namespace physics
 
         private void GameLoop(double elapsedTime)
         {
+            _msPhysicsTime = _stopwatch.ElapsedMilliseconds;
             RunEngine(elapsedTime);
+            _msPhysicsTime = _stopwatch.ElapsedMilliseconds - _msPhysicsTime;
 
             if (_stopwatch.ElapsedMilliseconds - _frameTime > 1000 / 60)
             {

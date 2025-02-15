@@ -26,24 +26,24 @@ namespace physics.Engine.Classes.ObjectTemplates
 
         public static PhysicsObject CreateSmallBall(float originX, float originY)
         {
-            return PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), 5, .7F, false, shaderBallVelocity);
+            return PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), 5, .6F, false, shaderBallVelocity);
         }
 
         public static PhysicsObject CreateSizedBall(float originX, float originY)
         {
-            return PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), r.Next(5,15), .7F, false, shaderBallVelocity);
+            return PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), r.Next(5,15), .6F, false, shaderBallVelocity);
         }
 
         public static PhysicsObject CreateSmallBall_Magnet(float originX, float originY)
         {
-            var oPhysicsObject = PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), 5, .7F, false, shaderBallVelocity);
+            var oPhysicsObject = PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), 5, .6F, false, shaderBallVelocity);
             PhysicsSystem.ListGravityObjects.Add(oPhysicsObject);
             return oPhysicsObject;
         }
 
         public static PhysicsObject CreateMedBall(float originX, float originY)
         {
-            return PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), 10, .7F, false, shaderBallVelocity);
+            return PhysicsSystem.CreateStaticCircle(new Vec2(originX, originY), 10, .6F, false, shaderBallVelocity);
         }
 
         public static PhysicsObject CreateWater(float originX, float originY)

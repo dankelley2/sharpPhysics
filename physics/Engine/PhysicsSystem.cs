@@ -17,6 +17,9 @@ namespace physics.Engine
 
         public float Friction { get; set; }
 
+        // Set this to roughly your average AABB size – adjust as needed.
+        public float SpatialHashCellSize { get; set; } = 20F;
+
         #endregion
 
         #region Local Declarations
@@ -24,7 +27,7 @@ namespace physics.Engine
 
         public const float FPS = 60;
         private const float _dt = 1 / FPS;
-        private const int PHYSICS_ITERATIONS = 2;
+        private const int PHYSICS_ITERATIONS = 8;
         private double accumulator = 0;
 
 
@@ -47,7 +50,7 @@ namespace physics.Engine
         }
 
         public static readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
-               
+
         public static readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
 
         internal void SetVelocity(PhysicsObject physicsObject, Vec2 velocity)
@@ -134,7 +137,7 @@ namespace physics.Engine
         {
             foreach (var physicsObject in ListStaticObjects)
             {
-                physicsObject.Velocity = new Vec2 {X = 0, Y = 0};
+                physicsObject.Velocity = new Vec2 { X = 0, Y = 0 };
             }
         }
 
@@ -298,7 +301,6 @@ namespace physics.Engine
             for (int i = 0; i < PHYSICS_ITERATIONS; i++)
             {
 
-
                 foreach (var pair in ListCollisionPairs)
                 {
                     var objA = pair.A;
@@ -377,33 +379,79 @@ namespace physics.Engine
         {
             ListCollisionPairs.Clear();
 
-            AABB a_bb;
-            AABB b_bb;
+            // Create the spatial hash dictionary keyed by grid cell coordinates.
+            Dictionary<(int, int), List<PhysicsObject>> spatialHash = new Dictionary<(int, int), List<PhysicsObject>>();
+            float cellSize = SpatialHashCellSize;
 
-            PhysicsObject A;
-            PhysicsObject B;
-
-            for (var i = 0; i < ListStaticObjects.Count; i++)
+            // Populate the spatial hash.
+            foreach (var obj in ListStaticObjects)
             {
-                //ListStaticObjects[i].LastCollision = null;
-                for (var j = i; j < ListStaticObjects.Count; j++)
+                int minX = (int)Math.Floor(obj.Aabb.Min.X / cellSize);
+                int minY = (int)Math.Floor(obj.Aabb.Min.Y / cellSize);
+                int maxX = (int)Math.Floor(obj.Aabb.Max.X / cellSize);
+                int maxY = (int)Math.Floor(obj.Aabb.Max.Y / cellSize);
+
+                for (int x = minX; x <= maxX; x++)
                 {
-                    if (j == i)
+                    for (int y = minY; y <= maxY; y++)
                     {
-                        continue;
-                    }
-
-                    A = ListStaticObjects[i];
-                    B = ListStaticObjects[j];
-
-                    a_bb = A.Aabb;
-                    b_bb = B.Aabb;
-
-                    if (Collision.AABBvsAABB(a_bb, b_bb))
-                    {
-                        ListCollisionPairs.Add(new CollisionPair(A, B));
+                        var key = (x, y);
+                        if (!spatialHash.TryGetValue(key, out List<PhysicsObject> cellList))
+                        {
+                            cellList = new List<PhysicsObject>();
+                            spatialHash[key] = cellList;
+                        }
+                        cellList.Add(obj);
                     }
                 }
+            }
+
+            // Use a hash set to avoid adding duplicate pairs (since objects may share multiple cells).
+            HashSet<(PhysicsObject, PhysicsObject)> pairSet = new HashSet<(PhysicsObject, PhysicsObject)>(new PhysicsObjectPairComparer());
+
+            // For each cell, add collision pairs from objects that share the cell.
+            foreach (var cell in spatialHash.Values)
+            {
+                int count = cell.Count;
+                if (count > 1)
+                {
+                    for (int i = 0; i < count - 1; i++)
+                    {
+                        for (int j = i + 1; j < count; j++)
+                        {
+                            PhysicsObject objA = cell[i];
+                            PhysicsObject objB = cell[j];
+
+                            // Add the pair if it has not already been processed.
+                            if (pairSet.Add((objA, objB)))
+                            {
+                                ListCollisionPairs.Add(new CollisionPair(objA, objB));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        #region Private Helper Classes
+
+        /// <summary>
+        /// Custom comparer for collision pair tuples so that the order of objects does not matter.
+        /// </summary>
+        private class PhysicsObjectPairComparer : IEqualityComparer<(PhysicsObject, PhysicsObject)>
+        {
+            public bool Equals((PhysicsObject, PhysicsObject) x, (PhysicsObject, PhysicsObject) y)
+            {
+                return (ReferenceEquals(x.Item1, y.Item1) && ReferenceEquals(x.Item2, y.Item2)) ||
+                       (ReferenceEquals(x.Item1, y.Item2) && ReferenceEquals(x.Item2, y.Item1));
+            }
+
+            public int GetHashCode((PhysicsObject, PhysicsObject) pair)
+            {
+                // XOR is order-independent.
+                return pair.Item1.GetHashCode() ^ pair.Item2.GetHashCode();
             }
         }
 
