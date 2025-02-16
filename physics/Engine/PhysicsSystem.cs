@@ -233,7 +233,10 @@ namespace physics.Engine
             }
 
             AddGravity(obj, dt);
-            obj.Velocity = obj.Velocity.Minus(Friction * dt);
+
+            var friction = Friction * dt;
+            obj.Velocity.X += obj.Velocity.X == 0 ? 0 : obj.Velocity.X > 0 ? -friction : friction;
+            obj.Velocity.Y += obj.Velocity.Y == 0 ? 0 : obj.Velocity.Y > 0 ? -friction : friction;
 
             if (obj.Center.Y > 2000 || obj.Center.Y < -2000 || obj.Center.X > 2000 || obj.Center.X < -2000)
             {
