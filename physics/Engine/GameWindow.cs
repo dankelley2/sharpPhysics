@@ -6,6 +6,10 @@ using System.Diagnostics;
 using physics.Engine.Classes;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Structs;
+using physics.Engine.Shaders;
+using System.Drawing;
+using Font = SFML.Graphics.Font;
+using Color = SFML.Graphics.Color;
 
 namespace physics.Engine
 {
