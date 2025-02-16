@@ -1,5 +1,6 @@
-﻿using System.Drawing;
+﻿using SFML.System;
 using physics.Engine.Classes;
+using physics.Engine.Helpers;
 
 namespace physics.Engine.Structs
 {
@@ -8,8 +9,8 @@ namespace physics.Engine.Structs
     /// </summary>
     public struct AABB
     {
-        public Vec2 Min;
-        public Vec2 Max;
+        public Vector2f Min;
+        public Vector2f Max;
         public float Area => (Max.X - Min.X) * (Max.Y - Min.Y);
 
         public static bool operator ==(AABB left, AABB right)
