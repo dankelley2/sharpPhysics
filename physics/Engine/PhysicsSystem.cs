@@ -33,7 +33,7 @@ namespace physics.Engine
 
         public static PhysicsObject ActiveObject;
 
-        public static readonly List<aShader> ListShaders = new List<aShader>();
+        public static readonly List<SFMLShader> ListShaders = new List<SFMLShader>();
 
         public static readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
 
@@ -75,7 +75,7 @@ namespace physics.Engine
         #region Public Methods
 
 
-        public static PhysicsObject CreateStaticCircle(Vec2 loc, int radius, float restitution, bool locked, aShader shader)
+        public static PhysicsObject CreateStaticCircle(Vec2 loc, int radius, float restitution, bool locked, SFMLShader shader)
         {
             var oAabb = new AABB
             {
@@ -88,7 +88,7 @@ namespace physics.Engine
             return obj;
         }
 
-        public static PhysicsObject CreateStaticBox(Vec2 start, Vec2 end, bool locked, aShader shader, float mass)
+        public static PhysicsObject CreateStaticBox(Vec2 start, Vec2 end, bool locked, SFMLShader shader, float mass)
         {
             var oAabb = new AABB
             {
