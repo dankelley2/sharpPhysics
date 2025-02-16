@@ -1,4 +1,5 @@
 ﻿using physics.Engine.Structs;
+using SFML.System;
 
 namespace physics.Engine.Classes
 {
@@ -8,7 +9,7 @@ namespace physics.Engine.Classes
         public PhysicsObject A;
         public PhysicsObject B;
         public float Penetration;
-        public Vec2 Normal;
+        public Vector2f Normal;
 
     }
 }

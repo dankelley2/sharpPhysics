@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Drawing;
 using physics.Engine.Classes;
+using physics.Engine.Extensions;
 using physics.Engine.Helpers;
 using physics.Engine.Structs;
+using SFML.System;
 
 namespace physics.Engine
 {
@@ -13,7 +15,7 @@ namespace physics.Engine
 
         public float GravityScale = 10F;
 
-        public Vec2 Gravity { get; set; }
+        public Vector2f Gravity { get; set; }
 
         public float Friction { get; set; }
 
@@ -33,7 +35,7 @@ namespace physics.Engine
 
         public static PhysicsObject ActiveObject;
 
-        public static readonly List<aShader> ListShaders = new List<aShader>();
+        public static readonly List<SFMLShader> ListShaders = new List<SFMLShader>();
 
         public static readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
 
@@ -53,7 +55,7 @@ namespace physics.Engine
 
         public static readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
 
-        internal void SetVelocity(PhysicsObject physicsObject, Vec2 velocity)
+        internal void SetVelocity(PhysicsObject physicsObject, Vector2f velocity)
         {
             physicsObject.Velocity = velocity;
         }
@@ -66,7 +68,7 @@ namespace physics.Engine
 
         public PhysicsSystem()
         {
-            Gravity = new Vec2 {X = 0, Y = 10F * GravityScale};
+            Gravity = new Vector2f {X = 0, Y = 10F * GravityScale};
             Friction = 1F;
         }
 
@@ -75,12 +77,12 @@ namespace physics.Engine
         #region Public Methods
 
 
-        public static PhysicsObject CreateStaticCircle(Vec2 loc, int radius, float restitution, bool locked, aShader shader)
+        public static PhysicsObject CreateStaticCircle(Vector2f loc, int radius, float restitution, bool locked, SFMLShader shader)
         {
             var oAabb = new AABB
             {
-                Min = new Vec2 { X = loc.X - radius, Y = loc.Y - radius },
-                Max = new Vec2 { X = loc.X + radius, Y = loc.Y + radius }
+                Min = new Vector2f { X = loc.X - radius, Y = loc.Y - radius },
+                Max = new Vector2f { X = loc.X + radius, Y = loc.Y + radius }
             };
             PhysMath.CorrectBoundingBox(ref oAabb);
             var obj = new PhysicsObject(oAabb, PhysicsObject.Type.Circle, restitution, locked, shader);
@@ -88,12 +90,12 @@ namespace physics.Engine
             return obj;
         }
 
-        public static PhysicsObject CreateStaticBox(Vec2 start, Vec2 end, bool locked, aShader shader, float mass)
+        public static PhysicsObject CreateStaticBox(Vector2f start, Vector2f end, bool locked, SFMLShader shader, float mass)
         {
             var oAabb = new AABB
             {
-                Min = new Vec2 { X = start.X, Y = start.Y },
-                Max = new Vec2 { X = end.X, Y = end.Y }
+                Min = new Vector2f { X = start.X, Y = start.Y },
+                Max = new Vector2f { X = end.X, Y = end.Y }
             };
             PhysMath.CorrectBoundingBox(ref oAabb);
             var obj = new PhysicsObject(oAabb, PhysicsObject.Type.Box, .95F, locked, shader, mass);
@@ -101,7 +103,7 @@ namespace physics.Engine
             return obj;
         }
 
-        public bool ActivateAtPoint(PointF p)
+        public bool ActivateAtPoint(Vector2f p)
         {
             ActiveObject = CheckObjectAtPoint(p);
 
@@ -114,7 +116,7 @@ namespace physics.Engine
             return true;
         }
 
-        public void AddVelocityToActive(Vec2 velocityDelta)
+        public void AddVelocityToActive(Vector2f velocityDelta)
         {
             if (ActiveObject == null || ActiveObject.Mass >= 1000000)
             {
@@ -123,7 +125,7 @@ namespace physics.Engine
 
             ActiveObject.Velocity += velocityDelta;
         }
-        public void SetVelocityOfActive(Vec2 velocityDelta)
+        public void SetVelocityOfActive(Vector2f velocityDelta)
         {
             if (ActiveObject == null || ActiveObject.Mass >= 1000000)
             {
@@ -137,21 +139,21 @@ namespace physics.Engine
         {
             foreach (var physicsObject in ListStaticObjects)
             {
-                physicsObject.Velocity = new Vec2 { X = 0, Y = 0 };
+                physicsObject.Velocity = new Vector2f { X = 0, Y = 0 };
             }
         }
 
-        public PointF GetActiveObjectCenter()
+        public Vector2f GetActiveObjectCenter()
         {
             if (ActiveObject == null)
             {
-                return new PointF();
+                return new Vector2f();
             }
 
-            return new PointF(ActiveObject.Center.X, ActiveObject.Center.Y);
+            return new Vector2f(ActiveObject.Center.X, ActiveObject.Center.Y);
         }
 
-        public void MoveActiveTowardsPoint(Vec2 point)
+        public void MoveActiveTowardsPoint(Vector2f point)
         {
             if (ActiveObject == null)
             {
@@ -162,7 +164,7 @@ namespace physics.Engine
             AddVelocityToActive(-delta / 10000);
         }
 
-        public void HoldActiveAtPoint(Vec2 point)
+        public void HoldActiveAtPoint(Vector2f point)
         {
             if (ActiveObject == null)
             {
@@ -231,7 +233,7 @@ namespace physics.Engine
             }
 
             AddGravity(obj, dt);
-            obj.Velocity -= Friction * dt;
+            obj.Velocity = obj.Velocity.Minus(Friction * dt);
 
             if (obj.Center.Y > 2000 || obj.Center.Y < -2000 || obj.Center.X > 2000 || obj.Center.X < -2000)
             {
@@ -239,9 +241,9 @@ namespace physics.Engine
             }
         }
 
-        private Vec2 CalculatePointGravity(PhysicsObject obj)
+        private Vector2f CalculatePointGravity(PhysicsObject obj)
         {
-            var forces = new Vec2(0, 0);
+            var forces = new Vector2f(0, 0);
 
             if (obj.Locked)
             {
@@ -254,12 +256,12 @@ namespace physics.Engine
                 PhysMath.RoundToZero(ref diff, 5F);
 
                 //apply inverse square law
-                var falloffMultiplier = gpt.Mass / diff.LengthSquared;
+                var falloffMultiplier = gpt.Mass / diff.LengthSquared();
 
                 diff.X = (int) diff.X == 0 ? 0 : diff.X * falloffMultiplier;
                 diff.Y = (int) diff.Y == 0 ? 0 : diff.Y * falloffMultiplier;
 
-                if (diff.Length > .005F)
+                if (diff.Length() > .005F)
                 {
                     forces += diff;
                 }
@@ -268,7 +270,7 @@ namespace physics.Engine
             return forces;
         }
 
-        private PhysicsObject CheckObjectAtPoint(PointF p)
+        private PhysicsObject CheckObjectAtPoint(Vector2f p)
         {
             foreach (var physicsObject in ListStaticObjects)
             {
@@ -281,7 +283,7 @@ namespace physics.Engine
             return null;
         }
 
-        private Vec2 GetGravityVector(PhysicsObject obj)
+        private Vector2f GetGravityVector(PhysicsObject obj)
         {
             return CalculatePointGravity(obj) + Gravity;
         }

@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Drawing;
 using System.Runtime.CompilerServices;
+using SFML.System;
+using physics.Engine.Helpers;
 using physics.Engine.Structs;
 
 namespace physics.Engine.Classes
@@ -13,26 +14,26 @@ namespace physics.Engine.Classes
             Circle
         }
 
-        public aShader Shader;
+        public SFMLShader Shader;
         public bool Locked;
         public AABB Aabb;
-        public Vec2 Velocity;
-        public Vec2 Center;
-        public Vec2 Pos;
+        public Vector2f Velocity;
+        public Vector2f Center;
+        public Vector2f Pos;
         public float Width;
         public float Height;
         public float Restitution;
         public float Mass;
         public float IMass;
 
-        public PhysicsObject(AABB boundingBox, Type t, float r, bool locked, aShader shader, float m = 0)
+        public PhysicsObject(AABB boundingBox, Type t, float r, bool locked, SFMLShader shader, float m = 0)
         {
-            Velocity = new Vec2(0, 0);
+            Velocity = new Vector2f(0, 0);
             Aabb = boundingBox;
             Width = Aabb.Max.X - Aabb.Min.X;
             Height = Aabb.Max.Y - Aabb.Min.Y;
-            Pos = new Vec2(Aabb.Min.X, Aabb.Min.Y);
-            Center = new Vec2(Pos.X + Width / 2, Pos.Y + Height / 2);
+            Pos = new Vector2f(Aabb.Min.X, Aabb.Min.Y);
+            Center = new Vector2f(Pos.X + Width / 2, Pos.Y + Height / 2);
             ShapeType = t;
             Restitution = r;
             Mass = (int)m == 0 ? Aabb.Area : m;
@@ -44,7 +45,7 @@ namespace physics.Engine.Classes
         public Type ShapeType { get; set; }
         public Manifold LastCollision { get; internal set; }
 
-        public bool Contains(PointF p)
+        public bool Contains(Vector2f p)
         {
             if (Aabb.Max.X > p.X && p.X > Aabb.Min.X)
             {
@@ -90,7 +91,7 @@ namespace physics.Engine.Classes
             Center.Y = Pos.Y + Height / 2;
         }
 
-        public void Move(Vec2 dVector)
+        public void Move(Vector2f dVector)
         {
             if (Locked)
             {

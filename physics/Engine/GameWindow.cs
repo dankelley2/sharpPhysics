@@ -43,9 +43,10 @@ namespace physics.Engine
             window.MouseMoved += OnMouseMoved;
             window.KeyPressed += OnKeyPressed;
 
-            debugFont = new Font("arial.ttf"); // You'll need to provide a font file
+            debugFont = new Font(@"C:\Windows\Fonts\arial.ttf"); // You'll need to provide a font file
             debugText = new Text("", debugFont, 12);
             debugText.FillColor = Color.White;
+            debugText.Position = new Vector2f(40, 40);
 
             InitializeGame();
             stopwatch.Start();
@@ -53,10 +54,10 @@ namespace physics.Engine
 
         private void InitializeGame()
         {
-            ObjectTemplates.CreateWall(0, 0, 20, (int)window.Size.Y);
-            ObjectTemplates.CreateWall((int)window.Size.X - 20, 0, (int)window.Size.X, (int)window.Size.Y);
-            ObjectTemplates.CreateWall(0, 0, (int)window.Size.X, 20);
-            ObjectTemplates.CreateWall(0, (int)window.Size.Y - 20, (int)window.Size.X, (int)window.Size.Y);
+            ObjectTemplates.CreateWall(0, 0, 5, (int)window.Size.Y);
+            ObjectTemplates.CreateWall((int)window.Size.X - 5, 0, (int)window.Size.X, (int)window.Size.Y);
+            ObjectTemplates.CreateWall(0, 0, (int)window.Size.X, 5);
+            ObjectTemplates.CreateWall(0, (int)window.Size.Y - 5, (int)window.Size.X, (int)window.Size.Y);
 
             for (int i = 0; i < 400; i += 20)
             {
@@ -103,7 +104,7 @@ namespace physics.Engine
             // Draw objects
             foreach (var obj in PhysicsSystem.ListStaticObjects)
             {
-                var sfmlShader = obj.Shader as SFMLShader;
+                var sfmlShader = obj.Shader;
                 if (sfmlShader != null)
                 {
                     sfmlShader.PreDraw(obj, window);
@@ -119,7 +120,7 @@ namespace physics.Engine
         {
             if (isGrabbing)
             {
-                physicsSystem.HoldActiveAtPoint(new Vec2 { X = mousePos.X, Y = mousePos.Y });
+                physicsSystem.HoldActiveAtPoint(new Vector2f { X = mousePos.X, Y = mousePos.Y });
             }
             physicsSystem.Tick(deltaTime);
         }
@@ -128,7 +129,7 @@ namespace physics.Engine
         {
             if (e.Button == Mouse.Button.Left)
             {
-                var point = new PointF(e.X, e.Y);
+                var point = new Vector2f(e.X, e.Y);
                 if (physicsSystem.ActivateAtPoint(point))
                 {
                     isGrabbing = true;
@@ -141,7 +142,7 @@ namespace physics.Engine
 
             if (e.Button == Mouse.Button.Right)
             {
-                var point = new PointF(e.X, e.Y);
+                var point = new Vector2f(e.X, e.Y);
                 if (physicsSystem.ActivateAtPoint(point))
                 {
                     physicsSystem.RemoveActiveObject();
@@ -156,7 +157,7 @@ namespace physics.Engine
             {
                 if (isGrabbing)
                 {
-                    physicsSystem.SetVelocityOfActive(new Vec2 { X = 0, Y = 0 });
+                    physicsSystem.SetVelocityOfActive(new Vector2f { X = 0, Y = 0 });
                     physicsSystem.ReleaseActiveObject();
                     isGrabbing = false;
                     return;
@@ -168,8 +169,8 @@ namespace physics.Engine
                     ActionTemplates.launch(
                         physicsSystem,
                         ObjectTemplates.CreateSmallBall(startPoint.X, startPoint.Y),
-                        new PointF(startPoint.X, startPoint.Y),
-                        new PointF(endPoint.X, endPoint.Y));
+                        new Vector2f(startPoint.X, startPoint.Y),
+                        new Vector2f(endPoint.X, endPoint.Y));
                     isMousePressedLeft = false;
                 }
             }
@@ -186,8 +187,7 @@ namespace physics.Engine
 
             if (isMousePressedRight)
             {
-                var point = new PointF(e.X, e.Y);
-                if (physicsSystem.ActivateAtPoint(point))
+                if (physicsSystem.ActivateAtPoint(mousePos))
                 {
                     physicsSystem.RemoveActiveObject();
                 }
