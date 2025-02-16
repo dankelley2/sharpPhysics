@@ -15,7 +15,7 @@ namespace physics.Engine.Classes
             _obj = obj;
         }
 
-        public override void Update(Keys k)
+        public override void Update(Keyboard.Key k)
         {
 
         }
@@ -25,6 +25,6 @@ namespace physics.Engine.Classes
     {
         public PhysicsObject _obj;
 
-        public abstract void Update(Keys k);
+        public abstract void Update(Keyboard.Key k);
     }
 }
