@@ -216,20 +216,11 @@ namespace physics.Engine
                 case Keyboard.Key.Space:
                     physicsSystem.FreezeStaticObjects();
                     break;
-                case Keyboard.Key.I:
-                    ActionTemplates.changeShader(physicsSystem, new SFMLBallVelocityShader());
-                    break;
                 case Keyboard.Key.P:
                     ActionTemplates.changeShader(physicsSystem, new SFMLBallShader());
                     break;
-                case Keyboard.Key.W:
-                    ActionTemplates.changeShader(physicsSystem, new SFMLBallVelocityShader());
-                    break;
                 case Keyboard.Key.V:
                     ActionTemplates.changeShader(physicsSystem, new SFMLBallVelocityShader());
-                    break;
-                case Keyboard.Key.F:
-                    ActionTemplates.changeShader(physicsSystem, new SFMLBallShader());
                     break;
                 case Keyboard.Key.G:
                     ObjectTemplates.CreateAttractor((int)mousePos.X, (int)mousePos.Y);
