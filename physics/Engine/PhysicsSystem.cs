@@ -18,12 +18,11 @@ namespace physics.Engine
         public float Friction { get; set; }
 
         // Set this to roughly your average AABB size – adjust as needed.
-        public float SpatialHashCellSize { get; set; } = 20F;
+        public float SpatialHashCellSize { get; set; } = 10F;
 
         #endregion
 
         #region Local Declarations
-
         public const float FPS = 60;
         private const float _dt = 1 / FPS;
         private const int PHYSICS_ITERATIONS = 4;
@@ -34,6 +33,7 @@ namespace physics.Engine
         public static readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
         public static readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
         public static readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
+        private readonly ManifoldPool _manifoldPool = new ManifoldPool();
 
         internal IEnumerable<PhysicsObject> GetMoveableObjects()
         {
@@ -300,6 +300,16 @@ namespace physics.Engine
 
         private void UpdatePhysics(float dt)
         {
+            // Optionally, clear and return previous collision manifolds to the pool.
+            //foreach (var obj in AllPhysicsObjects) // Assume you maintain a list of all physics objects.
+            //{
+            //    if (obj.LastCollision != null)
+            //    {
+            //        _manifoldPool.Return(obj.LastCollision);
+            //        obj.LastCollision = null;
+            //    }
+            //}
+
             for (int i = 0; i < PHYSICS_ITERATIONS; i++)
             {
                 foreach (var pair in ListCollisionPairs)
@@ -307,9 +317,11 @@ namespace physics.Engine
                     var objA = pair.A;
                     var objB = pair.B;
 
-                    var m = new Manifold();
-                    var collision = false;
+                    // Retrieve a manifold from the pool instead of creating a new instance.
+                    Manifold m = _manifoldPool.Get();
+                    bool collision = false;
 
+                    // Set the ordering based on object types (flip if necessary).
                     if (objA.ShapeType == PhysicsObject.Type.Circle && objB.ShapeType == PhysicsObject.Type.Box)
                     {
                         m.A = objB;
@@ -321,34 +333,24 @@ namespace physics.Engine
                         m.B = objB;
                     }
 
-                    // Box vs anything
+                    // Perform collision detection based on shape types.
                     if (m.A.ShapeType == PhysicsObject.Type.Box)
                     {
                         if (m.B.ShapeType == PhysicsObject.Type.Box)
                         {
-                            if (Collision.AABBvsAABB(ref m))
-                            {
-                                collision = true;
-                            }
+                            collision = Collision.AABBvsAABB(ref m);
                         }
                         else if (m.B.ShapeType == PhysicsObject.Type.Circle)
                         {
-                            if (Collision.AABBvsCircle(ref m))
-                            {
-                                collision = true;
-                            }
+                            collision = Collision.AABBvsCircle(ref m);
                         }
                     }
-                    // Circle vs Circle
                     else if (m.B.ShapeType == PhysicsObject.Type.Circle)
                     {
-                        if (Collision.CirclevsCircle(ref m))
-                        {
-                            collision = true;
-                        }
+                        collision = Collision.CirclevsCircle(ref m);
                     }
 
-                    // Resolve collision if one was detected
+                    // If a collision was detected, resolve it and store the manifold.
                     if (collision)
                     {
                         Collision.ResolveCollision(ref m);
@@ -356,9 +358,15 @@ namespace physics.Engine
                         objA.LastCollision = m;
                         objB.LastCollision = m;
                     }
+                    else
+                    {
+                        // No collision: return the manifold to the pool.
+                        _manifoldPool.Return(m);
+                    }
                 }
             }
 
+            // Process static objects as before.
             for (var i = 0; i < ListStaticObjects.Count; i++)
             {
                 ApplyConstants(ListStaticObjects[i], dt);

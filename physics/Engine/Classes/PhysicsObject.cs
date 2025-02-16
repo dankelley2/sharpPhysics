@@ -26,6 +26,14 @@ namespace physics.Engine.Classes
         public float Mass;
         public float IMass;
 
+        // New fields to cache geometry and track changes.
+        private float _prevWidth;
+        private float _prevHeight;
+        /// <summary>
+        /// True if width or height changed since last recalculation.
+        /// </summary>
+        public bool GeometryChanged { get; private set; } = true;
+
         public PhysicsObject(AABB boundingBox, Type t, float r, bool locked, SFMLShader shader, float m = 0)
         {
             Velocity = new Vector2f(0, 0);
@@ -40,6 +48,11 @@ namespace physics.Engine.Classes
             IMass = 1 / Mass;
             Locked = locked;
             Shader = shader;
+
+            // Initialize the cached values.
+            _prevWidth = Width;
+            _prevHeight = Height;
+            GeometryChanged = true;
         }
 
         public Type ShapeType { get; set; }
@@ -47,23 +60,15 @@ namespace physics.Engine.Classes
 
         public bool Contains(Vector2f p)
         {
-            if (Aabb.Max.X > p.X && p.X > Aabb.Min.X)
-            {
-                if (Aabb.Max.Y > p.Y && p.Y > Aabb.Min.Y)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return Aabb.Max.X > p.X && p.X > Aabb.Min.X &&
+                   Aabb.Max.Y > p.Y && p.Y > Aabb.Min.Y;
         }
 
         public void Move(float dt)
         {
             if (Mass >= 1000000)
-            {
                 return;
-            }
+
             RoundSpeedToZero();
 
             var p1 = Aabb.Min + (Velocity * dt);
@@ -74,10 +79,9 @@ namespace physics.Engine.Classes
 
         private void RoundSpeedToZero()
         {
-            if (Math.Abs(this.Velocity.X) + Math.Abs(this.Velocity.Y) < .01F)
+            if (Math.Abs(Velocity.X) + Math.Abs(Velocity.Y) < 0.01F)
             {
-                Velocity.X = 0;
-                Velocity.Y = 0;
+                Velocity = new Vector2f(0, 0);
             }
         }
 
@@ -85,21 +89,29 @@ namespace physics.Engine.Classes
         {
             Width = Aabb.Max.X - Aabb.Min.X;
             Height = Aabb.Max.Y - Aabb.Min.Y;
-            Pos.X = Aabb.Min.X;
-            Pos.Y = Aabb.Min.Y;
-            Center.X = Pos.X + Width / 2;
-            Center.Y = Pos.Y + Height / 2;
+            Pos = new Vector2f(Aabb.Min.X, Aabb.Min.Y);
+            Center = new Vector2f(Pos.X + Width / 2, Pos.Y + Height / 2);
+
+            // Only flag a geometry change if the dimensions have actually changed.
+            if (Width != _prevWidth || Height != _prevHeight)
+            {
+                GeometryChanged = true;
+                _prevWidth = Width;
+                _prevHeight = Height;
+            }
+            else
+            {
+                GeometryChanged = false;
+            }
         }
 
         public void Move(Vector2f dVector)
         {
             if (Locked)
-            {
                 return;
-            }
 
-            Aabb.Min = Aabb.Min + dVector;
-            Aabb.Max = Aabb.Max + dVector;
+            Aabb.Min += dVector;
+            Aabb.Max += dVector;
             Recalculate();
         }
     }
