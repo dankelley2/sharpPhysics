@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ARNet.Physics", "physics\AR
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ARNet.Physics.Tests", "ARNet.Physics.TestsARNet.Physics.Tests.csproj", "{5B5C116E-DE45-4D9C-A784-BF3B5E7C7B7A}"
+EndProject
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
