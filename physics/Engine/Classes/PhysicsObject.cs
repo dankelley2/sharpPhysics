@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Drawing;
 using System.Runtime.CompilerServices;
+using SFML.System;
+using physics.Engine.Helpers;
 using physics.Engine.Structs;
 
 namespace physics.Engine.Classes
@@ -44,7 +45,7 @@ namespace physics.Engine.Classes
         public Type ShapeType { get; set; }
         public Manifold LastCollision { get; internal set; }
 
-        public bool Contains(PointF p)
+        public bool Contains(Vector2f p)
         {
             if (Aabb.Max.X > p.X && p.X > Aabb.Min.X)
             {
