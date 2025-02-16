@@ -1,21 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+using SFML.System;
+using physics.Engine.Helpers;
 using physics.Engine.Structs;
 
 namespace physics.Engine.Classes.ObjectTemplates
 {
     public static class ActionTemplates
     {
-        public static void launch(PhysicsSystem physSystem, PhysicsObject physObj, PointF StartPointF, PointF EndPointF)
+        public static void launch(PhysicsSystem physSystem, PhysicsObject physObj, Vector2f start, Vector2f end)
         {
-            physSystem.ActivateAtPoint(StartPointF);
-            Vec2 delta = (new Vec2 { X = EndPointF.X, Y = EndPointF.Y } -
-                          new Vec2 { X = StartPointF.X, Y = StartPointF.Y });
+            physSystem.ActivateAtPoint(start);
+            Vec2 delta = (new Vec2 { X = end.X, Y = end.Y } -
+                          new Vec2 { X = start.X, Y = start.Y });
             physSystem.AddVelocityToActive(-delta);
         }
 
@@ -31,7 +29,7 @@ namespace physics.Engine.Classes.ObjectTemplates
         {
             foreach(PhysicsObject obj in physSystem.GetMoveableObjects())
             {
-                physSystem.ActivateAtPoint(new PointF(obj.Center.X, obj.Center.Y));
+                physSystem.ActivateAtPoint(new Vector2f(obj.Center.X, obj.Center.Y));
                 var velocity = obj.Velocity;
                 var origin = obj.Center;
                 physSystem.RemoveActiveObject();
