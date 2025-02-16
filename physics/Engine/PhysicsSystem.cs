@@ -14,9 +14,7 @@ namespace physics.Engine
         #region Public Properties
 
         public float GravityScale = 10F;
-
         public Vector2f Gravity { get; set; }
-
         public float Friction { get; set; }
 
         // Set this to roughly your average AABB size – adjust as needed.
@@ -26,34 +24,28 @@ namespace physics.Engine
 
         #region Local Declarations
 
-
         public const float FPS = 60;
         private const float _dt = 1 / FPS;
         private const int PHYSICS_ITERATIONS = 4;
         private double accumulator = 0;
 
-
         public static PhysicsObject ActiveObject;
-
         public static readonly List<SFMLShader> ListShaders = new List<SFMLShader>();
-
         public static readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
+        public static readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
+        public static readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
 
         internal IEnumerable<PhysicsObject> GetMoveableObjects()
         {
-            for(int i = ListStaticObjects.Count-1; i >= 0; i--)
+            for (int i = ListStaticObjects.Count - 1; i >= 0; i--)
             {
                 var obj = ListStaticObjects[i];
-                if (! obj.Locked && obj.Mass < 1000000)
+                if (!obj.Locked && obj.Mass < 1000000)
                 {
                     yield return obj;
                 }
             }
         }
-
-        public static readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
-
-        public static readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
 
         internal void SetVelocity(PhysicsObject physicsObject, Vector2f velocity)
         {
@@ -64,18 +56,26 @@ namespace physics.Engine
 
         #endregion
 
+        #region Reusable Broadphase Fields
+
+        // These fields are now allocated once and reused every tick.
+        private readonly Dictionary<(int, int), List<PhysicsObject>> _spatialHash = new Dictionary<(int, int), List<PhysicsObject>>();
+        private readonly HashSet<(PhysicsObject, PhysicsObject)> _pairSet =
+            new HashSet<(PhysicsObject, PhysicsObject)>(new PhysicsObjectPairComparer());
+
+        #endregion
+
         #region Constructors
 
         public PhysicsSystem()
         {
-            Gravity = new Vector2f {X = 0, Y = 10F * GravityScale};
+            Gravity = new Vector2f { X = 0, Y = 10F * GravityScale };
             Friction = 1F;
         }
 
         #endregion
 
         #region Public Methods
-
 
         public static PhysicsObject CreateStaticCircle(Vector2f loc, int radius, float restitution, bool locked, SFMLShader shader)
         {
@@ -125,6 +125,7 @@ namespace physics.Engine
 
             ActiveObject.Velocity += velocityDelta;
         }
+
         public void SetVelocityOfActive(Vector2f velocityDelta)
         {
             if (ActiveObject == null || ActiveObject.Mass >= 1000000)
@@ -172,7 +173,7 @@ namespace physics.Engine
             }
 
             var delta = ActiveObject.Center - point;
-            SetVelocityOfActive(-delta*10);
+            SetVelocityOfActive(-delta * 10);
         }
 
         public void ReleaseActiveObject()
@@ -200,10 +201,9 @@ namespace physics.Engine
 
         public void Tick(double elapsedTime)
         {
-
             accumulator += elapsedTime;
 
-            //Avoid accumulator spiral of death by clamping
+            // Avoid accumulator spiral of death by clamping
             if (accumulator > 0.1f)
                 accumulator = 0.1f;
 
@@ -255,11 +255,11 @@ namespace physics.Engine
                 var diff = gpt.Center - obj.Center;
                 PhysMath.RoundToZero(ref diff, 5F);
 
-                //apply inverse square law
+                // Apply inverse square law
                 var falloffMultiplier = gpt.Mass / diff.LengthSquared();
 
-                diff.X = (int) diff.X == 0 ? 0 : diff.X * falloffMultiplier;
-                diff.Y = (int) diff.Y == 0 ? 0 : diff.Y * falloffMultiplier;
+                diff.X = (int)diff.X == 0 ? 0 : diff.X * falloffMultiplier;
+                diff.Y = (int)diff.Y == 0 ? 0 : diff.Y * falloffMultiplier;
 
                 if (diff.Length() > .005F)
                 {
@@ -302,7 +302,6 @@ namespace physics.Engine
         {
             for (int i = 0; i < PHYSICS_ITERATIONS; i++)
             {
-
                 foreach (var pair in ListCollisionPairs)
                 {
                     var objA = pair.A;
@@ -322,19 +321,17 @@ namespace physics.Engine
                         m.B = objB;
                     }
 
-                    //Box vs anything
+                    // Box vs anything
                     if (m.A.ShapeType == PhysicsObject.Type.Box)
                     {
                         if (m.B.ShapeType == PhysicsObject.Type.Box)
                         {
-                            //continue;
                             if (Collision.AABBvsAABB(ref m))
                             {
                                 collision = true;
                             }
                         }
-
-                        if (m.B.ShapeType == PhysicsObject.Type.Circle)
+                        else if (m.B.ShapeType == PhysicsObject.Type.Circle)
                         {
                             if (Collision.AABBvsCircle(ref m))
                             {
@@ -342,20 +339,16 @@ namespace physics.Engine
                             }
                         }
                     }
-
-                    //Circle Circle
-                    else
+                    // Circle vs Circle
+                    else if (m.B.ShapeType == PhysicsObject.Type.Circle)
                     {
-                        if (m.B.ShapeType == PhysicsObject.Type.Circle)
+                        if (Collision.CirclevsCircle(ref m))
                         {
-                            if (Collision.CirclevsCircle(ref m))
-                            {
-                                collision = true;
-                            }
+                            collision = true;
                         }
                     }
 
-                    //Resolve Collision
+                    // Resolve collision if one was detected
                     if (collision)
                     {
                         Collision.ResolveCollision(ref m);
@@ -375,14 +368,17 @@ namespace physics.Engine
 
         #endregion
 
-        #region Private Events
+        #region Broad Phase Collision Detection
 
         private void BroadPhase_GeneratePairs()
         {
+            // Reuse the ListCollisionPairs (clear it first)
             ListCollisionPairs.Clear();
 
-            // Create the spatial hash dictionary keyed by grid cell coordinates.
-            Dictionary<(int, int), List<PhysicsObject>> spatialHash = new Dictionary<(int, int), List<PhysicsObject>>();
+            // Clear reusable structures to avoid allocations
+            _spatialHash.Clear();
+            _pairSet.Clear();
+
             float cellSize = SpatialHashCellSize;
 
             // Populate the spatial hash.
@@ -398,21 +394,18 @@ namespace physics.Engine
                     for (int y = minY; y <= maxY; y++)
                     {
                         var key = (x, y);
-                        if (!spatialHash.TryGetValue(key, out List<PhysicsObject> cellList))
+                        if (!_spatialHash.TryGetValue(key, out List<PhysicsObject> cellList))
                         {
                             cellList = new List<PhysicsObject>();
-                            spatialHash[key] = cellList;
+                            _spatialHash[key] = cellList;
                         }
                         cellList.Add(obj);
                     }
                 }
             }
 
-            // Use a hash set to avoid adding duplicate pairs (since objects may share multiple cells).
-            HashSet<(PhysicsObject, PhysicsObject)> pairSet = new HashSet<(PhysicsObject, PhysicsObject)>(new PhysicsObjectPairComparer());
-
-            // For each cell, add collision pairs from objects that share the cell.
-            foreach (var cell in spatialHash.Values)
+            // Use the reusable hash set to avoid duplicate pairs.
+            foreach (var cell in _spatialHash.Values)
             {
                 int count = cell.Count;
                 if (count > 1)
@@ -425,7 +418,7 @@ namespace physics.Engine
                             PhysicsObject objB = cell[j];
 
                             // Add the pair if it has not already been processed.
-                            if (pairSet.Add((objA, objB)))
+                            if (_pairSet.Add((objA, objB)))
                             {
                                 ListCollisionPairs.Add(new CollisionPair(objA, objB));
                             }

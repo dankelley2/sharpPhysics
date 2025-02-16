@@ -1,4 +1,4 @@
-using SFML.Graphics;
+﻿using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
 using System;
@@ -25,25 +25,31 @@ namespace physics.Engine
         private Vector2f endPoint;
         private bool isGrabbing = false;
         private Vector2f mousePos;
+
+        // Timing variables
         private long msFrameTime;
-        private long msLastFrame;
         private long msPerDrawCycle;
-        private long msThisFrame;
         private long msPhysicsTime;
+
         private int radius = 10;
         private Font debugFont;
         private Text debugText;
 
+        // Cap maximum delta time to avoid spiral of death (e.g., 33ms ~30 FPS)
+        private const float MAX_DELTA_TIME = 0.033f;
+
         public GameWindow(uint width, uint height, string title)
         {
-            window = new RenderWindow(new VideoMode(width, height), title);
+            window = new RenderWindow(new VideoMode(width, height), title, Styles.Close);
             window.Closed += (s, e) => window.Close();
             window.MouseButtonPressed += OnMouseButtonPressed;
             window.MouseButtonReleased += OnMouseButtonReleased;
             window.MouseMoved += OnMouseMoved;
             window.KeyPressed += OnKeyPressed;
 
-            debugFont = new Font(@"C:\Windows\Fonts\arial.ttf"); // You'll need to provide a font file
+            window.SetFramerateLimit(144);
+
+            debugFont = new Font(@"C:\Windows\Fonts\arial.ttf"); // Provide a valid font file
             debugText = new Text("", debugFont, 12);
             debugText.FillColor = Color.White;
             debugText.Position = new Vector2f(40, 40);
@@ -76,17 +82,25 @@ namespace physics.Engine
             {
                 window.DispatchEvents();
 
-                msPhysicsTime = stopwatch.ElapsedMilliseconds;
+                // Start of frame timestamp
+                long frameStartTime = stopwatch.ElapsedMilliseconds;
+
+                // Measure physics update time
                 float deltaTime = clock.Restart().AsSeconds();
+                // Cap deltaTime to avoid physics spiral of death.
+                deltaTime = Math.Min(deltaTime, MAX_DELTA_TIME);
+
+                long physicsStart = stopwatch.ElapsedMilliseconds;
                 Update(deltaTime);
-                msPhysicsTime = stopwatch.ElapsedMilliseconds - msPhysicsTime;
+                msPhysicsTime = stopwatch.ElapsedMilliseconds - physicsStart;
 
+                // Measure render time
+                long renderStart = stopwatch.ElapsedMilliseconds;
                 Render();
+                msPerDrawCycle = stopwatch.ElapsedMilliseconds - renderStart;
 
-                msPerDrawCycle = stopwatch.ElapsedMilliseconds - msFrameTime;
-                msLastFrame = msThisFrame;
-                msThisFrame = stopwatch.ElapsedMilliseconds;
-                msFrameTime = msThisFrame - msLastFrame;
+                // Total frame time
+                msFrameTime = stopwatch.ElapsedMilliseconds - frameStartTime;
             }
         }
 
@@ -96,9 +110,9 @@ namespace physics.Engine
 
             // Debug info
             debugText.DisplayedString = $"ms physics time: {msPhysicsTime}\n" +
-                                      $"ms total draw time: {msPerDrawCycle}\n" +
-                                      $"frame rate: {1000 / Math.Max(msFrameTime, 1)}\n" +
-                                      $"num objects: {PhysicsSystem.ListStaticObjects.Count}";
+                                          $"ms draw time: {msPerDrawCycle}\n" +
+                                          $"frame rate: {1000 / Math.Max(msFrameTime, 1)}\n" +
+                                          $"num objects: {PhysicsSystem.ListStaticObjects.Count}";
             window.Draw(debugText);
 
             // Draw objects
@@ -120,7 +134,8 @@ namespace physics.Engine
         {
             if (isGrabbing)
             {
-                physicsSystem.HoldActiveAtPoint(new Vector2f { X = mousePos.X, Y = mousePos.Y });
+                // Directly pass mousePos (already a Vector2f)
+                physicsSystem.HoldActiveAtPoint(mousePos);
             }
             physicsSystem.Tick(deltaTime);
         }
@@ -157,7 +172,7 @@ namespace physics.Engine
             {
                 if (isGrabbing)
                 {
-                    physicsSystem.SetVelocityOfActive(new Vector2f { X = 0, Y = 0 });
+                    physicsSystem.SetVelocityOfActive(new Vector2f(0, 0));
                     physicsSystem.ReleaseActiveObject();
                     isGrabbing = false;
                     return;
@@ -169,8 +184,8 @@ namespace physics.Engine
                     ActionTemplates.launch(
                         physicsSystem,
                         ObjectTemplates.CreateSmallBall(startPoint.X, startPoint.Y),
-                        new Vector2f(startPoint.X, startPoint.Y),
-                        new Vector2f(endPoint.X, endPoint.Y));
+                        startPoint,
+                        endPoint);
                     isMousePressedLeft = false;
                 }
             }
