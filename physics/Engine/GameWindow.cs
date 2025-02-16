@@ -204,7 +204,7 @@ namespace physics.Engine
                     ActionTemplates.changeShader(physicsSystem, new SFMLBallShader());
                     break;
                 case Keyboard.Key.W:
-                    ActionTemplates.changeShader(physicsSystem, new SFMLWallShader());
+                    ActionTemplates.changeShader(physicsSystem, new SFMLBallVelocityShader());
                     break;
                 case Keyboard.Key.V:
                     ActionTemplates.changeShader(physicsSystem, new SFMLBallVelocityShader());
