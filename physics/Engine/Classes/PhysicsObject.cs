@@ -14,7 +14,7 @@ namespace physics.Engine.Classes
             Circle
         }
 
-        public aShader Shader;
+        public SFMLShader Shader;
         public bool Locked;
         public AABB Aabb;
         public Vec2 Velocity;
@@ -26,7 +26,7 @@ namespace physics.Engine.Classes
         public float Mass;
         public float IMass;
 
-        public PhysicsObject(AABB boundingBox, Type t, float r, bool locked, aShader shader, float m = 0)
+        public PhysicsObject(AABB boundingBox, Type t, float r, bool locked, SFMLShader shader, float m = 0)
         {
             Velocity = new Vec2(0, 0);
             Aabb = boundingBox;

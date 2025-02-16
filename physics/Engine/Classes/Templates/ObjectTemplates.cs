@@ -10,17 +10,17 @@ namespace physics.Engine.Classes.ObjectTemplates
 {
     public static class ObjectTemplates
     {
-        private static aShader shaderDefault = new ShaderDefault();
+        private static SFMLShader shaderDefault = new SFMLBallShader();
 
-        private static aShader shaderWall = new ShaderWall();
+        private static SFMLShader shaderWall = new SFMLWallShader();
 
-        private static aShader shaderBall = new ShaderBall();
+        private static SFMLShader shaderBall = new SFMLBallShader();
 
-        private static aShader shaderBallFast = new ShaderBallFast();
+        private static SFMLShader shaderBallFast = new SFMLBallShader();
 
-        private static aShader shaderBallVelocity = new ShaderBallVelocity();
+        private static SFMLShader shaderBallVelocity = new SFMLBallVelocityShader();
 
-        private static aShader shaderWater = new ShaderWater();
+        private static SFMLShader shaderWater = new SFMLBallVelocityShader();
 
         private static Random r = new Random();
 
