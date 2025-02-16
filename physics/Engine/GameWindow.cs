@@ -198,7 +198,7 @@ namespace physics.Engine
                     physicsSystem.FreezeStaticObjects();
                     break;
                 case Keyboard.Key.I:
-                    ActionTemplates.changeShader(physicsSystem, new ShaderInfo());
+                    ActionTemplates.changeShader(physicsSystem, new SFMLBallVelocityShader());
                     break;
                 case Keyboard.Key.P:
                     ActionTemplates.changeShader(physicsSystem, new SFMLBallShader());
