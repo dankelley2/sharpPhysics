@@ -1,23 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using SFML.System;
-using physics.Engine.Helpers;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
+using physics.Engine;
 using physics.Engine.Structs;
 
 namespace physics.Engine.Classes.ObjectTemplates
 {
     public static class ActionTemplates
     {
-        public static void launch(PhysicsSystem physSystem, PhysicsObject physObj, Vector2f start, Vector2f end)
+        public static void launch(PhysicsSystem physSystem, PhysicsObject physObj, Vector2f StartPointF, Vector2f EndPointF)
         {
-            physSystem.ActivateAtPoint(start);
-            Vec2 delta = (new Vec2 { X = end.X, Y = end.Y } -
-                          new Vec2 { X = start.X, Y = start.Y });
+            physSystem.ActivateAtPoint(StartPointF);
+            Vec2 delta = (new Vec2 { X = EndPointF.X, Y = EndPointF.Y } -
+                          new Vec2 { X = StartPointF.X, Y = StartPointF.Y });
             physSystem.AddVelocityToActive(-delta);
         }
 
-        public static void changeShader(PhysicsSystem physSystem, aShader shader)
+        public static void changeShader(PhysicsSystem physSystem, SFMLShader shader)
         {
             foreach(PhysicsObject obj in physSystem.GetMoveableObjects())
             {
