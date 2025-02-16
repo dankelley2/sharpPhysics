@@ -12,8 +12,9 @@ namespace physics.Engine
     public class GameWindow
     {
         private readonly RenderWindow window;
-        private readonly Stopwatch stopwatch = new Stopwatch();
         private readonly PhysicsSystem physicsSystem = new PhysicsSystem();
+        private readonly Clock clock = new Clock();
+        private readonly Stopwatch stopwatch = new Stopwatch(); // Keep for performance metrics
         private bool isMousePressedLeft = false;
         private bool isMousePressedRight = false;
         private Vector2f startPoint;
@@ -71,7 +72,8 @@ namespace physics.Engine
                 window.DispatchEvents();
 
                 msPhysicsTime = stopwatch.ElapsedMilliseconds;
-                RunEngine(1.0 / 60.0); // Fixed time step
+                float deltaTime = clock.Restart().AsSeconds();
+                Update(deltaTime);
                 msPhysicsTime = stopwatch.ElapsedMilliseconds - msPhysicsTime;
 
                 Render();
@@ -109,13 +111,13 @@ namespace physics.Engine
             window.Display();
         }
 
-        private void RunEngine(double elapsedTime)
+        private void Update(float deltaTime)
         {
             if (isGrabbing)
             {
                 physicsSystem.HoldActiveAtPoint(new Vec2 { X = mousePos.X, Y = mousePos.Y });
             }
-            physicsSystem.Tick(elapsedTime);
+            physicsSystem.Tick(deltaTime);
         }
 
         private void OnMouseButtonPressed(object sender, MouseButtonEventArgs e)
