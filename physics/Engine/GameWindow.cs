@@ -97,11 +97,13 @@ namespace physics.Engine
             // Draw objects
             foreach (var obj in PhysicsSystem.ListStaticObjects)
             {
-                // TODO: Convert GDI+ shaders to SFML shapes
-                var shape = new CircleShape(obj.Width / 2);
-                shape.Position = new Vector2f(obj.Center.X - obj.Width / 2, obj.Center.Y - obj.Width / 2);
-                shape.FillColor = Color.White;
-                window.Draw(shape);
+                var sfmlShader = obj.Shader as SFMLShader;
+                if (sfmlShader != null)
+                {
+                    sfmlShader.PreDraw(obj, window);
+                    sfmlShader.Draw(obj, window);
+                    sfmlShader.PostDraw(obj, window);
+                }
             }
 
             window.Display();
