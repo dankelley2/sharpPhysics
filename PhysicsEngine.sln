@@ -1,14 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.1082
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34728.123
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ARNet.Physics", "physics\ARNet.Physics.csproj", "{394D2D64-62E0-419A-966E-0C6E8CA39F73}"
 EndProject
-Global
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ARNet.Physics.Tests", "ARNet.Physics.Tests\ARNet.Physics.Tests.csproj", "{5B5C116E-DE45-4D9C-A784-BF3B5E7C7B7A}"
 EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
@@ -17,6 +17,10 @@ EndProject
 		{394D2D64-62E0-419A-966E-0C6E8CA39F73}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{394D2D64-62E0-419A-966E-0C6E8CA39F73}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{394D2D64-62E0-419A-966E-0C6E8CA39F73}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B5C116E-DE45-4D9C-A784-BF3B5E7C7B7A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B5C116E-DE45-4D9C-A784-BF3B5E7C7B7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B5C116E-DE45-4D9C-A784-BF3B5E7C7B7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B5C116E-DE45-4D9C-A784-BF3B5E7C7B7A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

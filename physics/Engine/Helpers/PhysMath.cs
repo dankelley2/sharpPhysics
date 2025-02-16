@@ -9,7 +9,7 @@ using physics.Engine.Structs;
 
 namespace physics.Engine.Helpers
 {
-    static class PhysMath
+    public static class PhysMath
     {
 
         public static decimal DotProduct(PointF pa, PointF pb)
@@ -26,6 +26,7 @@ namespace physics.Engine.Helpers
             aabb.Min = new Vec2 { X = p1.X, Y = p1.Y };
             aabb.Max = new Vec2 { X = p2.X, Y = p2.Y };
         }
+
         public static void CorrectBoundingPoints(ref PointF p1, ref PointF p2)
         {
             PointF new_p1 = new PointF(Math.Min(p1.X, p2.X), Math.Min(p1.Y, p2.Y));
