@@ -1,5 +1,6 @@
-﻿using System.Drawing;
+﻿using SFML.System;
 using physics.Engine.Classes;
+using physics.Engine.Helpers;
 
 namespace physics.Engine.Structs
 {
