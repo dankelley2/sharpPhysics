@@ -201,16 +201,16 @@ namespace physics.Engine
                     ActionTemplates.changeShader(physicsSystem, new ShaderInfo());
                     break;
                 case Keyboard.Key.P:
-                    ActionTemplates.changeShader(physicsSystem, new ShaderBall());
+                    ActionTemplates.changeShader(physicsSystem, new SFMLBallShader());
                     break;
                 case Keyboard.Key.W:
-                    ActionTemplates.changeShader(physicsSystem, new ShaderWater());
+                    ActionTemplates.changeShader(physicsSystem, new SFMLWallShader());
                     break;
                 case Keyboard.Key.V:
-                    ActionTemplates.changeShader(physicsSystem, new ShaderBallVelocity());
+                    ActionTemplates.changeShader(physicsSystem, new SFMLBallVelocityShader());
                     break;
                 case Keyboard.Key.F:
-                    ActionTemplates.changeShader(physicsSystem, new ShaderBallFast());
+                    ActionTemplates.changeShader(physicsSystem, new SFMLBallShader());
                     break;
                 case Keyboard.Key.G:
                     ObjectTemplates.CreateAttractor((int)mousePos.X, (int)mousePos.Y);
