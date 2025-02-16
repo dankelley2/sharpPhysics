@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Drawing;
 using physics.Engine.Classes;
+using physics.Engine.Extensions;
 using physics.Engine.Helpers;
 using physics.Engine.Structs;
+using SFML.System;
 
 namespace physics.Engine
 {
@@ -12,48 +14,40 @@ namespace physics.Engine
         #region Public Properties
 
         public float GravityScale = 10F;
-
-        public Vec2 Gravity { get; set; }
-
+        public Vector2f Gravity { get; set; }
         public float Friction { get; set; }
 
         // Set this to roughly your average AABB size – adjust as needed.
-        public float SpatialHashCellSize { get; set; } = 20F;
+        public float SpatialHashCellSize { get; set; } = 10F;
 
         #endregion
 
         #region Local Declarations
-
-
         public const float FPS = 60;
         private const float _dt = 1 / FPS;
         private const int PHYSICS_ITERATIONS = 4;
         private double accumulator = 0;
 
-
         public static PhysicsObject ActiveObject;
-
-        public static readonly List<aShader> ListShaders = new List<aShader>();
-
+        public static readonly List<SFMLShader> ListShaders = new List<SFMLShader>();
         public static readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
+        public static readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
+        public static readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
+        private readonly ManifoldPool _manifoldPool = new ManifoldPool();
 
         internal IEnumerable<PhysicsObject> GetMoveableObjects()
         {
-            for(int i = ListStaticObjects.Count-1; i >= 0; i--)
+            for (int i = ListStaticObjects.Count - 1; i >= 0; i--)
             {
                 var obj = ListStaticObjects[i];
-                if (! obj.Locked && obj.Mass < 1000000)
+                if (!obj.Locked && obj.Mass < 1000000)
                 {
                     yield return obj;
                 }
             }
         }
 
-        public static readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
-
-        public static readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
-
-        internal void SetVelocity(PhysicsObject physicsObject, Vec2 velocity)
+        internal void SetVelocity(PhysicsObject physicsObject, Vector2f velocity)
         {
             physicsObject.Velocity = velocity;
         }
@@ -62,11 +56,20 @@ namespace physics.Engine
 
         #endregion
 
+        #region Reusable Broadphase Fields
+
+        // These fields are now allocated once and reused every tick.
+        private readonly Dictionary<(int, int), List<PhysicsObject>> _spatialHash = new Dictionary<(int, int), List<PhysicsObject>>();
+        private readonly HashSet<(PhysicsObject, PhysicsObject)> _pairSet =
+            new HashSet<(PhysicsObject, PhysicsObject)>(new PhysicsObjectPairComparer());
+
+        #endregion
+
         #region Constructors
 
         public PhysicsSystem()
         {
-            Gravity = new Vec2 {X = 0, Y = 10F * GravityScale};
+            Gravity = new Vector2f { X = 0, Y = 10F * GravityScale };
             Friction = 1F;
         }
 
@@ -74,13 +77,12 @@ namespace physics.Engine
 
         #region Public Methods
 
-
-        public static PhysicsObject CreateStaticCircle(Vec2 loc, int radius, float restitution, bool locked, aShader shader)
+        public static PhysicsObject CreateStaticCircle(Vector2f loc, int radius, float restitution, bool locked, SFMLShader shader)
         {
             var oAabb = new AABB
             {
-                Min = new Vec2 { X = loc.X - radius, Y = loc.Y - radius },
-                Max = new Vec2 { X = loc.X + radius, Y = loc.Y + radius }
+                Min = new Vector2f { X = loc.X - radius, Y = loc.Y - radius },
+                Max = new Vector2f { X = loc.X + radius, Y = loc.Y + radius }
             };
             PhysMath.CorrectBoundingBox(ref oAabb);
             var obj = new PhysicsObject(oAabb, PhysicsObject.Type.Circle, restitution, locked, shader);
@@ -88,12 +90,12 @@ namespace physics.Engine
             return obj;
         }
 
-        public static PhysicsObject CreateStaticBox(Vec2 start, Vec2 end, bool locked, aShader shader, float mass)
+        public static PhysicsObject CreateStaticBox(Vector2f start, Vector2f end, bool locked, SFMLShader shader, float mass)
         {
             var oAabb = new AABB
             {
-                Min = new Vec2 { X = start.X, Y = start.Y },
-                Max = new Vec2 { X = end.X, Y = end.Y }
+                Min = new Vector2f { X = start.X, Y = start.Y },
+                Max = new Vector2f { X = end.X, Y = end.Y }
             };
             PhysMath.CorrectBoundingBox(ref oAabb);
             var obj = new PhysicsObject(oAabb, PhysicsObject.Type.Box, .95F, locked, shader, mass);
@@ -101,7 +103,7 @@ namespace physics.Engine
             return obj;
         }
 
-        public bool ActivateAtPoint(PointF p)
+        public bool ActivateAtPoint(Vector2f p)
         {
             ActiveObject = CheckObjectAtPoint(p);
 
@@ -114,7 +116,7 @@ namespace physics.Engine
             return true;
         }
 
-        public void AddVelocityToActive(Vec2 velocityDelta)
+        public void AddVelocityToActive(Vector2f velocityDelta)
         {
             if (ActiveObject == null || ActiveObject.Mass >= 1000000)
             {
@@ -123,7 +125,8 @@ namespace physics.Engine
 
             ActiveObject.Velocity += velocityDelta;
         }
-        public void SetVelocityOfActive(Vec2 velocityDelta)
+
+        public void SetVelocityOfActive(Vector2f velocityDelta)
         {
             if (ActiveObject == null || ActiveObject.Mass >= 1000000)
             {
@@ -137,21 +140,21 @@ namespace physics.Engine
         {
             foreach (var physicsObject in ListStaticObjects)
             {
-                physicsObject.Velocity = new Vec2 { X = 0, Y = 0 };
+                physicsObject.Velocity = new Vector2f { X = 0, Y = 0 };
             }
         }
 
-        public PointF GetActiveObjectCenter()
+        public Vector2f GetActiveObjectCenter()
         {
             if (ActiveObject == null)
             {
-                return new PointF();
+                return new Vector2f();
             }
 
-            return new PointF(ActiveObject.Center.X, ActiveObject.Center.Y);
+            return new Vector2f(ActiveObject.Center.X, ActiveObject.Center.Y);
         }
 
-        public void MoveActiveTowardsPoint(Vec2 point)
+        public void MoveActiveTowardsPoint(Vector2f point)
         {
             if (ActiveObject == null)
             {
@@ -162,7 +165,7 @@ namespace physics.Engine
             AddVelocityToActive(-delta / 10000);
         }
 
-        public void HoldActiveAtPoint(Vec2 point)
+        public void HoldActiveAtPoint(Vector2f point)
         {
             if (ActiveObject == null)
             {
@@ -170,7 +173,7 @@ namespace physics.Engine
             }
 
             var delta = ActiveObject.Center - point;
-            SetVelocityOfActive(-delta*10);
+            SetVelocityOfActive(-delta * 10);
         }
 
         public void ReleaseActiveObject()
@@ -198,10 +201,9 @@ namespace physics.Engine
 
         public void Tick(double elapsedTime)
         {
-
             accumulator += elapsedTime;
 
-            //Avoid accumulator spiral of death by clamping
+            // Avoid accumulator spiral of death by clamping
             if (accumulator > 0.1f)
                 accumulator = 0.1f;
 
@@ -231,7 +233,7 @@ namespace physics.Engine
             }
 
             AddGravity(obj, dt);
-            obj.Velocity -= Friction * dt;
+            obj.Velocity = obj.Velocity.Minus(Friction * dt);
 
             if (obj.Center.Y > 2000 || obj.Center.Y < -2000 || obj.Center.X > 2000 || obj.Center.X < -2000)
             {
@@ -239,9 +241,9 @@ namespace physics.Engine
             }
         }
 
-        private Vec2 CalculatePointGravity(PhysicsObject obj)
+        private Vector2f CalculatePointGravity(PhysicsObject obj)
         {
-            var forces = new Vec2(0, 0);
+            var forces = new Vector2f(0, 0);
 
             if (obj.Locked)
             {
@@ -253,13 +255,13 @@ namespace physics.Engine
                 var diff = gpt.Center - obj.Center;
                 PhysMath.RoundToZero(ref diff, 5F);
 
-                //apply inverse square law
-                var falloffMultiplier = gpt.Mass / diff.LengthSquared;
+                // Apply inverse square law
+                var falloffMultiplier = gpt.Mass / diff.LengthSquared();
 
-                diff.X = (int) diff.X == 0 ? 0 : diff.X * falloffMultiplier;
-                diff.Y = (int) diff.Y == 0 ? 0 : diff.Y * falloffMultiplier;
+                diff.X = (int)diff.X == 0 ? 0 : diff.X * falloffMultiplier;
+                diff.Y = (int)diff.Y == 0 ? 0 : diff.Y * falloffMultiplier;
 
-                if (diff.Length > .005F)
+                if (diff.Length() > .005F)
                 {
                     forces += diff;
                 }
@@ -268,7 +270,7 @@ namespace physics.Engine
             return forces;
         }
 
-        private PhysicsObject CheckObjectAtPoint(PointF p)
+        private PhysicsObject CheckObjectAtPoint(Vector2f p)
         {
             foreach (var physicsObject in ListStaticObjects)
             {
@@ -281,7 +283,7 @@ namespace physics.Engine
             return null;
         }
 
-        private Vec2 GetGravityVector(PhysicsObject obj)
+        private Vector2f GetGravityVector(PhysicsObject obj)
         {
             return CalculatePointGravity(obj) + Gravity;
         }
@@ -298,17 +300,28 @@ namespace physics.Engine
 
         private void UpdatePhysics(float dt)
         {
+            // Optionally, clear and return previous collision manifolds to the pool.
+            //foreach (var obj in AllPhysicsObjects) // Assume you maintain a list of all physics objects.
+            //{
+            //    if (obj.LastCollision != null)
+            //    {
+            //        _manifoldPool.Return(obj.LastCollision);
+            //        obj.LastCollision = null;
+            //    }
+            //}
+
             for (int i = 0; i < PHYSICS_ITERATIONS; i++)
             {
-
                 foreach (var pair in ListCollisionPairs)
                 {
                     var objA = pair.A;
                     var objB = pair.B;
 
-                    var m = new Manifold();
-                    var collision = false;
+                    // Retrieve a manifold from the pool instead of creating a new instance.
+                    Manifold m = _manifoldPool.Get();
+                    bool collision = false;
 
+                    // Set the ordering based on object types (flip if necessary).
                     if (objA.ShapeType == PhysicsObject.Type.Circle && objB.ShapeType == PhysicsObject.Type.Box)
                     {
                         m.A = objB;
@@ -320,40 +333,24 @@ namespace physics.Engine
                         m.B = objB;
                     }
 
-                    //Box vs anything
+                    // Perform collision detection based on shape types.
                     if (m.A.ShapeType == PhysicsObject.Type.Box)
                     {
                         if (m.B.ShapeType == PhysicsObject.Type.Box)
                         {
-                            //continue;
-                            if (Collision.AABBvsAABB(ref m))
-                            {
-                                collision = true;
-                            }
+                            collision = Collision.AABBvsAABB(ref m);
                         }
-
-                        if (m.B.ShapeType == PhysicsObject.Type.Circle)
+                        else if (m.B.ShapeType == PhysicsObject.Type.Circle)
                         {
-                            if (Collision.AABBvsCircle(ref m))
-                            {
-                                collision = true;
-                            }
+                            collision = Collision.AABBvsCircle(ref m);
                         }
                     }
-
-                    //Circle Circle
-                    else
+                    else if (m.B.ShapeType == PhysicsObject.Type.Circle)
                     {
-                        if (m.B.ShapeType == PhysicsObject.Type.Circle)
-                        {
-                            if (Collision.CirclevsCircle(ref m))
-                            {
-                                collision = true;
-                            }
-                        }
+                        collision = Collision.CirclevsCircle(ref m);
                     }
 
-                    //Resolve Collision
+                    // If a collision was detected, resolve it and store the manifold.
                     if (collision)
                     {
                         Collision.ResolveCollision(ref m);
@@ -361,9 +358,15 @@ namespace physics.Engine
                         objA.LastCollision = m;
                         objB.LastCollision = m;
                     }
+                    else
+                    {
+                        // No collision: return the manifold to the pool.
+                        _manifoldPool.Return(m);
+                    }
                 }
             }
 
+            // Process static objects as before.
             for (var i = 0; i < ListStaticObjects.Count; i++)
             {
                 ApplyConstants(ListStaticObjects[i], dt);
@@ -373,14 +376,17 @@ namespace physics.Engine
 
         #endregion
 
-        #region Private Events
+        #region Broad Phase Collision Detection
 
         private void BroadPhase_GeneratePairs()
         {
+            // Reuse the ListCollisionPairs (clear it first)
             ListCollisionPairs.Clear();
 
-            // Create the spatial hash dictionary keyed by grid cell coordinates.
-            Dictionary<(int, int), List<PhysicsObject>> spatialHash = new Dictionary<(int, int), List<PhysicsObject>>();
+            // Clear reusable structures to avoid allocations
+            _spatialHash.Clear();
+            _pairSet.Clear();
+
             float cellSize = SpatialHashCellSize;
 
             // Populate the spatial hash.
@@ -396,21 +402,18 @@ namespace physics.Engine
                     for (int y = minY; y <= maxY; y++)
                     {
                         var key = (x, y);
-                        if (!spatialHash.TryGetValue(key, out List<PhysicsObject> cellList))
+                        if (!_spatialHash.TryGetValue(key, out List<PhysicsObject> cellList))
                         {
                             cellList = new List<PhysicsObject>();
-                            spatialHash[key] = cellList;
+                            _spatialHash[key] = cellList;
                         }
                         cellList.Add(obj);
                     }
                 }
             }
 
-            // Use a hash set to avoid adding duplicate pairs (since objects may share multiple cells).
-            HashSet<(PhysicsObject, PhysicsObject)> pairSet = new HashSet<(PhysicsObject, PhysicsObject)>(new PhysicsObjectPairComparer());
-
-            // For each cell, add collision pairs from objects that share the cell.
-            foreach (var cell in spatialHash.Values)
+            // Use the reusable hash set to avoid duplicate pairs.
+            foreach (var cell in _spatialHash.Values)
             {
                 int count = cell.Count;
                 if (count > 1)
@@ -423,7 +426,7 @@ namespace physics.Engine
                             PhysicsObject objB = cell[j];
 
                             // Add the pair if it has not already been processed.
-                            if (pairSet.Add((objA, objB)))
+                            if (_pairSet.Add((objA, objB)))
                             {
                                 ListCollisionPairs.Add(new CollisionPair(objA, objB));
                             }

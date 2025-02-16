@@ -1,18 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using SFML.System;
 using physics.Engine.Classes;
 using physics.Engine.Structs;
+using physics.Engine.Extensions;
 
 namespace physics.Engine.Helpers
 {
     public static class PhysMath
     {
-
-        public static decimal DotProduct(PointF pa, PointF pb)
+        public static decimal DotProduct(Vector2f pa, Vector2f pb)
         {
             decimal[] a = { (decimal)pa.X, (decimal)pa.Y };
             decimal[] b = { (decimal)pb.X, (decimal)pb.Y };
@@ -21,30 +19,30 @@ namespace physics.Engine.Helpers
 
         public static void CorrectBoundingBox(ref AABB aabb)
         {
-            PointF p1 = new PointF(Math.Min(aabb.Min.X, aabb.Max.X), Math.Min(aabb.Min.Y, aabb.Max.Y));
-            PointF p2 = new PointF(Math.Max(aabb.Min.X, aabb.Max.X), Math.Max(aabb.Min.Y, aabb.Max.Y));
-            aabb.Min = new Vec2 { X = p1.X, Y = p1.Y };
-            aabb.Max = new Vec2 { X = p2.X, Y = p2.Y };
+            Vector2f p1 = new Vector2f(Math.Min(aabb.Min.X, aabb.Max.X), Math.Min(aabb.Min.Y, aabb.Max.Y));
+            Vector2f p2 = new Vector2f(Math.Max(aabb.Min.X, aabb.Max.X), Math.Max(aabb.Min.Y, aabb.Max.Y));
+            aabb.Min = new Vector2f { X = p1.X, Y = p1.Y };
+            aabb.Max = new Vector2f { X = p2.X, Y = p2.Y };
         }
 
-        public static void CorrectBoundingPoints(ref PointF p1, ref PointF p2)
+        public static void CorrectBoundingPoints(ref Vector2f p1, ref Vector2f p2)
         {
-            PointF new_p1 = new PointF(Math.Min(p1.X, p2.X), Math.Min(p1.Y, p2.Y));
-            PointF new_p2 = new PointF(Math.Max(p1.X, p2.X), Math.Max(p1.Y, p2.Y));
+            Vector2f new_p1 = new Vector2f(Math.Min(p1.X, p2.X), Math.Min(p1.Y, p2.Y));
+            Vector2f new_p2 = new Vector2f(Math.Max(p1.X, p2.X), Math.Max(p1.Y, p2.Y));
 
             p1 = new_p1;
             p2 = new_p2;
         }
 
-        public static void Clamp(ref Vec2 vector, Vec2 min, Vec2 max)
+        public static void Clamp(ref Vector2f vector, Vector2f min, Vector2f max)
         {
             vector.X = Math.Max(min.X, Math.Min(max.X, vector.X));
             vector.Y = Math.Max(min.Y, Math.Min(max.Y, vector.Y));
         }
 
-        public static void RoundToZero(ref Vec2 vector, float cutoff)
+        public static void RoundToZero(ref Vector2f vector, float cutoff)
         {
-            if (vector.Length < cutoff)
+            if (vector.Length() < cutoff)
             {
                 vector.X = 0;
                 vector.Y = 0;
@@ -55,7 +53,5 @@ namespace physics.Engine.Helpers
         {
             return (float)(180 / Math.PI) * rads;
         }
-
     }
-
 }

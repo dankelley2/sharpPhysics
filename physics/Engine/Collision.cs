@@ -1,6 +1,8 @@
 ﻿using System;
 using physics.Engine.Classes;
+using physics.Engine.Extensions;
 using physics.Engine.Structs;
+using SFML.System;
 
 namespace physics.Engine
 {
@@ -55,11 +57,11 @@ namespace physics.Engine
                         // Point towards B knowing that n points from A to B
                         if (n.X < 0)
                         {
-                            m.Normal = new Vec2 {X = -1, Y = 0};
+                            m.Normal = new Vector2f {X = -1, Y = 0};
                         }
                         else
                         {
-                            m.Normal = new Vec2 {X = 1, Y = 0};
+                            m.Normal = new Vector2f {X = 1, Y = 0};
                         }
 
                         m.Penetration = x_overlap;
@@ -69,11 +71,11 @@ namespace physics.Engine
                     // Point toward B knowing that n points from A to B
                     if (n.Y < 0)
                     {
-                        m.Normal = new Vec2 {X = 0, Y = -1};
+                        m.Normal = new Vector2f {X = 0, Y = -1};
                     }
                     else
                     {
-                        m.Normal = new Vec2 {X = 0, Y = 1};
+                        m.Normal = new Vector2f {X = 0, Y = 1};
                     }
 
                     m.Penetration = y_overlap;
@@ -97,13 +99,13 @@ namespace physics.Engine
             r *= r;
 
 
-            if (n.LengthSquared > r)
+            if (n.LengthSquared() > r)
             {
                 return false;
             }
 
             // Circles have collided, now compute manifold
-            var d = n.Length; // perform actual sqrt
+            var d = n.Length(); // perform actual sqrt
             // If distance between circles is not zero
             if (d != 0)
             {
@@ -119,7 +121,7 @@ namespace physics.Engine
             // Circles are on same position
             // Choose random (but consistent) values
             m.Penetration = A.Width/2;
-            m.Normal = new Vec2 {X = 1, Y = 0};
+            m.Normal = new Vector2f {X = 1, Y = 0};
             return true;
         }
 
@@ -185,7 +187,7 @@ namespace physics.Engine
             }
 
             var normal = n - closest;
-            var d = normal.LengthSquared;
+            var d = normal.LengthSquared();
             var r = circle.Width/2;
 
             // Early out of the radius is shorter than distance to closest point and
@@ -202,13 +204,13 @@ namespace physics.Engine
             // inside the AABB
             if (inside)
             {
-                m.Normal = Vec2.Normalize(-normal);
+                m.Normal = (-normal).Normalize();
                 m.Penetration = r - d;
             }
             else
             {
                 //If pushing up at all, go straight up (gravity hack)
-                m.Normal = Vec2.Normalize(normal);
+                m.Normal = normal.Normalize();
                 m.Penetration = r - d;
             }
 
@@ -224,7 +226,7 @@ namespace physics.Engine
                 return;
             }
 
-            var velAlongNormal = Vec2.DotProduct(rv, m.Normal);
+            var velAlongNormal = Extensions.Extensions.DotProduct(rv, m.Normal);
 
             if (velAlongNormal > 0)
             {
@@ -277,7 +279,7 @@ namespace physics.Engine
             if (m.Penetration <= 0)
                 return;
 
-            Vec2 correction = m.Normal * (m.Penetration * 0.5f);
+            Vector2f correction = m.Normal * (m.Penetration * 0.5f);
 
             if (!m.A.Locked)
                 m.A.Move(-correction);

@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using physics.Engine.Helpers;
 using physics.Engine.Structs;
+using SFML.System;
 using System.Drawing;
 
 namespace ARNet.Physics.Tests
@@ -11,7 +12,7 @@ namespace ARNet.Physics.Tests
         [TestMethod]
         public void DotProduct_IdenticalVectors_ReturnsSquaredLength()
         {
-            var p = new PointF(3, 4);
+            var p = new Vector2f(3, 4);
             var result = PhysMath.DotProduct(p, p);
             Assert.AreEqual(25m, result);
         }
@@ -19,8 +20,8 @@ namespace ARNet.Physics.Tests
         [TestMethod]
         public void DotProduct_PerpendicularVectors_ReturnsZero()
         {
-            var p1 = new PointF(1, 0);
-            var p2 = new PointF(0, 1);
+            var p1 = new Vector2f(1, 0);
+            var p2 = new Vector2f(0, 1);
             var result = PhysMath.DotProduct(p1, p2);
             Assert.AreEqual(0m, result);
         }
@@ -30,8 +31,8 @@ namespace ARNet.Physics.Tests
         {
             var aabb = new AABB
             {
-                Min = new Vec2(5, 6),
-                Max = new Vec2(1, 2)
+                Min = new Vector2f(5, 6),
+                Max = new Vector2f(1, 2)
             };
             PhysMath.CorrectBoundingBox(ref aabb);
             Assert.AreEqual(1, aabb.Min.X);
@@ -45,8 +46,8 @@ namespace ARNet.Physics.Tests
         {
             var aabb = new AABB
             {
-                Min = new Vec2(1, 2),
-                Max = new Vec2(5, 6)
+                Min = new Vector2f(1, 2),
+                Max = new Vector2f(5, 6)
             };
             PhysMath.CorrectBoundingBox(ref aabb);
             Assert.AreEqual(1, aabb.Min.X);
@@ -58,9 +59,9 @@ namespace ARNet.Physics.Tests
         [TestMethod]
         public void Clamp_ValueInRange_ReturnsValue()
         {
-            var vector = new Vec2(5, 5);
-            var min = new Vec2(0, 0);
-            var max = new Vec2(10, 10);
+            var vector = new Vector2f(5, 5);
+            var min = new Vector2f(0, 0);
+            var max = new Vector2f(10, 10);
             PhysMath.Clamp(ref vector, min, max);
             Assert.AreEqual(5, vector.X);
             Assert.AreEqual(5, vector.Y);
@@ -69,9 +70,9 @@ namespace ARNet.Physics.Tests
         [TestMethod]
         public void Clamp_ValueBelowRange_ClampsToMin()
         {
-            var vector = new Vec2(-1, -2);
-            var min = new Vec2(0, 0);
-            var max = new Vec2(10, 10);
+            var vector = new Vector2f(-1, -2);
+            var min = new Vector2f(0, 0);
+            var max = new Vector2f(10, 10);
             PhysMath.Clamp(ref vector, min, max);
             Assert.AreEqual(0, vector.X);
             Assert.AreEqual(0, vector.Y);
@@ -80,9 +81,9 @@ namespace ARNet.Physics.Tests
         [TestMethod]
         public void Clamp_ValueAboveRange_ClampsToMax()
         {
-            var vector = new Vec2(11, 12);
-            var min = new Vec2(0, 0);
-            var max = new Vec2(10, 10);
+            var vector = new Vector2f(11, 12);
+            var min = new Vector2f(0, 0);
+            var max = new Vector2f(10, 10);
             PhysMath.Clamp(ref vector, min, max);
             Assert.AreEqual(10, vector.X);
             Assert.AreEqual(10, vector.Y);
@@ -91,7 +92,7 @@ namespace ARNet.Physics.Tests
         [TestMethod]
         public void RoundToZero_BelowCutoff_SetsToZero()
         {
-            var vector = new Vec2(0.001f, 0.002f);
+            var vector = new Vector2f(0.001f, 0.002f);
             PhysMath.RoundToZero(ref vector, 0.01f);
             Assert.AreEqual(0, vector.X);
             Assert.AreEqual(0, vector.Y);
@@ -100,7 +101,7 @@ namespace ARNet.Physics.Tests
         [TestMethod]
         public void RoundToZero_AboveCutoff_RemainsSame()
         {
-            var vector = new Vec2(0.1f, 0.2f);
+            var vector = new Vector2f(0.1f, 0.2f);
             PhysMath.RoundToZero(ref vector, 0.01f);
             Assert.AreEqual(0.1f, vector.X);
             Assert.AreEqual(0.2f, vector.Y);
