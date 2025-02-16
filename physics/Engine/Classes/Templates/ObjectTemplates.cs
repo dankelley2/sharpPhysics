@@ -1,9 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using physics.Engine.Shaders;
 using physics.Engine.Structs;
 using SFML.System;
@@ -12,57 +8,94 @@ namespace physics.Engine.Classes.ObjectTemplates
 {
     public static class ObjectTemplates
     {
-        private static SFMLShader shaderDefault = new SFMLBallShader();
+        // Outer dictionary keyed on the shader type.
+        // Inner dictionary keyed on the object's diameter (as an int) with a shader instance as the value.
+        private static Dictionary<Type, Dictionary<int, SFMLShader>> shaderPool =
+            new Dictionary<Type, Dictionary<int, SFMLShader>>();
 
-        private static SFMLShader shaderWall = new SFMLWallShader();
+        // Generic helper method to get (or create) a shader for a given diameter.
+        private static T GetShader<T>(int diameter) where T : SFMLShader
+        {
+            Type shaderType = typeof(T);
+            if (!shaderPool.ContainsKey(shaderType))
+            {
+                shaderPool[shaderType] = new Dictionary<int, SFMLShader>();
+            }
+            var innerDict = shaderPool[shaderType];
+            if (!innerDict.ContainsKey(diameter))
+            {
+                // Try to get a constructor that takes an int parameter.
+                var constructor = shaderType.GetConstructor(new Type[] { typeof(int) });
+                if (constructor != null)
+                {
+                    innerDict[diameter] = (SFMLShader)Activator.CreateInstance(shaderType, diameter);
+                }
+                else
+                {
+                    // If not available, use the default constructor.
+                    innerDict[diameter] = (SFMLShader)Activator.CreateInstance(shaderType);
+                }
+            }
+            return (T)innerDict[diameter];
+        }
 
-        private static SFMLShader shaderBall = new SFMLBallShader();
-
-        private static SFMLShader shaderBallFast = new SFMLBallShader();
-
-        private static SFMLShader shaderBallVelocity = new SFMLBallVelocityShader();
-
-        private static SFMLShader shaderWater = new SFMLBallVelocityShader();
 
         private static Random r = new Random();
 
         public static PhysicsObject CreateSmallBall(float originX, float originY)
         {
-            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), 5, .6F, false, shaderBallVelocity);
+            // Using a diameter of 5.
+            int diameter = 5;
+            SFMLShader shader = GetShader<SFMLBallVelocityShader>(diameter);
+            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.6F, false, shader);
         }
 
         public static PhysicsObject CreateSizedBall(float originX, float originY)
         {
-            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), r.Next(5,15), .6F, false, shaderBallVelocity);
+            // Random diameter between 5 and 15.
+            int diameter = r.Next(5, 15);
+            SFMLShader shader = GetShader<SFMLBallVelocityShader>(diameter);
+            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.6F, false, shader);
         }
 
         public static PhysicsObject CreateSmallBall_Magnet(float originX, float originY)
         {
-            var oPhysicsObject = PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), 5, .6F, false, shaderBallVelocity);
+            int diameter = 5;
+            SFMLShader shader = GetShader<SFMLBallVelocityShader>(diameter);
+            var oPhysicsObject = PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.6F, false, shader);
             PhysicsSystem.ListGravityObjects.Add(oPhysicsObject);
             return oPhysicsObject;
         }
 
         public static PhysicsObject CreateMedBall(float originX, float originY)
         {
-            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), 10, .6F, false, shaderBallVelocity);
+            int diameter = 10;
+            SFMLShader shader = GetShader<SFMLBallVelocityShader>(diameter);
+            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.6F, false, shader);
         }
 
         public static PhysicsObject CreateWater(float originX, float originY)
         {
-            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), 5, .99F, false, shaderWater);
+            int diameter = 5;
+            SFMLShader shader = GetShader<SFMLBallVelocityShader>(diameter);
+            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.99F, false, shader);
         }
 
         public static PhysicsObject CreateAttractor(float originX, float originY)
         {
-            var oPhysicsObject = PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), 50, .95F, true, shaderBall);
+            int diameter = 50;
+            // Use a different shader type for attractors.
+            SFMLShader shader = GetShader<SFMLBallShader>(diameter);
+            var oPhysicsObject = PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.95F, true, shader);
             PhysicsSystem.ListGravityObjects.Add(oPhysicsObject);
             return oPhysicsObject;
         }
 
         public static PhysicsObject CreateWall(float minX, float minY, float maxX, float maxY)
         {
-            return PhysicsSystem.CreateStaticBox(new Vector2f(minX, minY), new Vector2f(maxX, maxY), true, shaderWall, 1000000);
+            int width = (int)(maxX - minX);
+            SFMLShader shader = GetShader<SFMLWallShader>(width);
+            return PhysicsSystem.CreateStaticBox(new Vector2f(minX, minY), new Vector2f(maxX, maxY), true, shader, 1000000);
         }
     }
 }

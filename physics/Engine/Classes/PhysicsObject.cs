@@ -26,14 +26,6 @@ namespace physics.Engine.Classes
         public float Mass;
         public float IMass;
 
-        // New fields to cache geometry and track changes.
-        private float _prevWidth;
-        private float _prevHeight;
-        /// <summary>
-        /// True if width or height changed since last recalculation.
-        /// </summary>
-        public bool GeometryChanged { get; private set; } = true;
-
         public PhysicsObject(AABB boundingBox, Type t, float r, bool locked, SFMLShader shader, float m = 0)
         {
             Velocity = new Vector2f(0, 0);
@@ -48,11 +40,6 @@ namespace physics.Engine.Classes
             IMass = 1 / Mass;
             Locked = locked;
             Shader = shader;
-
-            // Initialize the cached values.
-            _prevWidth = Width;
-            _prevHeight = Height;
-            GeometryChanged = true;
         }
 
         public Type ShapeType { get; set; }
@@ -91,18 +78,6 @@ namespace physics.Engine.Classes
             Height = Aabb.Max.Y - Aabb.Min.Y;
             Pos = new Vector2f(Aabb.Min.X, Aabb.Min.Y);
             Center = new Vector2f(Pos.X + Width / 2, Pos.Y + Height / 2);
-
-            // Only flag a geometry change if the dimensions have actually changed.
-            if (Width != _prevWidth || Height != _prevHeight)
-            {
-                GeometryChanged = true;
-                _prevWidth = Width;
-                _prevHeight = Height;
-            }
-            else
-            {
-                GeometryChanged = false;
-            }
         }
 
         public void Move(Vector2f dVector)

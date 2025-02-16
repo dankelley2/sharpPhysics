@@ -68,11 +68,11 @@ namespace physics.Engine
             ObjectTemplates.CreateWall(0, 0, (int)window.Size.X, 5);
             ObjectTemplates.CreateWall(0, (int)window.Size.Y - 5, (int)window.Size.X, (int)window.Size.Y);
 
-            for (int i = 0; i < 800; i += 10)
+            for (int i = 0; i < 800; i += 20)
             {
-                for (int j = 0; j < 200; j += 10)
+                for (int j = 0; j < 200; j += 20)
                 {
-                    ObjectTemplates.CreateSmallBall(i + 200, j + 150);
+                    ObjectTemplates.CreateMedBall(i + 200, j + 150);
                 }
             }
 
@@ -241,7 +241,7 @@ namespace physics.Engine
                     ActionTemplates.changeShader(physicsSystem, new SFMLBallShader());
                     break;
                 case Keyboard.Key.V:
-                    ActionTemplates.changeShader(physicsSystem, new SFMLBallVelocityShader());
+                    //ActionTemplates.changeShader(physicsSystem, new SFMLBallVelocityShader());
                     break;
                 case Keyboard.Key.G:
                     ObjectTemplates.CreateAttractor((int)mousePos.X, (int)mousePos.Y);

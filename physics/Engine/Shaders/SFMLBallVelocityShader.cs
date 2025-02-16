@@ -12,6 +12,10 @@ namespace physics.Engine.Shaders
         // Use instance fields rather than static fields so that each shader instance can cache its state.
         private readonly CircleShape _circle = new CircleShape();
         private readonly RectangleShape _velocityLine = new RectangleShape();
+        public SFMLBallVelocityShader(int radius)
+        {
+            _circle.Radius = radius;
+        }
 
         public override void PreDraw(PhysicsObject obj, RenderTarget target)
         {
@@ -20,11 +24,6 @@ namespace physics.Engine.Shaders
 
         public override void Draw(PhysicsObject obj, RenderTarget target)
         {
-            // Only update the circle’s radius if the physics object’s geometry changed.
-            if (obj.GeometryChanged)
-            {
-                _circle.Radius = obj.Width / 2;
-            }
             // Always update the circle’s position (since the center may move even if the size doesn’t change).
             _circle.Position = new Vector2f(obj.Center.X - obj.Width / 2, obj.Center.Y - obj.Height / 2);
 
