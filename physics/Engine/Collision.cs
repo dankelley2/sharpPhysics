@@ -246,7 +246,9 @@ namespace physics.Engine
 
         public static void PositionalCorrection(ref Manifold m)
         {
-            var percent = 0.6F; // usually 20% to 80%
+            // Pushing this all the way will cause the objects to be fully separated.
+            // lower amounts will allow for some overlap.
+            var percent = .8F; // usually 20% to 80%
             var correction = m.Normal * (percent * (m.Penetration / (m.A.IMass + m.B.IMass)));
             if (!m.A.Locked)
             {

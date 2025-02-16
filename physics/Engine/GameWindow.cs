@@ -7,7 +7,6 @@ using physics.Engine.Classes;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Structs;
 using physics.Engine.Shaders;
-using System.Drawing;
 using Font = SFML.Graphics.Font;
 using Color = SFML.Graphics.Color;
 
@@ -18,7 +17,8 @@ namespace physics.Engine
         private readonly RenderWindow window;
         private readonly PhysicsSystem physicsSystem = new PhysicsSystem();
         private readonly Clock clock = new Clock();
-        private readonly Stopwatch stopwatch = new Stopwatch(); // Keep for performance metrics
+        private readonly Stopwatch stopwatch = new Stopwatch(); // For performance metrics
+
         private bool isMousePressedLeft = false;
         private bool isMousePressedRight = false;
         private Vector2f startPoint;
@@ -37,6 +37,9 @@ namespace physics.Engine
 
         // Cap maximum delta time to avoid spiral of death (e.g., 33ms ~30 FPS)
         private const float MAX_DELTA_TIME = 0.033f;
+
+        // Timer accumulator for continuous ball launching (every 0.25 seconds)
+        private float launchTimer = 0f;
 
         public GameWindow(uint width, uint height, string title)
         {
@@ -65,11 +68,11 @@ namespace physics.Engine
             ObjectTemplates.CreateWall(0, 0, (int)window.Size.X, 5);
             ObjectTemplates.CreateWall(0, (int)window.Size.Y - 5, (int)window.Size.X, (int)window.Size.Y);
 
-            for (int i = 0; i < 400; i += 20)
+            for (int i = 0; i < 800; i += 10)
             {
-                for (int j = 0; j < 200; j += 20)
+                for (int j = 0; j < 200; j += 10)
                 {
-                    ObjectTemplates.CreateMedBall(i + 200, j + 150);
+                    ObjectTemplates.CreateSmallBall(i + 200, j + 150);
                 }
             }
 
@@ -132,11 +135,31 @@ namespace physics.Engine
 
         private void Update(float deltaTime)
         {
+            // If an object is being grabbed, update its position.
             if (isGrabbing)
             {
-                // Directly pass mousePos (already a Vector2f)
                 physicsSystem.HoldActiveAtPoint(mousePos);
             }
+            else if (isMousePressedLeft)
+            {
+                // Accumulate time while left mouse button is held.
+                launchTimer += deltaTime;
+                if (launchTimer >= 0.025f)
+                {
+                    // Compute the launch vector implicitly from (mousePos - startPoint)
+                    // Launch balls from the current mouse position.
+                    // (Optionally, you could add a slight offset to each ball if desired.)
+                    ActionTemplates.launch(
+                        physicsSystem,
+                        ObjectTemplates.CreateSmallBall(startPoint.X, startPoint.Y),
+                        startPoint,
+                        mousePos);
+
+                    // Reset the timer.
+                    launchTimer = 0f;
+                }
+            }
+
             physicsSystem.Tick(deltaTime);
         }
 
@@ -145,14 +168,16 @@ namespace physics.Engine
             if (e.Button == Mouse.Button.Left)
             {
                 var point = new Vector2f(e.X, e.Y);
+                // If clicking on an existing object, grab it.
                 if (physicsSystem.ActivateAtPoint(point))
                 {
                     isGrabbing = true;
                     return;
                 }
-
-                startPoint = new Vector2f(e.X, e.Y);
+                // Otherwise, start the ball launching stream.
+                startPoint = point;
                 isMousePressedLeft = true;
+                launchTimer = 0f;
             }
 
             if (e.Button == Mouse.Button.Right)
@@ -178,15 +203,11 @@ namespace physics.Engine
                     return;
                 }
 
+                // Stop the continuous launch stream.
                 if (isMousePressedLeft)
                 {
-                    endPoint = new Vector2f(e.X, e.Y);
-                    ActionTemplates.launch(
-                        physicsSystem,
-                        ObjectTemplates.CreateSmallBall(startPoint.X, startPoint.Y),
-                        startPoint,
-                        endPoint);
                     isMousePressedLeft = false;
+                    launchTimer = 0f;
                 }
             }
 

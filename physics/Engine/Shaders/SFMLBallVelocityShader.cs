@@ -30,7 +30,7 @@ namespace physics.Engine.Shaders
 
             // Color based on velocity.
             // The particleSpeed value is computed and then treated as a hue (0 to 360).
-            double particleSpeed = 220 - Math.Min((int)obj.Velocity.Length(), 220);
+            double particleSpeed = 220 - Math.Min((int)obj.Velocity.Length() / 2, 220);
             double hue = particleSpeed % 360;
             HsvToRgb(hue, 1, 1, out int red, out int green, out int blue);
             _circle.FillColor = new Color((byte)red, (byte)green, (byte)blue);
