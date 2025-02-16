@@ -14,9 +14,8 @@ namespace physics
         [STAThread]
         static void Main()
         {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new FormMainWindow());
+            var window = new Engine.GameWindow(800, 600, "SharpPhysics");
+            window.Run();
         }
     }
 }
