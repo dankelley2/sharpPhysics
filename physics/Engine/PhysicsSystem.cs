@@ -18,7 +18,7 @@ namespace physics.Engine
         public float Friction { get; set; }
 
         // Set this to roughly your average AABB size – adjust as needed.
-        public float SpatialHashCellSize { get; set; } = 10F;
+        public float SpatialHashCellSize { get; set; } = 20F;
 
         #endregion
 

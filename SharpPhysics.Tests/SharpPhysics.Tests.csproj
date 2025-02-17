@@ -99,6 +99,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CollisionHelperTests.cs" />
+    <Compile Include="CollisionTests.cs" />
     <Compile Include="Vec2Tests.cs" />
     <Compile Include="PhysMathTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -2,12 +2,11 @@
 using physics.Engine.Classes;
 using physics.Engine.Extensions;
 using physics.Engine.Structs;
-using physics.Engine.Extensions;
 using SFML.System;
 
 namespace physics.Engine
 {
-    internal static class Collision
+    public static class Collision
     {
 
         public static bool AABBvsAABB(AABB a, AABB b)
@@ -98,7 +97,7 @@ namespace physics.Engine
                 {
                     penetration = overlap;
                     // Flip the axis so it points from A to B.
-                    bestAxis = B_axis0 * (tB.X < 0 ? 1 : -1);
+                    bestAxis = B_axis0 * (tB.X < 0 ? -1 : 1);
                 }
             }
 
@@ -112,7 +111,7 @@ namespace physics.Engine
                 if (overlap < penetration)
                 {
                     penetration = overlap;
-                    bestAxis = B_axis1 * (tB.Y < 0 ? 1 : -1);
+                    bestAxis = B_axis1 * (tB.Y < 0 ? -1 : 1);
                 }
             }
 

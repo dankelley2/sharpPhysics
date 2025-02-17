@@ -92,11 +92,11 @@ namespace physics.Engine
 
             ObjectTemplates.CreateAttractor(400, 450);
 
-            //// Create a box
-            //var boxA = ObjectTemplates.CreateBox(100,400, 200, 500);
+            // Create a box
+            var boxA = ObjectTemplates.CreateBox(100, 400, 200, 500);
 
-            //boxA.Velocity = new Vector2f(0, 100);
-            //boxA.Angle = (float)(Math.PI / 4);
+            boxA.Velocity = new Vector2f(0, 100);
+            boxA.Angle = (float)(Math.PI / 4);
 
             //var boxb = ObjectTemplates.CreateBox(190, 300, 290, 400);
         }
