@@ -6,7 +6,7 @@ using SFML.System;
 
 namespace physics.Engine
 {
-    internal static class Collision
+    public static class Collision
     {
 
         public static bool AABBvsAABB(AABB a, AABB b)
@@ -18,73 +18,120 @@ namespace physics.Engine
             // No separating axis found, therefor there is at least one overlapping axis
             return true;
         }
+
         public static bool AABBvsAABB(ref Manifold m)
         {
-            // Setup a couple pointers to each object
             var A = m.A;
             var B = m.B;
 
-            // Vector from A to B
-            var n = B.Center - A.Center;
+            if (A.Locked && B.Locked)
+                return false;
 
+            // Compute half extents for each box.
+            float a_halfX = A.Width / 2f;
+            float a_halfY = A.Height / 2f;
+            float b_halfX = B.Width / 2f;
+            float b_halfY = B.Height / 2f;
 
-            var abox = A.Aabb;
-            var bbox = B.Aabb;
+            // Compute the local axes for each box.
+            // For object A:
+            Vector2f A_axis0 = new Vector2f((float)Math.Cos(A.Angle), (float)Math.Sin(A.Angle));
+            Vector2f A_axis1 = new Vector2f(-A_axis0.Y, A_axis0.X);
+            // For object B:
+            Vector2f B_axis0 = new Vector2f((float)Math.Cos(B.Angle), (float)Math.Sin(B.Angle));
+            Vector2f B_axis1 = new Vector2f(-B_axis0.Y, B_axis0.X);
 
-            // Calculate half extents along x axis for each object
-            var a_extent = (abox.Max.X - abox.Min.X) / 2;
-            var b_extent = (bbox.Max.X - bbox.Min.X) / 2;
+            // Compute the rotation matrix R where R[i][j] = Dot(A_axis[i], B_axis[j])
+            float R00 = Dot(A_axis0, B_axis0);
+            float R01 = Dot(A_axis0, B_axis1);
+            float R10 = Dot(A_axis1, B_axis0);
+            float R11 = Dot(A_axis1, B_axis1);
 
-            // Calculate overlap on x axis
-            var x_overlap = a_extent + b_extent - Math.Abs(n.X);
+            // Compute translation vector t from A's center to B's center and
+            // express it in A's local coordinate system.
+            Vector2f t = B.Center - A.Center;
+            Vector2f tA = new Vector2f(Dot(t, A_axis0), Dot(t, A_axis1));
 
-            // SAT test on x axis
-            if (x_overlap > 0)
+            float penetration = float.MaxValue;
+            Vector2f bestAxis = new Vector2f();
+
+            // Test axis A_axis0.
             {
-                // Calculate half extents along y axis for each object
-                a_extent = (abox.Max.Y - abox.Min.Y) / 2;
-                b_extent = (bbox.Max.Y - bbox.Min.Y) / 2;
-
-                // Calculate overlap on y axis
-                var y_overlap = a_extent + b_extent - Math.Abs(n.Y);
-
-                // SAT test on y axis
-                if (y_overlap > 0)
+                float ra = a_halfX;
+                float rb = b_halfX * Math.Abs(R00) + b_halfY * Math.Abs(R01);
+                float overlap = (ra + rb) - Math.Abs(tA.X);
+                if (overlap < 0)
+                    return false;
+                if (overlap < penetration)
                 {
-                    // Find out which axis is axis of least penetration
-                    if (x_overlap < y_overlap)
-                    {
-                        // Point towards B knowing that n points from A to B
-                        if (n.X < 0)
-                        {
-                            m.Normal = new Vector2f {X = -1, Y = 0};
-                        }
-                        else
-                        {
-                            m.Normal = new Vector2f {X = 1, Y = 0};
-                        }
-
-                        m.Penetration = x_overlap;
-                        return true;
-                    }
-
-                    // Point toward B knowing that n points from A to B
-                    if (n.Y < 0)
-                    {
-                        m.Normal = new Vector2f {X = 0, Y = -1};
-                    }
-                    else
-                    {
-                        m.Normal = new Vector2f {X = 0, Y = 1};
-                    }
-
-                    m.Penetration = y_overlap;
-                    return true;
+                    penetration = overlap;
+                    bestAxis = A_axis0 * (tA.X < 0 ? -1 : 1);
                 }
             }
 
-            return false;
+            // Test axis A_axis1.
+            {
+                float ra = a_halfY;
+                float rb = b_halfX * Math.Abs(R10) + b_halfY * Math.Abs(R11);
+                float overlap = (ra + rb) - Math.Abs(tA.Y);
+                if (overlap < 0)
+                    return false;
+                if (overlap < penetration)
+                {
+                    penetration = overlap;
+                    bestAxis = A_axis1 * (tA.Y < 0 ? -1 : 1);
+                }
+            }
+
+            // Compute t expressed in B's coordinate system.
+            Vector2f tB = new Vector2f(Dot(t, B_axis0), Dot(t, B_axis1));
+
+            // Test axis B_axis0.
+            {
+                float ra = a_halfX * Math.Abs(R00) + a_halfY * Math.Abs(R10);
+                float rb = b_halfX;
+                float overlap = (ra + rb) - Math.Abs(tB.X);
+                if (overlap < 0)
+                    return false;
+                if (overlap < penetration)
+                {
+                    penetration = overlap;
+                    // Flip the axis so it points from A to B.
+                    bestAxis = B_axis0 * (tB.X < 0 ? -1 : 1);
+                }
+            }
+
+            // Test axis B_axis1.
+            {
+                float ra = a_halfX * Math.Abs(R01) + a_halfY * Math.Abs(R11);
+                float rb = b_halfY;
+                float overlap = (ra + rb) - Math.Abs(tB.Y);
+                if (overlap < 0)
+                    return false;
+                if (overlap < penetration)
+                {
+                    penetration = overlap;
+                    bestAxis = B_axis1 * (tB.Y < 0 ? -1 : 1);
+                }
+            }
+
+            // If we get here, there is an intersection.
+            m.Normal = bestAxis;
+            m.Penetration = penetration;
+            // Set a simple collision point as the midpoint between the centers.
+            m.ContactPoint = (A.Center + B.Center) * 0.5f;
+
+            m.A.LastContactPoint = m.ContactPoint;
+            m.B.LastContactPoint = m.ContactPoint;
+            return true;
         }
+
+        // Helper: Dot product.
+        private static float Dot(Vector2f a, Vector2f b)
+        {
+            return a.X * b.X + a.Y * b.Y;
+        }
+
 
         public static bool CirclevsCircle(ref Manifold m)
         {
@@ -95,127 +142,138 @@ namespace physics.Engine
             // Vector from A to B
             var n = B.Center - A.Center;
 
-            var r = A.Width/2 + B.Width/2;
-            r *= r;
+            // Radii of circles
+            float rA = A.Width / 2;
+            float rB = B.Width / 2;
+            float radiusSum = rA + rB;
 
-
-            if (n.LengthSquared() > r)
+            // Early out if circles are not colliding
+            if (n.LengthSquared() > radiusSum * radiusSum)
             {
                 return false;
             }
 
-            // Circles have collided, now compute manifold
-            var d = n.Length(); // perform actual sqrt
-            // If distance between circles is not zero
+            // Compute the distance between circle centers
+            float d = n.Length();
+
+            // If the circles are not perfectly overlapping...
             if (d != 0)
             {
-                // Distance is difference between radius and distance
-                m.Penetration = m.A.Width/2 + m.B.Width/2 - d;
-
-                // Utilize our d since we performed sqrt on it already within Length( )
-                // Points from A to B, and is a unit vector
+                // Penetration is the difference between the sum of the radii and the distance
+                m.Penetration = radiusSum - d;
+                // The collision normal is the normalized vector from A to B
                 m.Normal = n / d;
+
+                // Compute the contact point:
+                // For circles, one common method is to take the point on the perimeter of A (along the collision normal)
+                // and the point on the perimeter of B (opposite the collision normal), then average them.
+                Vector2f contactA = A.Center + m.Normal * rA;
+                Vector2f contactB = B.Center - m.Normal * rB;
+                m.ContactPoint = (contactA + contactB) * 0.5f;
+
+                // Set the LastContactPoint point for circle and circle
+                A.LastContactPoint = m.ContactPoint;
+                B.LastContactPoint = m.ContactPoint;
+
                 return true;
             }
-
-            // Circles are on same position
-            // Choose random (but consistent) values
-            m.Penetration = A.Width/2;
-            m.Normal = new Vector2f {X = 1, Y = 0};
-            return true;
+            else
+            {
+                // If the circles are on the same position, choose an arbitrary collision normal and contact point.
+                m.Penetration = rA;
+                m.Normal = new Vector2f(1, 0);
+                m.ContactPoint = A.Center;
+                return true;
+            }
         }
+
 
         public static bool AABBvsCircle(ref Manifold m)
         {
-            // Setup a couple pointers to each object
-            //Box Shape
+            // m.A is the box and m.B is the circle.
             var box = m.A;
-
-            //CircleShape
             var circle = m.B;
 
-            // Vector from box to circle
-            var n = circle.Center - box.Center;
+            // Calculate half extents of the box.
+            float x_extent = box.Width / 2f;
+            float y_extent = box.Height / 2f;
 
-            // Closest point on box to center of circle
-            var closest = n;
+            // Translate the circle center into the box's local space.
+            // Step 1: Get vector from box center to circle center.
+            Vector2f circleToBox = circle.Center - box.Center;
+            // Step 2: Rotate that vector by -box.Angle.
+            float cos = (float)Math.Cos(-box.Angle);
+            float sin = (float)Math.Sin(-box.Angle);
+            Vector2f circleLocal = new Vector2f(
+                 circleToBox.X * cos - circleToBox.Y * sin,
+                 circleToBox.X * sin + circleToBox.Y * cos
+            );
 
-            // Calculate half extents along each axis
-            var x_extent = (box.Aabb.Max.X - box.Aabb.Min.X) / 2;
-            var y_extent = (box.Aabb.Max.Y - box.Aabb.Min.Y) / 2;
+            // Find the closest point in the box (in local space) to the circle's center.
+            Vector2f closestLocal = new Vector2f(
+                 Clamp(-x_extent, x_extent, circleLocal.X),
+                 Clamp(-y_extent, y_extent, circleLocal.Y)
+            );
 
-            // Clamp point to edges of the AABB
-            closest.X = Clamp(-x_extent, x_extent, closest.X);
-            closest.Y = Clamp(-y_extent, y_extent, closest.Y);
-
-
-            var inside = false;
-
-            // Circle is inside the AABB, so we need to clamp the circle's center
-            // to the closest edge
-            if (n == closest)
+            bool inside = false;
+            // If the circle's local center is inside the box, then no clamping occurred.
+            if (circleLocal.X == closestLocal.X && circleLocal.Y == closestLocal.Y)
             {
                 inside = true;
-
-                // Find closest axis
-                if (Math.Abs(n.X) < Math.Abs(n.Y))
+                // Push the closest point to the nearest box edge.
+                if (Math.Abs(circleLocal.X) < Math.Abs(circleLocal.Y))
                 {
-                    // Clamp to closest extent
-                    if (closest.X > 0)
-                    {
-                        closest.X = x_extent;
-                    }
-                    else
-                    {
-                        closest.X = -x_extent;
-                    }
+                    closestLocal.X = (circleLocal.X > 0) ? x_extent : -x_extent;
                 }
-
-                // y axis is shorter
                 else
                 {
-                    // Clamp to closest extent
-                    if (closest.Y > 0)
-                    {
-                        closest.Y = y_extent;
-                    }
-                    else
-                    {
-                        closest.Y = -y_extent;
-                    }
+                    closestLocal.Y = (circleLocal.Y > 0) ? y_extent : -y_extent;
                 }
             }
 
-            var normal = n - closest;
-            var d = normal.LengthSquared();
-            var r = circle.Width/2;
+            // Compute the difference between the circle's local center and the closest point.
+            Vector2f diffLocal = circleLocal - closestLocal;
+            float dSquared = diffLocal.LengthSquared();
+            float r = circle.Width / 2f;
 
-            // Early out of the radius is shorter than distance to closest point and
-            // Circle not inside the AABB
-            if (d > r * r && !inside)
-            {
+            // If there's no collision (and the circle's center isn't inside), early out.
+            if (dSquared > r * r && !inside)
                 return false;
-            }
 
-            // Avoided sqrt until we needed
-            d = (float) Math.Sqrt(d);
+            float d = (dSquared > 0) ? (float)Math.Sqrt(dSquared) : 0f;
 
-            // Collision normal needs to be flipped to point outside if circle was
-            // inside the AABB
+            Vector2f normalLocal;
             if (inside)
             {
-                m.Normal = (-normal).Normalize();
+                // When inside, the normal should point from the box toward the circle.
+                normalLocal = (-diffLocal).Normalize();
                 m.Penetration = r - d;
             }
             else
             {
-                //If pushing up at all, go straight up (gravity hack)
-                m.Normal = normal.Normalize();
+                normalLocal = diffLocal.Normalize();
                 m.Penetration = r - d;
             }
 
+            // Transform the collision normal back into world space using the box's rotation.
+            cos = (float)Math.Cos(box.Angle);
+            sin = (float)Math.Sin(box.Angle);
+            Vector2f normalWorld = new Vector2f(
+                 normalLocal.X * cos - normalLocal.Y * sin,
+                 normalLocal.X * sin + normalLocal.Y * cos
+            );
+            m.Normal = normalWorld;
+
+            // Set the contact point on the circle's perimeter along the collision normal.
+            m.ContactPoint = circle.Center - m.Normal * r;
+
+            // Set the LastContactPoint point for box and circle
+            box.LastContactPoint = m.ContactPoint;
+            circle.LastContactPoint = m.ContactPoint;
+
             return true;
         }
+
 
         public static void ResolveCollision(ref Manifold m)
         {
@@ -244,12 +302,102 @@ namespace physics.Engine
             m.B.Velocity = !m.B.Locked ? m.B.Velocity + impulse * m.B.IMass : m.B.Velocity;
         }
 
+        public static void ResolveCollisionRotational(ref Manifold m)
+        {
+            var A = m.A;
+            var B = m.B;
+
+            // Vectors from centers to contact point
+            Vector2f rA = m.ContactPoint - A.Center;
+            Vector2f rB = m.ContactPoint - B.Center;
+
+            // Compute the relative velocity at the contact point,
+            // including both linear and rotational contributions.
+            Vector2f vA_contact = A.Velocity + Perpendicular(rA) * A.AngularVelocity;
+            Vector2f vB_contact = B.Velocity + Perpendicular(rB) * B.AngularVelocity;
+            Vector2f relativeVelocity = vB_contact - vA_contact;
+
+            float velAlongNormal = Extensions.Extensions.DotProduct(relativeVelocity, m.Normal);
+            if (velAlongNormal > 0)
+                return;
+
+            float e = Math.Min(A.Restitution, B.Restitution);
+
+            // Calculate scalar cross products for the normal.
+            float rA_cross_N = Cross(rA, m.Normal);
+            float rB_cross_N = Cross(rB, m.Normal);
+
+            // Compute denominator with both linear and rotational inertia contributions.
+            float invMassSum = A.IMass + B.IMass +
+                               (rA_cross_N * rA_cross_N) * A.IInertia +
+                               (rB_cross_N * rB_cross_N) * B.IInertia;
+
+            // Compute normal impulse scalar.
+            float j = -(1 + e) * velAlongNormal;
+            j /= invMassSum;
+
+            Vector2f impulse = m.Normal * j;
+
+            if (!A.Locked)
+            {
+                A.Velocity -= impulse * A.IMass;
+                A.AngularVelocity -= Cross(rA, impulse) * A.IInertia;
+            }
+            if (!B.Locked)
+            {
+                B.Velocity += impulse * B.IMass;
+                B.AngularVelocity += Cross(rB, impulse) * B.IInertia;
+            }
+
+            // --- Now apply friction (tangential) impulse ---
+            // Compute tangent vector: remove the normal component from the relative velocity.
+            Vector2f tangent = relativeVelocity - m.Normal * Extensions.Extensions.DotProduct(relativeVelocity, m.Normal);
+            if (tangent.LengthSquared() > 0.0001f)
+                tangent = tangent.Normalize();
+            else
+                tangent = new Vector2f(0, 0);
+
+            // Compute friction impulse scalar.
+            float jt = -Extensions.Extensions.DotProduct(relativeVelocity, tangent);
+
+            // Denominator including rotational inertia along the tangent.
+            float rA_cross_t = Cross(rA, tangent);
+            float rB_cross_t = Cross(rB, tangent);
+            float invMassSumFriction = A.IMass + B.IMass +
+                                       (rA_cross_t * rA_cross_t) * A.IInertia +
+                                       (rB_cross_t * rB_cross_t) * B.IInertia;
+            jt /= invMassSumFriction;
+
+            // Coulomb friction: clamp friction impulse magnitude to μ times the normal impulse.
+            float mu = 0.7f; // Friction coefficient; adjust as needed.
+            jt = Math.Min(Math.Abs(jt), mu * Math.Abs(j));
+            jt = jt * (jt < 0 ? -1 : 1);  // restore the sign
+
+            Vector2f frictionImpulse = tangent * jt;
+
+            if (!A.Locked)
+            {
+                A.Velocity += frictionImpulse * A.IMass;
+                A.AngularVelocity += Cross(rA, frictionImpulse) * A.IInertia;
+            }
+            if (!B.Locked)
+            {
+                B.Velocity -= frictionImpulse * B.IMass;
+                B.AngularVelocity -= Cross(rB, frictionImpulse) * B.IInertia;
+            }
+        }
+
+
         public static void PositionalCorrection(ref Manifold m)
         {
-            // Pushing this all the way will cause the objects to be fully separated.
-            // lower amounts will allow for some overlap.
-            var percent = .8F; // usually 20% to 80%
-            var correction = m.Normal * (percent * (m.Penetration / (m.A.IMass + m.B.IMass)));
+            var percent = 0.4f; // usually 20% to 80%
+            var slop = 0.01f;    // usually 0.01 to 0.1
+
+            // Only correct penetration beyond the slop.
+            float penetration = Math.Max(m.Penetration - slop, 0.0f);
+            float correctionMagnitude = penetration / (m.A.IMass + m.B.IMass) * percent;
+            Vector2f correction = m.Normal * correctionMagnitude;
+
             if (!m.A.Locked)
             {
                 m.A.Move(-correction * m.A.IMass);
@@ -261,34 +409,49 @@ namespace physics.Engine
             }
         }
 
-        public static void ResolveCollisionFast(ref Manifold m)
+
+        public static void AngularPositionalCorrection(ref Manifold m)
         {
-            // Simply reduce the velocities of both objects to simulate energy loss.
-            // Adjust the damping factor as needed.
-            const float damping = 0.999f; // 80% of the original velocity is retained.
+            // Tuning factor for angular correction; adjust as needed.
+            const float angularCorrectionPercent = 0.05f;
 
-            if (!m.A.Locked)
-                m.A.Velocity *= damping;
+            // Compute lever arms (r vectors) from each object's center to the contact point.
+            Vector2f rA = m.ContactPoint - m.A.Center;
+            Vector2f rB = m.ContactPoint - m.B.Center;
 
-            if (!m.B.Locked)
-                m.B.Velocity *= damping;
+            // For object A:
+            if (!m.A.Locked && rA.LengthSquared() > 0.0001f)
+            {
+                // The farther the contact point is from the center, the smaller the required angular adjustment.
+                float angularErrorA = m.Penetration / rA.Length();
+                // The sign of the correction is given by the cross product of rA and the collision normal.
+                float signA = Math.Sign(Cross(rA, m.Normal));
+                // Adjust the angle by a fraction of the error.
+                m.A.Angle -= angularCorrectionPercent * angularErrorA * signA;
+            }
+
+            // For object B:
+            if (!m.B.Locked && rB.LengthSquared() > 0.0001f)
+            {
+                float angularErrorB = m.Penetration / rB.Length();
+                float signB = Math.Sign(Cross(rB, m.Normal));
+                m.B.Angle += angularCorrectionPercent * angularErrorB * signB;
+            }
         }
 
-        public static void PositionalCorrectionFast(ref Manifold m)
+        // Helper: Returns a vector perpendicular to v (i.e., rotated 90 degrees)
+        private static Vector2f Perpendicular(Vector2f v)
         {
-            // If there is penetration, push the objects apart along the collision normal.
-            // We move each object by half of the penetration distance.
-            if (m.Penetration <= 0)
-                return;
-
-            Vector2f correction = m.Normal * (m.Penetration * 0.5f);
-
-            if (!m.A.Locked)
-                m.A.Move(-correction);
-
-            if (!m.B.Locked)
-                m.B.Move(correction);
+            return new Vector2f(-v.Y, v.X);
         }
+
+        // Helper: Cross product in 2D (returns a scalar)
+        // For vectors a and b, Cross(a, b) = a.X * b.Y - a.Y * b.X
+        private static float Cross(Vector2f a, Vector2f b)
+        {
+            return a.X * b.Y - a.Y * b.X;
+        }
+
 
         private static float Clamp(float low, float high, float val)
         {

@@ -2,7 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using physics.Engine.Structs;
 using SFML.System;
 using physics.Engine.Extensions;
-namespace ARNet.Physics.Tests
+namespace SharpPhysics.Tests
 {
     [TestClass]
     public class Vector2fTests

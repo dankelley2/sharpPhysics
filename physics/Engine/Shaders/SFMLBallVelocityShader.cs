@@ -9,9 +9,11 @@ namespace physics.Engine.Shaders
 {
     public class SFMLBallVelocityShader : SFMLShader
     {
-        // Use instance fields rather than static fields so that each shader instance can cache its state.
+        // Instance fields for drawing the ball.
         private readonly CircleShape _circle = new CircleShape();
         private readonly RectangleShape _velocityLine = new RectangleShape();
+        private readonly RectangleShape _anglularTracker = new RectangleShape();
+
         public SFMLBallVelocityShader(int radius)
         {
             _circle.Radius = radius;
@@ -24,11 +26,10 @@ namespace physics.Engine.Shaders
 
         public override void Draw(PhysicsObject obj, RenderTarget target)
         {
-            // Always update the circle’s position (since the center may move even if the size doesn’t change).
+            // Update ball's position.
             _circle.Position = new Vector2f(obj.Center.X - obj.Width / 2, obj.Center.Y - obj.Height / 2);
 
             // Color based on velocity.
-            // The particleSpeed value is computed and then treated as a hue (0 to 360).
             double particleSpeed = 220 - Math.Min((int)obj.Velocity.Length() / 2, 220);
             double hue = particleSpeed % 360;
             HsvToRgb(hue, 1, 1, out int red, out int green, out int blue);
@@ -46,6 +47,19 @@ namespace physics.Engine.Shaders
                 _velocityLine.FillColor = _circle.FillColor;
                 target.Draw(_velocityLine);
             }
+
+            // Draw the angular tracker.
+            _anglularTracker.Position = new Vector2f(obj.Center.X, obj.Center.Y);
+            _anglularTracker.Size = new Vector2f(_circle.Radius, 1);
+            _anglularTracker.Rotation = obj.Angle * 180 / (float)Math.PI;
+            _anglularTracker.FillColor = Color.White;
+            target.Draw(_anglularTracker);
+
+            // Draw a small circle at the object's last contact point.
+            //CircleShape contactCircle = new CircleShape(3); // radius 3
+            //contactCircle.FillColor = _contactPointColor;
+            //contactCircle.Position = new Vector2f(obj.LastContactPoint.X - 3, obj.LastContactPoint.Y - 3);
+            //target.Draw(contactCircle);
         }
 
         public override void PostDraw(PhysicsObject obj, RenderTarget target)

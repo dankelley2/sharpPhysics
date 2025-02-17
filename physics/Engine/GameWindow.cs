@@ -26,6 +26,11 @@ namespace physics.Engine
         private bool isGrabbing = false;
         private Vector2f mousePos;
 
+        // New fields for box creation with the RMB.
+        private bool isCreatingBox = false;
+        private Vector2f boxStartPoint;
+        private Vector2f boxEndPoint;
+
         // Timing variables
         private long msFrameTime;
         private long msPerDrawCycle;
@@ -41,6 +46,11 @@ namespace physics.Engine
         // Timer accumulator for continuous ball launching (every 0.25 seconds)
         private float launchTimer = 0f;
 
+        // New fields for view (zooming & panning)
+        private View view;
+        private bool isPanning = false;
+        private Vector2f panStartPos; // stored as pixel coordinates
+
         public GameWindow(uint width, uint height, string title)
         {
             window = new RenderWindow(new VideoMode(width, height), title, Styles.Close);
@@ -48,9 +58,13 @@ namespace physics.Engine
             window.MouseButtonPressed += OnMouseButtonPressed;
             window.MouseButtonReleased += OnMouseButtonReleased;
             window.MouseMoved += OnMouseMoved;
+            window.MouseWheelScrolled += OnMouseWheelScrolled; // For zooming
             window.KeyPressed += OnKeyPressed;
 
             window.SetFramerateLimit(144);
+
+            // Create a new view that covers the whole window.
+            view = new View(new FloatRect(0, 0, width, height));
 
             debugFont = new Font(@"C:\Windows\Fonts\arial.ttf"); // Provide a valid font file
             debugText = new Text("", debugFont, 12);
@@ -63,10 +77,10 @@ namespace physics.Engine
 
         private void InitializeGame()
         {
-            ObjectTemplates.CreateWall(0, 0, 5, (int)window.Size.Y);
-            ObjectTemplates.CreateWall((int)window.Size.X - 5, 0, (int)window.Size.X, (int)window.Size.Y);
-            ObjectTemplates.CreateWall(0, 0, (int)window.Size.X, 5);
-            ObjectTemplates.CreateWall(0, (int)window.Size.Y - 5, (int)window.Size.X, (int)window.Size.Y);
+            ObjectTemplates.CreateWall(0, 0, 15, (int)window.Size.Y);
+            ObjectTemplates.CreateWall((int)window.Size.X - 15, 0, (int)window.Size.X, (int)window.Size.Y);
+            ObjectTemplates.CreateWall(0, 0, (int)window.Size.X, 15);
+            ObjectTemplates.CreateWall(0, (int)window.Size.Y - 15, (int)window.Size.X, (int)window.Size.Y);
 
             for (int i = 0; i < 800; i += 20)
             {
@@ -77,6 +91,14 @@ namespace physics.Engine
             }
 
             ObjectTemplates.CreateAttractor(400, 450);
+
+            // Create a box
+            var boxA = ObjectTemplates.CreateBox(100, 400, 200, 500);
+
+            boxA.Velocity = new Vector2f(0, 100);
+            boxA.Angle = (float)(Math.PI / 4);
+
+            //var boxb = ObjectTemplates.CreateBox(190, 300, 290, 400);
         }
 
         public void Run()
@@ -109,6 +131,9 @@ namespace physics.Engine
 
         private void Render()
         {
+            // Apply the current view (which might be zoomed or panned)
+            window.SetView(view);
+
             window.Clear(Color.Black);
 
             // Debug info
@@ -117,6 +142,21 @@ namespace physics.Engine
                                           $"frame rate: {1000 / Math.Max(msFrameTime, 1)}\n" +
                                           $"num objects: {PhysicsSystem.ListStaticObjects.Count}";
             window.Draw(debugText);
+
+            // Optionally, draw the rectangle preview when creating a box.
+            if (isCreatingBox)
+            {
+                float minX = Math.Min(boxStartPoint.X, boxEndPoint.X);
+                float minY = Math.Min(boxStartPoint.Y, boxEndPoint.Y);
+                float width = Math.Abs(boxEndPoint.X - boxStartPoint.X);
+                float height = Math.Abs(boxEndPoint.Y - boxStartPoint.Y);
+                RectangleShape previewRect = new RectangleShape(new Vector2f(width, height));
+                previewRect.Position = new Vector2f(minX, minY);
+                previewRect.FillColor = new Color(0, 0, 0, 0);
+                previewRect.OutlineColor = Color.Red;
+                previewRect.OutlineThickness = 2;
+                window.Draw(previewRect);
+            }
 
             // Draw objects
             foreach (var obj in PhysicsSystem.ListStaticObjects)
@@ -146,9 +186,7 @@ namespace physics.Engine
                 launchTimer += deltaTime;
                 if (launchTimer >= 0.025f)
                 {
-                    // Compute the launch vector implicitly from (mousePos - startPoint)
-                    // Launch balls from the current mouse position.
-                    // (Optionally, you could add a slight offset to each ball if desired.)
+                    // Launch balls from the starting point toward the current mouse position.
                     ActionTemplates.launch(
                         physicsSystem,
                         ObjectTemplates.CreateSmallBall(startPoint.X, startPoint.Y),
@@ -165,29 +203,45 @@ namespace physics.Engine
 
         private void OnMouseButtonPressed(object sender, MouseButtonEventArgs e)
         {
+            // Translate the mouse position from pixel to world coordinates.
+            Vector2f worldPos = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view);
+
             if (e.Button == Mouse.Button.Left)
             {
-                var point = new Vector2f(e.X, e.Y);
                 // If clicking on an existing object, grab it.
-                if (physicsSystem.ActivateAtPoint(point))
+                if (physicsSystem.ActivateAtPoint(worldPos))
                 {
                     isGrabbing = true;
                     return;
                 }
                 // Otherwise, start the ball launching stream.
-                startPoint = point;
+                startPoint = worldPos;
                 isMousePressedLeft = true;
                 launchTimer = 0f;
             }
-
-            if (e.Button == Mouse.Button.Right)
+            else if (e.Button == Mouse.Button.Right)
             {
-                var point = new Vector2f(e.X, e.Y);
-                if (physicsSystem.ActivateAtPoint(point))
+                // Check if there is an object to remove.
+                bool objectFound = physicsSystem.ActivateAtPoint(worldPos);
+                if (objectFound)
                 {
                     physicsSystem.RemoveActiveObject();
                 }
+                else
+                {
+                    // Start creating a rectangle.
+                    isCreatingBox = true;
+                    boxStartPoint = worldPos;
+                    boxEndPoint = worldPos;
+                }
                 isMousePressedRight = true;
+            }
+            else if (e.Button == Mouse.Button.Middle)
+            {
+                // Start panning.
+                isPanning = true;
+                // For panning, we keep the raw pixel position.
+                panStartPos = new Vector2f(e.X, e.Y);
             }
         }
 
@@ -202,7 +256,6 @@ namespace physics.Engine
                     isGrabbing = false;
                     return;
                 }
-
                 // Stop the continuous launch stream.
                 if (isMousePressedLeft)
                 {
@@ -210,23 +263,76 @@ namespace physics.Engine
                     launchTimer = 0f;
                 }
             }
-
-            if (e.Button == Mouse.Button.Right)
+            else if (e.Button == Mouse.Button.Right)
             {
+                // If we were creating a box, finalize it.
+                if (isCreatingBox)
+                {
+                    // Compute min and max coordinates.
+                    float minX = Math.Min(boxStartPoint.X, boxEndPoint.X);
+                    float minY = Math.Min(boxStartPoint.Y, boxEndPoint.Y);
+                    float maxX = Math.Max(boxStartPoint.X, boxEndPoint.X);
+                    float maxY = Math.Max(boxStartPoint.Y, boxEndPoint.Y);
+
+                    // Create the box using the provided function.
+                    ObjectTemplates.CreateBox(minX, minY, maxX, maxY);
+
+                    isCreatingBox = false;
+                }
                 isMousePressedRight = false;
+            }
+            else if (e.Button == Mouse.Button.Middle)
+            {
+                // Stop panning.
+                isPanning = false;
             }
         }
 
         private void OnMouseMoved(object sender, MouseMoveEventArgs e)
         {
-            mousePos = new Vector2f(e.X, e.Y);
+            // Update the mouse position in world coordinates.
+            mousePos = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view);
 
-            if (isMousePressedRight)
+            // Handle panning if the middle mouse button is held.
+            if (isPanning)
             {
-                if (physicsSystem.ActivateAtPoint(mousePos))
+                // Use raw pixel positions for calculating the panning delta.
+                Vector2i prevPixelPos = new Vector2i((int)panStartPos.X, (int)panStartPos.Y);
+                Vector2i currentPixelPos = new Vector2i(e.X, e.Y);
+                Vector2f worldPrev = window.MapPixelToCoords(prevPixelPos, view);
+                Vector2f worldCurrent = window.MapPixelToCoords(currentPixelPos, view);
+                Vector2f delta = worldPrev - worldCurrent;
+                view.Center += delta;
+                // Update the starting point for the next move.
+                panStartPos = new Vector2f(e.X, e.Y);
+            }
+
+            // If we are creating a box with the RMB, update the box's end point.
+            if (isCreatingBox)
+            {
+                boxEndPoint = mousePos;
+            }
+            else if (isMousePressedRight)
+            {
+                Vector2f worldPos = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view);
+                if (physicsSystem.ActivateAtPoint(worldPos))
                 {
                     physicsSystem.RemoveActiveObject();
                 }
+            }
+        }
+
+        private void OnMouseWheelScrolled(object sender, MouseWheelScrollEventArgs e)
+        {
+            // Adjust the view zoom based on the scroll delta.
+            // Scrolling up zooms in, scrolling down zooms out.
+            if (e.Delta > 0)
+            {
+                view.Zoom(0.9f);
+            }
+            else
+            {
+                view.Zoom(1.1f);
             }
         }
 
@@ -241,10 +347,11 @@ namespace physics.Engine
                     ActionTemplates.changeShader(physicsSystem, new SFMLBallShader());
                     break;
                 case Keyboard.Key.V:
-                    //ActionTemplates.changeShader(physicsSystem, new SFMLBallVelocityShader());
+                    // Uncomment or add shader changes as needed.
+                    // ActionTemplates.changeShader(physicsSystem, new SFMLBallVelocityShader());
                     break;
                 case Keyboard.Key.G:
-                    ObjectTemplates.CreateAttractor((int)mousePos.X, (int)mousePos.Y);
+                    ObjectTemplates.CreateAttractor(mousePos.X, mousePos.Y);
                     break;
                 case Keyboard.Key.Semicolon:
                     ActionTemplates.PopAndMultiply(physicsSystem);

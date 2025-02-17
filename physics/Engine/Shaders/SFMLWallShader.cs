@@ -1,6 +1,7 @@
 using SFML.Graphics;
 using SFML.System;
 using physics.Engine.Classes;
+using System;
 
 namespace physics.Engine.Shaders
 {
@@ -21,6 +22,7 @@ namespace physics.Engine.Shaders
         {
             Rectangle.Size = new Vector2f(obj.Aabb.Max.X - obj.Aabb.Min.X, obj.Aabb.Max.Y - obj.Aabb.Min.Y);
             Rectangle.Position = new Vector2f(obj.Aabb.Min.X, obj.Aabb.Min.Y);
+            Rectangle.Rotation = obj.Angle * 180 / (float)Math.PI;
             Rectangle.FillColor = GrayColor;
             target.Draw(Rectangle);
         }

@@ -97,5 +97,17 @@ namespace physics.Engine.Classes.ObjectTemplates
             SFMLShader shader = GetShader<SFMLWallShader>(width);
             return PhysicsSystem.CreateStaticBox(new Vector2f(minX, minY), new Vector2f(maxX, maxY), true, shader, 1000000);
         }
+
+        public static PhysicsObject CreateBox(float minX, float minY, float maxX, float maxY)
+        {
+            int width = (int)(maxX - minX);
+            int height = (int)(maxY - minY);
+            SFMLShader shader = GetShader<SFMLBoxShader>(width);
+
+            //Compute mass from xy dimensions
+            float mass = width * height;
+
+            return PhysicsSystem.CreateStaticBox2(new Vector2f(minX, minY), new Vector2f(maxX, maxY), false, shader, mass);
+        }
     }
 }
