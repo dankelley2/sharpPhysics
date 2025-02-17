@@ -9,6 +9,7 @@ namespace physics.Engine.Classes
         public PhysicsObject B;
         public float Penetration;
         public Vector2f Normal;
+        public Vector2f ContactPoint;
 
         public void Reset()
         {
@@ -16,6 +17,7 @@ namespace physics.Engine.Classes
             B = null;
             Penetration = 0;
             Normal = new Vector2f(0, 0);
+            ContactPoint = new Vector2f(0, 0);
         }
     }
 }

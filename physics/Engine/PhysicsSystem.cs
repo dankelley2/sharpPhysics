@@ -303,16 +303,6 @@ namespace physics.Engine
 
         private void UpdatePhysics(float dt)
         {
-            // Optionally, clear and return previous collision manifolds to the pool.
-            //foreach (var obj in AllPhysicsObjects) // Assume you maintain a list of all physics objects.
-            //{
-            //    if (obj.LastCollision != null)
-            //    {
-            //        _manifoldPool.Return(obj.LastCollision);
-            //        obj.LastCollision = null;
-            //    }
-            //}
-
             for (int i = 0; i < PHYSICS_ITERATIONS; i++)
             {
                 foreach (var pair in ListCollisionPairs)

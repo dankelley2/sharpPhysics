@@ -95,35 +95,47 @@ namespace physics.Engine
             // Vector from A to B
             var n = B.Center - A.Center;
 
-            var r = A.Width/2 + B.Width/2;
-            r *= r;
+            // Radii of circles
+            float rA = A.Width / 2;
+            float rB = B.Width / 2;
+            float radiusSum = rA + rB;
 
-
-            if (n.LengthSquared() > r)
+            // Early out if circles are not colliding
+            if (n.LengthSquared() > radiusSum * radiusSum)
             {
                 return false;
             }
 
-            // Circles have collided, now compute manifold
-            var d = n.Length(); // perform actual sqrt
-            // If distance between circles is not zero
+            // Compute the distance between circle centers
+            float d = n.Length();
+
+            // If the circles are not perfectly overlapping...
             if (d != 0)
             {
-                // Distance is difference between radius and distance
-                m.Penetration = m.A.Width/2 + m.B.Width/2 - d;
-
-                // Utilize our d since we performed sqrt on it already within Length( )
-                // Points from A to B, and is a unit vector
+                // Penetration is the difference between the sum of the radii and the distance
+                m.Penetration = radiusSum - d;
+                // The collision normal is the normalized vector from A to B
                 m.Normal = n / d;
+
+                // Compute the contact point:
+                // For circles, one common method is to take the point on the perimeter of A (along the collision normal)
+                // and the point on the perimeter of B (opposite the collision normal), then average them.
+                Vector2f contactA = A.Center + m.Normal * rA;
+                Vector2f contactB = B.Center - m.Normal * rB;
+                m.ContactPoint = (contactA + contactB) * 0.5f;
+
                 return true;
             }
-
-            // Circles are on same position
-            // Choose random (but consistent) values
-            m.Penetration = A.Width/2;
-            m.Normal = new Vector2f {X = 1, Y = 0};
-            return true;
+            else
+            {
+                // If the circles are on the same position, choose an arbitrary collision normal and contact point.
+                m.Penetration = rA;
+                m.Normal = new Vector2f(1, 0);
+                m.ContactPoint = A.Center;
+                return true;
+            }
         }
+
 
         public static bool AABBvsCircle(ref Manifold m)
         {
@@ -260,35 +272,66 @@ namespace physics.Engine
                 m.B.Move(correction * m.B.IMass);
             }
         }
-
-        public static void ResolveCollisionFast(ref Manifold m)
+        public static void ResolveCollisionRotational(ref Manifold m)
         {
-            // Simply reduce the velocities of both objects to simulate energy loss.
-            // Adjust the damping factor as needed.
-            const float damping = 0.999f; // 80% of the original velocity is retained.
+            var A = m.A;
+            var B = m.B;
 
-            if (!m.A.Locked)
-                m.A.Velocity *= damping;
+            // Vectors from centers to contact point
+            Vector2f rA = m.ContactPoint - A.Center;
+            Vector2f rB = m.ContactPoint - B.Center;
 
-            if (!m.B.Locked)
-                m.B.Velocity *= damping;
-        }
+            // Compute the relative velocity at contact point:
+            // In 2D, the tangential velocity due to rotation can be approximated by:
+            // Perp(AngularVelocity) * r  (i.e. a perpendicular vector scaled by angular speed)
+            Vector2f vA_contact = A.Velocity + Perpendicular(rA) * A.AngularVelocity;
+            Vector2f vB_contact = B.Velocity + Perpendicular(rB) * B.AngularVelocity;
+            Vector2f relativeVelocity = vB_contact - vA_contact;
 
-        public static void PositionalCorrectionFast(ref Manifold m)
-        {
-            // If there is penetration, push the objects apart along the collision normal.
-            // We move each object by half of the penetration distance.
-            if (m.Penetration <= 0)
+            float velAlongNormal = Extensions.Extensions.DotProduct(relativeVelocity, m.Normal);
+            if (velAlongNormal > 0)
                 return;
 
-            Vector2f correction = m.Normal * (m.Penetration * 0.5f);
+            float e = Math.Min(A.Restitution, B.Restitution);
 
-            if (!m.A.Locked)
-                m.A.Move(-correction);
+            // Calculate the scalar cross products (in 2D, treat them as scalars)
+            float rA_cross_N = Cross(rA, m.Normal);
+            float rB_cross_N = Cross(rB, m.Normal);
 
-            if (!m.B.Locked)
-                m.B.Move(correction);
+            // Compute denominator with rotational inertia terms.
+            float invMassSum = A.IMass + B.IMass + (rA_cross_N * rA_cross_N) * A.IInertia + (rB_cross_N * rB_cross_N) * B.IInertia;
+
+            float j = -(1 + e) * velAlongNormal;
+            j /= invMassSum;
+
+            Vector2f impulse = m.Normal * j;
+
+            if (!A.Locked)
+            {
+                A.Velocity -= impulse * A.IMass;
+                // Angular impulse is the cross product of rA and impulse
+                A.AngularVelocity -= Cross(rA, impulse) * A.IInertia;
+            }
+            if (!B.Locked)
+            {
+                B.Velocity += impulse * B.IMass;
+                B.AngularVelocity += Cross(rB, impulse) * B.IInertia;
+            }
         }
+
+        // Helper: Returns a vector perpendicular to v (i.e., rotated 90 degrees)
+        private static Vector2f Perpendicular(Vector2f v)
+        {
+            return new Vector2f(-v.Y, v.X);
+        }
+
+        // Helper: Cross product in 2D (returns a scalar)
+        // For vectors a and b, Cross(a, b) = a.X * b.Y - a.Y * b.X
+        private static float Cross(Vector2f a, Vector2f b)
+        {
+            return a.X * b.Y - a.Y * b.X;
+        }
+
 
         private static float Clamp(float low, float high, float val)
         {
