@@ -311,9 +311,8 @@ namespace physics.Engine
             Vector2f rA = m.ContactPoint - A.Center;
             Vector2f rB = m.ContactPoint - B.Center;
 
-            // Compute the relative velocity at contact point:
-            // In 2D, the tangential velocity due to rotation can be approximated by:
-            // Perp(AngularVelocity) * r  (i.e. a perpendicular vector scaled by angular speed)
+            // Compute the relative velocity at the contact point,
+            // including both linear and rotational contributions.
             Vector2f vA_contact = A.Velocity + Perpendicular(rA) * A.AngularVelocity;
             Vector2f vB_contact = B.Velocity + Perpendicular(rB) * B.AngularVelocity;
             Vector2f relativeVelocity = vB_contact - vA_contact;
@@ -324,13 +323,16 @@ namespace physics.Engine
 
             float e = Math.Min(A.Restitution, B.Restitution);
 
-            // Calculate the scalar cross products (in 2D, treat them as scalars)
+            // Calculate scalar cross products for the normal.
             float rA_cross_N = Cross(rA, m.Normal);
             float rB_cross_N = Cross(rB, m.Normal);
 
-            // Compute denominator with rotational inertia terms.
-            float invMassSum = A.IMass + B.IMass + (rA_cross_N * rA_cross_N) * A.IInertia + (rB_cross_N * rB_cross_N) * B.IInertia;
+            // Compute denominator with both linear and rotational inertia contributions.
+            float invMassSum = A.IMass + B.IMass +
+                               (rA_cross_N * rA_cross_N) * A.IInertia +
+                               (rB_cross_N * rB_cross_N) * B.IInertia;
 
+            // Compute normal impulse scalar.
             float j = -(1 + e) * velAlongNormal;
             j /= invMassSum;
 
@@ -339,13 +341,49 @@ namespace physics.Engine
             if (!A.Locked)
             {
                 A.Velocity -= impulse * A.IMass;
-                // Angular impulse is the cross product of rA and impulse
                 A.AngularVelocity -= Cross(rA, impulse) * A.IInertia;
             }
             if (!B.Locked)
             {
                 B.Velocity += impulse * B.IMass;
                 B.AngularVelocity += Cross(rB, impulse) * B.IInertia;
+            }
+
+            // --- Now apply friction (tangential) impulse ---
+            // Compute tangent vector: remove the normal component from the relative velocity.
+            Vector2f tangent = relativeVelocity - m.Normal * Extensions.Extensions.DotProduct(relativeVelocity, m.Normal);
+            if (tangent.LengthSquared() > 0.0001f)
+                tangent = tangent.Normalize();
+            else
+                tangent = new Vector2f(0, 0);
+
+            // Compute friction impulse scalar.
+            float jt = -Extensions.Extensions.DotProduct(relativeVelocity, tangent);
+
+            // Denominator including rotational inertia along the tangent.
+            float rA_cross_t = Cross(rA, tangent);
+            float rB_cross_t = Cross(rB, tangent);
+            float invMassSumFriction = A.IMass + B.IMass +
+                                       (rA_cross_t * rA_cross_t) * A.IInertia +
+                                       (rB_cross_t * rB_cross_t) * B.IInertia;
+            jt /= invMassSumFriction;
+
+            // Coulomb friction: clamp friction impulse magnitude to μ times the normal impulse.
+            float mu = 0.7f; // Friction coefficient; adjust as needed.
+            jt = Math.Min(Math.Abs(jt), mu * Math.Abs(j));
+            jt = jt * (jt < 0 ? -1 : 1);  // restore the sign
+
+            Vector2f frictionImpulse = tangent * jt;
+
+            if (!A.Locked)
+            {
+                A.Velocity += frictionImpulse * A.IMass;
+                A.AngularVelocity += Cross(rA, frictionImpulse) * A.IInertia;
+            }
+            if (!B.Locked)
+            {
+                B.Velocity -= frictionImpulse * B.IMass;
+                B.AngularVelocity -= Cross(rB, frictionImpulse) * B.IInertia;
             }
         }
 
