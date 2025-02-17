@@ -1,11 +1,11 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("ARNet.Physics.Tests")]
+[assembly: AssemblyTitle("SharpPhysics.Tests")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("ARNet.Physics.Tests")]
+[assembly: AssemblyProduct("SharpPhysics.Tests")]
 [assembly: AssemblyCopyright("Copyright © 2025")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

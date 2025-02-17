@@ -92,9 +92,9 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\physics\ARNet.Physics.csproj">
+    <ProjectReference Include="..\physics\SharpPhysics.csproj">
       <Project>{394D2D64-62E0-419A-966E-0C6E8CA39F73}</Project>
-      <Name>ARNet.Physics</Name>
+      <Name>SharpPhysics</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

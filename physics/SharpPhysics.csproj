@@ -4,7 +4,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net48</TargetFramework>
     <RootNamespace>physics</RootNamespace>
-    <AssemblyName>ARNet.Physics</AssemblyName>
+    <AssemblyName>SharpPhysics</AssemblyName>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UseWindowsForms>false</UseWindowsForms>
     <Platforms>AnyCPU;x86</Platforms>

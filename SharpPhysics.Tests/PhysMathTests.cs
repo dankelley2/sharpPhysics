@@ -4,7 +4,7 @@ using physics.Engine.Structs;
 using SFML.System;
 using System.Drawing;
 
-namespace ARNet.Physics.Tests
+namespace SharpPhysics.Tests
 {
     [TestClass]
     public class PhysMathTests
