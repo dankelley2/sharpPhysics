@@ -11,6 +11,8 @@ Controls as of right now:
 
 * LMB: Move existing objects or create/launch new ones
 * RMB: Delete objects on click / mouse move
+* MMB Scroll: zoom
+* MMB Hold: pan screen
 * P: Switch to poolball shader
 * V: Switch to velocity shader
 * G: Create Gravity orb
