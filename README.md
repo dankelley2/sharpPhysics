@@ -4,6 +4,7 @@
 https://youtu.be/O_O9jhB9bcI
 
 ![image](https://github.com/user-attachments/assets/f51c6901-9197-45fd-956d-20997dabc3d1)
+![image](https://github.com/user-attachments/assets/b32b5011-4df3-4fcf-81ab-707044529b9f)
 
 
 Controls as of right now:
