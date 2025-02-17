@@ -308,7 +308,7 @@ namespace physics.Engine
 
         private void ProcessRemovalQueue()
         {
-            if (RemovalQueue.Count > 0)
+            while (RemovalQueue.Count > 0)
             {
                 var obj = RemovalQueue.Dequeue();
                 ListStaticObjects.Remove(obj);

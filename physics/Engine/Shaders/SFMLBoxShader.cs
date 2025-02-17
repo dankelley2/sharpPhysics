@@ -38,14 +38,15 @@ namespace physics.Engine.Shaders
 
             target.Draw(Rectangle);
 
-            // Calculate the size of the rectangle from the AABB.
-            Rectangle2.Size = new Vector2f(obj.Aabb.Max.X - obj.Aabb.Min.X, obj.Aabb.Max.Y - obj.Aabb.Min.Y);
-            Rectangle2.Position = obj.Aabb.Min;
-            Rectangle2.FillColor = Color.Transparent;
-            Rectangle2.OutlineColor = Color.Magenta;
-            Rectangle2.OutlineThickness = 1;
+            //// DEBUG FOR OG Bounding box
+            //// Calculate the size of the rectangle from the AABB.
+            //Rectangle2.Size = new Vector2f(obj.Aabb.Max.X - obj.Aabb.Min.X, obj.Aabb.Max.Y - obj.Aabb.Min.Y);
+            //Rectangle2.Position = obj.Aabb.Min;
+            //Rectangle2.FillColor = Color.Transparent;
+            //Rectangle2.OutlineColor = Color.Magenta;
+            //Rectangle2.OutlineThickness = 1;
 
-            target.Draw(Rectangle2);
+            //target.Draw(Rectangle2);
         }
 
     }
