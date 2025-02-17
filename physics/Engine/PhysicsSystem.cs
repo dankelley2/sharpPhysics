@@ -23,7 +23,7 @@ namespace physics.Engine
         #endregion
 
         #region Local Declarations
-        public const float FPS = 60;
+        public const float FPS = 144;
         private const float _dt = 1 / FPS;
         private const int PHYSICS_ITERATIONS = 4;
         private double accumulator = 0;
@@ -99,6 +99,19 @@ namespace physics.Engine
             };
             PhysMath.CorrectBoundingBox(ref oAabb);
             var obj = new PhysicsObject(oAabb, PhysicsObject.Type.Box, .95F, locked, shader, mass);
+            ListStaticObjects.Add(obj);
+            return obj;
+        }
+
+        public static PhysicsObject CreateStaticBox2(Vector2f start, Vector2f end, bool locked, SFMLShader shader, float mass)
+        {
+            var oAabb = new AABB
+            {
+                Min = new Vector2f { X = start.X, Y = start.Y },
+                Max = new Vector2f { X = end.X, Y = end.Y }
+            };
+            PhysMath.CorrectBoundingBox(ref oAabb);
+            var obj = new PhysicsObject(oAabb, PhysicsObject.Type.Box, .5F, locked, shader, mass);
             ListStaticObjects.Add(obj);
             return obj;
         }
@@ -238,6 +251,8 @@ namespace physics.Engine
             obj.Velocity.X += obj.Velocity.X == 0 ? 0 : obj.Velocity.X > 0 ? -friction : friction;
             obj.Velocity.Y += obj.Velocity.Y == 0 ? 0 : obj.Velocity.Y > 0 ? -friction : friction;
 
+           // obj.AngularVelocity *= friction * 0.01F;
+
             if (obj.Center.Y > 2000 || obj.Center.Y < -2000 || obj.Center.X > 2000 || obj.Center.X < -2000)
             {
                 RemovalQueue.Enqueue(obj);
@@ -332,6 +347,10 @@ namespace physics.Engine
                         if (m.B.ShapeType == PhysicsObject.Type.Box)
                         {
                             collision = Collision.AABBvsAABB(ref m);
+                            if (collision)
+                            {
+                                CollisionHelpers.UpdateContactPoint(ref m);
+                            }
                         }
                         else if (m.B.ShapeType == PhysicsObject.Type.Circle)
                         {
@@ -346,8 +365,9 @@ namespace physics.Engine
                     // If a collision was detected, resolve it and store the manifold.
                     if (collision)
                     {
-                        Collision.ResolveCollision(ref m);
+                        Collision.ResolveCollisionRotational(ref m);
                         Collision.PositionalCorrection(ref m);
+                        Collision.AngularPositionalCorrection(ref m);
                         objA.LastCollision = m;
                         objB.LastCollision = m;
                     }
@@ -364,6 +384,8 @@ namespace physics.Engine
             {
                 ApplyConstants(ListStaticObjects[i], dt);
                 ListStaticObjects[i].Move(dt);
+                ListStaticObjects[i].UpdateRotation(dt);
+
             }
         }
 
@@ -385,24 +407,36 @@ namespace physics.Engine
             // Populate the spatial hash.
             foreach (var obj in ListStaticObjects)
             {
-                int minX = (int)Math.Floor(obj.Aabb.Min.X / cellSize);
-                int minY = (int)Math.Floor(obj.Aabb.Min.Y / cellSize);
-                int maxX = (int)Math.Floor(obj.Aabb.Max.X / cellSize);
-                int maxY = (int)Math.Floor(obj.Aabb.Max.Y / cellSize);
+                int minX, minY, maxX, maxY;
 
-                for (int x = minX; x <= maxX; x++)
+                if (obj.ShapeType == PhysicsObject.Type.Box) {
+                    var newAabb = GeometryHelpers.GetRotatedAABB(obj);
+                    minX = (int)Math.Floor(newAabb.Min.X / cellSize);
+                    minY = (int)Math.Floor(newAabb.Min.Y / cellSize);
+                    maxX = (int)Math.Floor(newAabb.Max.X / cellSize);
+                    maxY = (int)Math.Floor(newAabb.Max.Y / cellSize);
+                } else
                 {
-                    for (int y = minY; y <= maxY; y++)
-                    {
-                        var key = (x, y);
-                        if (!_spatialHash.TryGetValue(key, out List<PhysicsObject> cellList))
-                        {
-                            cellList = new List<PhysicsObject>();
-                            _spatialHash[key] = cellList;
-                        }
-                        cellList.Add(obj);
-                    }
+                    // Get adjusted AABB
+                    minX = (int)Math.Floor(obj.Aabb.Min.X / cellSize);
+                    minY = (int)Math.Floor(obj.Aabb.Min.Y / cellSize);
+                    maxX = (int)Math.Floor(obj.Aabb.Max.X / cellSize);
+                    maxY = (int)Math.Floor(obj.Aabb.Max.Y / cellSize);
                 }
+
+                    for (int x = minX; x <= maxX; x++)
+                    {
+                        for (int y = minY; y <= maxY; y++)
+                        {
+                            var key = (x, y);
+                            if (!_spatialHash.TryGetValue(key, out List<PhysicsObject> cellList))
+                            {
+                                cellList = new List<PhysicsObject>();
+                                _spatialHash[key] = cellList;
+                            }
+                            cellList.Add(obj);
+                        }
+                    }
             }
 
             // Use the reusable hash set to avoid duplicate pairs.

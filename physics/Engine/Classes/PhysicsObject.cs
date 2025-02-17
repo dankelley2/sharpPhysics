@@ -19,6 +19,7 @@ public class PhysicsObject
     public float Restitution;
     public float Mass;
     public float IMass;
+    public Vector2f LastContactPoint;
 
     // New rotational properties:
     public float Angle;             // Orientation (in degrees or radians)
@@ -110,6 +111,10 @@ public class PhysicsObject
     {
         if (Locked) return;
         Angle += AngularVelocity * dt;
-        // If your rendering uses a rotation property, update it here.
+
+        // Apply angular damping.
+        AngularVelocity *= 0.9999f; // dampen by 1% per update
+        if (Math.Abs(AngularVelocity) < 0.0001f)
+            AngularVelocity = 0;
     }
 }

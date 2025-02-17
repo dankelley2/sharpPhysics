@@ -26,6 +26,11 @@ namespace physics.Engine
         private bool isGrabbing = false;
         private Vector2f mousePos;
 
+        // New fields for box creation with the RMB.
+        private bool isCreatingBox = false;
+        private Vector2f boxStartPoint;
+        private Vector2f boxEndPoint;
+
         // Timing variables
         private long msFrameTime;
         private long msPerDrawCycle;
@@ -86,6 +91,14 @@ namespace physics.Engine
             }
 
             ObjectTemplates.CreateAttractor(400, 450);
+
+            //// Create a box
+            //var boxA = ObjectTemplates.CreateBox(100,400, 200, 500);
+
+            //boxA.Velocity = new Vector2f(0, 100);
+            //boxA.Angle = (float)(Math.PI / 4);
+
+            //var boxb = ObjectTemplates.CreateBox(190, 300, 290, 400);
         }
 
         public void Run()
@@ -129,6 +142,21 @@ namespace physics.Engine
                                           $"frame rate: {1000 / Math.Max(msFrameTime, 1)}\n" +
                                           $"num objects: {PhysicsSystem.ListStaticObjects.Count}";
             window.Draw(debugText);
+
+            // Optionally, draw the rectangle preview when creating a box.
+            if (isCreatingBox)
+            {
+                float minX = Math.Min(boxStartPoint.X, boxEndPoint.X);
+                float minY = Math.Min(boxStartPoint.Y, boxEndPoint.Y);
+                float width = Math.Abs(boxEndPoint.X - boxStartPoint.X);
+                float height = Math.Abs(boxEndPoint.Y - boxStartPoint.Y);
+                RectangleShape previewRect = new RectangleShape(new Vector2f(width, height));
+                previewRect.Position = new Vector2f(minX, minY);
+                previewRect.FillColor = new Color(0, 0, 0, 0);
+                previewRect.OutlineColor = Color.Red;
+                previewRect.OutlineThickness = 2;
+                window.Draw(previewRect);
+            }
 
             // Draw objects
             foreach (var obj in PhysicsSystem.ListStaticObjects)
@@ -193,9 +221,18 @@ namespace physics.Engine
             }
             else if (e.Button == Mouse.Button.Right)
             {
-                if (physicsSystem.ActivateAtPoint(worldPos))
+                // Check if there is an object to remove.
+                bool objectFound = physicsSystem.ActivateAtPoint(worldPos);
+                if (objectFound)
                 {
                     physicsSystem.RemoveActiveObject();
+                }
+                else
+                {
+                    // Start creating a rectangle.
+                    isCreatingBox = true;
+                    boxStartPoint = worldPos;
+                    boxEndPoint = worldPos;
                 }
                 isMousePressedRight = true;
             }
@@ -228,6 +265,20 @@ namespace physics.Engine
             }
             else if (e.Button == Mouse.Button.Right)
             {
+                // If we were creating a box, finalize it.
+                if (isCreatingBox)
+                {
+                    // Compute min and max coordinates.
+                    float minX = Math.Min(boxStartPoint.X, boxEndPoint.X);
+                    float minY = Math.Min(boxStartPoint.Y, boxEndPoint.Y);
+                    float maxX = Math.Max(boxStartPoint.X, boxEndPoint.X);
+                    float maxY = Math.Max(boxStartPoint.Y, boxEndPoint.Y);
+
+                    // Create the box using the provided function.
+                    ObjectTemplates.CreateBox(minX, minY, maxX, maxY);
+
+                    isCreatingBox = false;
+                }
                 isMousePressedRight = false;
             }
             else if (e.Button == Mouse.Button.Middle)
@@ -256,8 +307,12 @@ namespace physics.Engine
                 panStartPos = new Vector2f(e.X, e.Y);
             }
 
-            // Existing behavior for right mouse button.
-            if (isMousePressedRight)
+            // If we are creating a box with the RMB, update the box's end point.
+            if (isCreatingBox)
+            {
+                boxEndPoint = mousePos;
+            }
+            else if (isMousePressedRight)
             {
                 Vector2f worldPos = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view);
                 if (physicsSystem.ActivateAtPoint(worldPos))
