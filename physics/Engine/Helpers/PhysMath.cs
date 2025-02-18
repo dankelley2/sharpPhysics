@@ -9,6 +9,10 @@ using physics.Engine.Structs;
 
 namespace physics.Engine.Helpers
 {
+    /// <summary>
+    /// Provides optimized mathematical operations for physics calculations.
+    /// Includes vector operations, bounding box corrections, and coordinate transformations.
+    /// </summary>
     public static class PhysMath
     {
 
