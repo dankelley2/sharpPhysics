@@ -4,9 +4,22 @@ using physics.Engine.Structs;
 
 namespace physics.Engine
 {
+    /// <summary>
+    /// Provides collision detection and resolution algorithms for 2D physics simulation.
+    /// Implements efficient collision checks and response calculations:
+    /// - AABB vs AABB using Separating Axis Theorem (SAT)
+    /// - Circle vs Circle with squared distance optimization
+    /// - AABB vs Circle using Voronoi regions
+    /// Uses optimized math operations and early-out checks for performance.
+    /// </summary>
     internal static class Collision
     {
 
+        /// <summary>
+        /// Fast AABB vs AABB collision test using Separating Axis Theorem.
+        /// Provides early-out on first separating axis found.
+        /// </summary>
+        /// <returns>True if AABBs overlap, false if separated</returns>
         public static bool AABBvsAABB(AABB a, AABB b)
         {
             // Exit with no intersection if found separated along an axis
@@ -84,6 +97,13 @@ namespace physics.Engine
             return false;
         }
 
+        /// <summary>
+        /// Detects collision between two circles using squared distance optimization.
+        /// Avoids sqrt operations until absolutely necessary for better performance.
+        /// Handles special case of coincident circles.
+        /// </summary>
+        /// <param name="m">Collision manifold containing circle objects and collision data</param>
+        /// <returns>True if circles are colliding, false otherwise</returns>
         public static bool CirclevsCircle(ref Manifold m)
         {
             // Setup a couple pointers to each object
@@ -123,6 +143,13 @@ namespace physics.Engine
             return true;
         }
 
+        /// <summary>
+        /// Detects collision between AABB and circle using Voronoi regions.
+        /// Handles both external collisions and internal containment cases.
+        /// Uses efficient point containment tests and clamping for optimization.
+        /// </summary>
+        /// <param name="m">Collision manifold containing objects and collision data</param>
+        /// <returns>True if objects are colliding, false otherwise</returns>
         public static bool AABBvsCircle(ref Manifold m)
         {
             // Setup a couple pointers to each object
@@ -215,6 +242,17 @@ namespace physics.Engine
             return true;
         }
 
+        /// <summary>
+        /// Resolves collision using impulse-based dynamics.
+        /// Formula: j = -(1 + e) * Vrel • n / (1/Ma + 1/Mb)
+        /// where:
+        /// - e: restitution coefficient
+        /// - Vrel: relative velocity
+        /// - n: collision normal
+        /// - Ma,Mb: object masses
+        /// Handles special cases like locked objects and NaN normals.
+        /// </summary>
+        /// <param name="m">Collision manifold containing objects and collision data</param>
         public static void ResolveCollision(ref Manifold m)
         {
             var rv = m.B.Velocity - m.A.Velocity;
