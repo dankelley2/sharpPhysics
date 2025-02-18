@@ -28,8 +28,8 @@ namespace physics.Engine.Objects
                 return;
 
             Angle += AngularVelocity * dt;
-            AngularVelocity *= 0.9999f; // Apply angular damping.
-            if (Math.Abs(AngularVelocity) < 0.0001f)
+            AngularVelocity *= 0.999f; // Apply angular damping.
+            if (Math.Abs(AngularVelocity) < 0.001f)
                 AngularVelocity = 0;
 
             // Update AABB to reflect the new rotation.
