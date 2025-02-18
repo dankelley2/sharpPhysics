@@ -4,6 +4,8 @@ using physics.Engine.Classes;
 using physics.Engine.Helpers;
 using physics.Engine.Extensions;
 using System;
+using physics.Engine.Objects;
+using physics.Engine.Shapes;
 
 namespace physics.Engine.Shaders
 {
@@ -27,7 +29,7 @@ namespace physics.Engine.Shaders
         public override void Draw(PhysicsObject obj, RenderTarget target)
         {
             // Update ball's position.
-            _circle.Position = new Vector2f(obj.Center.X - obj.Width / 2, obj.Center.Y - obj.Height / 2);
+            _circle.Position = obj.Aabb.Min;
 
             // Color based on velocity.
             double particleSpeed = 220 - Math.Min((int)obj.Velocity.Length() / 2, 220);

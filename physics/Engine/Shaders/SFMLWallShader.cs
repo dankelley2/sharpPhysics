@@ -2,6 +2,7 @@ using SFML.Graphics;
 using SFML.System;
 using physics.Engine.Classes;
 using System;
+using physics.Engine.Objects;
 
 namespace physics.Engine.Shaders
 {

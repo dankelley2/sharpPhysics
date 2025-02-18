@@ -3,6 +3,8 @@ using SFML.System;
 using physics.Engine.Classes;
 using System;
 using System.Collections.Generic;
+using physics.Engine.Objects;
+using physics.Engine.Shapes;
 
 namespace physics.Engine.Shaders
 {
@@ -24,8 +26,12 @@ namespace physics.Engine.Shaders
 
         public override void PostDraw(PhysicsObject obj, RenderTarget target)
         {
+            if (!(obj.Shape is BoxPhysShape b))
+            {
+                throw new ArgumentException("GetRectangleCorners requires a PhysicsObject with a BoxShape.");
+            }
             // Calculate the size of the rectangle from the AABB.
-            Vector2f size = new Vector2f(obj.Aabb.Max.X - obj.Aabb.Min.X, obj.Aabb.Max.Y - obj.Aabb.Min.Y);
+            Vector2f size = new Vector2f(b.Width, b.Height);
             Rectangle.Size = size;
             // Set the origin to the center so that rotations are around the center.
             Rectangle.Origin = new Vector2f(size.X / 2, size.Y / 2);

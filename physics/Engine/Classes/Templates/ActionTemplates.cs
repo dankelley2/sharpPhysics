@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using physics.Engine;
-using physics.Engine.Structs;
+﻿
+using physics.Engine.Objects;
 using SFML.System;
 
 namespace physics.Engine.Classes.ObjectTemplates

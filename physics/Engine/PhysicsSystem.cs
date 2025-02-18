@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Drawing;
 using physics.Engine.Classes;
+using physics.Engine.Objects;
 using physics.Engine.Extensions;
 using physics.Engine.Helpers;
+using physics.Engine.Shapes;
 using physics.Engine.Structs;
 using SFML.System;
 
@@ -18,7 +20,7 @@ namespace physics.Engine
         public float Friction { get; set; }
 
         // Set this to roughly your average AABB size – adjust as needed.
-        public float SpatialHashCellSize { get; set; } = 20F;
+        public float SpatialHashCellSize { get; set; } = 10F;
 
         #endregion
 
@@ -79,42 +81,52 @@ namespace physics.Engine
 
         public static PhysicsObject CreateStaticCircle(Vector2f loc, int radius, float restitution, bool locked, SFMLShader shader)
         {
-            var oAabb = new AABB
-            {
-                Min = new Vector2f { X = loc.X - radius, Y = loc.Y - radius },
-                Max = new Vector2f { X = loc.X + radius, Y = loc.Y + radius }
-            };
-            PhysMath.CorrectBoundingBox(ref oAabb);
-            var obj = new PhysicsObject(oAabb, PhysicsObject.Type.Circle, restitution, locked, shader);
+            // Create the circle shape using the given radius.
+            IShape shape = new CirclePhysShape(radius);
+            // For a circle, the center is the provided location.
+            var obj = new RotatingPhysicsObject(shape, loc, restitution, locked, shader);
             ListStaticObjects.Add(obj);
             return obj;
         }
 
         public static PhysicsObject CreateStaticBox(Vector2f start, Vector2f end, bool locked, SFMLShader shader, float mass)
         {
-            var oAabb = new AABB
-            {
-                Min = new Vector2f { X = start.X, Y = start.Y },
-                Max = new Vector2f { X = end.X, Y = end.Y }
-            };
-            PhysMath.CorrectBoundingBox(ref oAabb);
-            var obj = new PhysicsObject(oAabb, PhysicsObject.Type.Box, .95F, locked, shader, mass);
+            // Ensure start and end define the correct bounds.
+            var min = new Vector2f(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y));
+            var max = new Vector2f(Math.Max(start.X, end.X), Math.Max(start.Y, end.Y));
+
+            // Compute width and height.
+            float width = max.X - min.X;
+            float height = max.Y - min.Y;
+            // Calculate the center from the corrected bounds.
+            var center = new Vector2f((min.X + max.X) / 2f, (min.Y + max.Y) / 2f);
+
+            // Create a box shape with the computed dimensions.
+            IShape shape = new BoxPhysShape(width, height);
+            var obj = new NonRotatingPhysicsObject(shape, center, 0.95f, locked, shader, mass);
             ListStaticObjects.Add(obj);
             return obj;
         }
 
         public static PhysicsObject CreateStaticBox2(Vector2f start, Vector2f end, bool locked, SFMLShader shader, float mass)
         {
-            var oAabb = new AABB
-            {
-                Min = new Vector2f { X = start.X, Y = start.Y },
-                Max = new Vector2f { X = end.X, Y = end.Y }
-            };
-            PhysMath.CorrectBoundingBox(ref oAabb);
-            var obj = new PhysicsObject(oAabb, PhysicsObject.Type.Box, .5F, locked, shader, mass);
+            // Compute the corrected bounding box.
+            var min = new Vector2f(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y));
+            var max = new Vector2f(Math.Max(start.X, end.X), Math.Max(start.Y, end.Y));
+
+            // Compute width and height.
+            float width = max.X - min.X;
+            float height = max.Y - min.Y;
+            // Compute the center.
+            var center = new Vector2f((min.X + max.X) / 2f, (min.Y + max.Y) / 2f);
+
+            // Create the box shape.
+            IShape shape = new BoxPhysShape(width, height);
+            var obj = new RotatingPhysicsObject(shape, center, 0.5f, locked, shader, mass);
             ListStaticObjects.Add(obj);
             return obj;
         }
+
 
         public bool ActivateAtPoint(Vector2f p)
         {
@@ -248,16 +260,22 @@ namespace physics.Engine
             AddGravity(obj, dt);
 
             var friction = Friction * dt;
-            obj.Velocity.X += obj.Velocity.X == 0 ? 0 : obj.Velocity.X > 0 ? -friction : friction;
-            obj.Velocity.Y += obj.Velocity.Y == 0 ? 0 : obj.Velocity.Y > 0 ? -friction : friction;
 
-           // obj.AngularVelocity *= friction * 0.01F;
+            // Store velocity in a temporary variable.
+            var velocity = obj.Velocity;
+            velocity.X += velocity.X == 0 ? 0 : velocity.X > 0 ? -friction : friction;
+            velocity.Y += velocity.Y == 0 ? 0 : velocity.Y > 0 ? -friction : friction;
+            // Assign the modified velocity back.
+            obj.Velocity = velocity;
+
+            // obj.AngularVelocity *= friction * 0.01F;
 
             if (obj.Center.Y > 2000 || obj.Center.Y < -2000 || obj.Center.X > 2000 || obj.Center.X < -2000)
             {
                 RemovalQueue.Enqueue(obj);
             }
         }
+
 
         private Vector2f CalculatePointGravity(PhysicsObject obj)
         {
@@ -320,17 +338,18 @@ namespace physics.Engine
         {
             for (int i = 0; i < PHYSICS_ITERATIONS; i++)
             {
-                foreach (var pair in ListCollisionPairs)
+                for(int j = 0; j < ListCollisionPairs.Count; j++)
                 {
-                    var objA = pair.A;
-                    var objB = pair.B;
+                    var objA = ListCollisionPairs[j].A;
+                    var objB = ListCollisionPairs[j].B;
 
                     // Retrieve a manifold from the pool instead of creating a new instance.
                     Manifold m = _manifoldPool.Get();
                     bool collision = false;
 
-                    // Set the ordering based on object types (flip if necessary).
-                    if (objA.ShapeType == PhysicsObject.Type.Circle && objB.ShapeType == PhysicsObject.Type.Box)
+                    // Set the ordering based on shape types (swap if necessary):
+                    // If objA's shape is a Circle and objB's shape is a Box, swap them.
+                    if (objA.Shape is CirclePhysShape && objB.Shape is BoxPhysShape)
                     {
                         m.A = objB;
                         m.B = objA;
@@ -342,9 +361,9 @@ namespace physics.Engine
                     }
 
                     // Perform collision detection based on shape types.
-                    if (m.A.ShapeType == PhysicsObject.Type.Box)
+                    if (m.A.Shape is BoxPhysShape)
                     {
-                        if (m.B.ShapeType == PhysicsObject.Type.Box)
+                        if (m.B.Shape is BoxPhysShape)
                         {
                             collision = Collision.AABBvsAABB(ref m);
                             if (collision)
@@ -352,12 +371,12 @@ namespace physics.Engine
                                 CollisionHelpers.UpdateContactPoint(ref m);
                             }
                         }
-                        else if (m.B.ShapeType == PhysicsObject.Type.Circle)
+                        else if (m.B.Shape is CirclePhysShape)
                         {
                             collision = Collision.AABBvsCircle(ref m);
                         }
                     }
-                    else if (m.B.ShapeType == PhysicsObject.Type.Circle)
+                    else if (m.A.Shape is CirclePhysShape && m.B.Shape is CirclePhysShape)
                     {
                         collision = Collision.CirclevsCircle(ref m);
                     }
@@ -368,8 +387,6 @@ namespace physics.Engine
                         Collision.ResolveCollisionRotational(ref m);
                         Collision.PositionalCorrection(ref m);
                         Collision.AngularPositionalCorrection(ref m);
-                        objA.LastCollision = m;
-                        objB.LastCollision = m;
                     }
                     else
                     {
@@ -385,9 +402,9 @@ namespace physics.Engine
                 ApplyConstants(ListStaticObjects[i], dt);
                 ListStaticObjects[i].Move(dt);
                 ListStaticObjects[i].UpdateRotation(dt);
-
             }
         }
+
 
         #endregion
 
@@ -407,36 +424,26 @@ namespace physics.Engine
             // Populate the spatial hash.
             foreach (var obj in ListStaticObjects)
             {
-                int minX, minY, maxX, maxY;
+                // Get min / max extents, divide by cellSize for grid coordinates.
+                int minX = (int)Math.Floor(obj.Aabb.Min.X / cellSize);
+                int minY = (int)Math.Floor(obj.Aabb.Min.Y / cellSize);
+                int maxX = (int)Math.Floor(obj.Aabb.Max.X / cellSize);
+                int maxY = (int)Math.Floor(obj.Aabb.Max.Y / cellSize);
 
-                if (obj.ShapeType == PhysicsObject.Type.Box) {
-                    var newAabb = GeometryHelpers.GetRotatedAABB(obj);
-                    minX = (int)Math.Floor(newAabb.Min.X / cellSize);
-                    minY = (int)Math.Floor(newAabb.Min.Y / cellSize);
-                    maxX = (int)Math.Floor(newAabb.Max.X / cellSize);
-                    maxY = (int)Math.Floor(newAabb.Max.Y / cellSize);
-                } else
+
+                for (int x = minX; x <= maxX; x++)
                 {
-                    // Get adjusted AABB
-                    minX = (int)Math.Floor(obj.Aabb.Min.X / cellSize);
-                    minY = (int)Math.Floor(obj.Aabb.Min.Y / cellSize);
-                    maxX = (int)Math.Floor(obj.Aabb.Max.X / cellSize);
-                    maxY = (int)Math.Floor(obj.Aabb.Max.Y / cellSize);
-                }
-
-                    for (int x = minX; x <= maxX; x++)
+                    for (int y = minY; y <= maxY; y++)
                     {
-                        for (int y = minY; y <= maxY; y++)
+                        var key = (x, y);
+                        if (!_spatialHash.TryGetValue(key, out List<PhysicsObject> cellList))
                         {
-                            var key = (x, y);
-                            if (!_spatialHash.TryGetValue(key, out List<PhysicsObject> cellList))
-                            {
-                                cellList = new List<PhysicsObject>();
-                                _spatialHash[key] = cellList;
-                            }
-                            cellList.Add(obj);
+                            cellList = new List<PhysicsObject>();
+                            _spatialHash[key] = cellList;
                         }
+                        cellList.Add(obj);
                     }
+                }
             }
 
             // Use the reusable hash set to avoid duplicate pairs.

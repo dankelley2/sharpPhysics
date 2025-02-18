@@ -1,5 +1,6 @@
 using SFML.Graphics;
 using physics.Engine.Classes;
+using physics.Engine.Objects;
 
 namespace physics.Engine
 {

@@ -1,6 +1,8 @@
 ﻿using System;
 using physics.Engine.Classes;
 using physics.Engine.Extensions;
+using physics.Engine.Objects;
+using physics.Engine.Shapes;
 using physics.Engine.Structs;
 using SFML.System;
 
@@ -28,10 +30,10 @@ namespace physics.Engine
                 return false;
 
             // Compute half extents for each box.
-            float a_halfX = A.Width / 2f;
-            float a_halfY = A.Height / 2f;
-            float b_halfX = B.Width / 2f;
-            float b_halfY = B.Height / 2f;
+            float a_halfX = A.Shape.GetWidth() / 2f;
+            float a_halfY = A.Shape.GetHeight() / 2f;
+            float b_halfX = B.Shape.GetWidth() / 2f;
+            float b_halfY = B.Shape.GetHeight() / 2f;
 
             // Compute the local axes for each box.
             // For object A:
@@ -135,43 +137,47 @@ namespace physics.Engine
 
         public static bool CirclevsCircle(ref Manifold m)
         {
-            // Setup a couple pointers to each object
-            var A = m.A;
-            var B = m.B;
+            PhysicsObject A = m.A;
+            PhysicsObject B = m.B;
 
-            // Vector from A to B
-            var n = B.Center - A.Center;
+            // Ensure both objects are circles.
+            CirclePhysShape circleA = A.Shape as CirclePhysShape;
+            CirclePhysShape circleB = B.Shape as CirclePhysShape;
+            if (circleA == null || circleB == null)
+            {
+                throw new ArgumentException("CirclevsCircle requires both objects to have a CircleShape.");
+            }
 
-            // Radii of circles
-            float rA = A.Width / 2;
-            float rB = B.Width / 2;
+            // Vector from A to B.
+            Vector2f n = B.Center - A.Center;
+
+            // Radii of the circles.
+            float rA = circleA.Radius;
+            float rB = circleB.Radius;
             float radiusSum = rA + rB;
 
-            // Early out if circles are not colliding
+            // Early out if circles are not colliding.
             if (n.LengthSquared() > radiusSum * radiusSum)
             {
                 return false;
             }
 
-            // Compute the distance between circle centers
+            // Compute the distance between circle centers.
             float d = n.Length();
 
-            // If the circles are not perfectly overlapping...
             if (d != 0)
             {
-                // Penetration is the difference between the sum of the radii and the distance
+                // Penetration is the difference between the sum of the radii and the distance.
                 m.Penetration = radiusSum - d;
-                // The collision normal is the normalized vector from A to B
+                // The collision normal is the normalized vector from A to B.
                 m.Normal = n / d;
 
-                // Compute the contact point:
-                // For circles, one common method is to take the point on the perimeter of A (along the collision normal)
-                // and the point on the perimeter of B (opposite the collision normal), then average them.
+                // Compute contact points on each circle's perimeter along the collision normal.
                 Vector2f contactA = A.Center + m.Normal * rA;
                 Vector2f contactB = B.Center - m.Normal * rB;
                 m.ContactPoint = (contactA + contactB) * 0.5f;
 
-                // Set the LastContactPoint point for circle and circle
+                // Store the contact point for both objects.
                 A.LastContactPoint = m.ContactPoint;
                 B.LastContactPoint = m.ContactPoint;
 
@@ -179,7 +185,7 @@ namespace physics.Engine
             }
             else
             {
-                // If the circles are on the same position, choose an arbitrary collision normal and contact point.
+                // If the circles are at the same position, choose an arbitrary normal and contact point.
                 m.Penetration = rA;
                 m.Normal = new Vector2f(1, 0);
                 m.ContactPoint = A.Center;
@@ -188,22 +194,28 @@ namespace physics.Engine
         }
 
 
+
         public static bool AABBvsCircle(ref Manifold m)
         {
             // m.A is the box and m.B is the circle.
-            var box = m.A;
-            var circle = m.B;
+            PhysicsObject boxObj = m.A;
+            PhysicsObject circleObj = m.B;
+
+            if (!(boxObj.Shape is BoxPhysShape boxShape))
+                throw new ArgumentException("AABBvsCircle requires m.A to have a BoxPhysShape.");
+            if (!(circleObj.Shape is CirclePhysShape circleShape))
+                throw new ArgumentException("AABBvsCircle requires m.B to have a CirclePhysShape.");
 
             // Calculate half extents of the box.
-            float x_extent = box.Width / 2f;
-            float y_extent = box.Height / 2f;
+            float x_extent = boxShape.Width / 2f;
+            float y_extent = boxShape.Height / 2f;
 
             // Translate the circle center into the box's local space.
             // Step 1: Get vector from box center to circle center.
-            Vector2f circleToBox = circle.Center - box.Center;
+            Vector2f circleToBox = circleObj.Center - boxObj.Center;
             // Step 2: Rotate that vector by -box.Angle.
-            float cos = (float)Math.Cos(-box.Angle);
-            float sin = (float)Math.Sin(-box.Angle);
+            float cos = (float)Math.Cos(-boxObj.Angle);
+            float sin = (float)Math.Sin(-boxObj.Angle);
             Vector2f circleLocal = new Vector2f(
                  circleToBox.X * cos - circleToBox.Y * sin,
                  circleToBox.X * sin + circleToBox.Y * cos
@@ -234,7 +246,7 @@ namespace physics.Engine
             // Compute the difference between the circle's local center and the closest point.
             Vector2f diffLocal = circleLocal - closestLocal;
             float dSquared = diffLocal.LengthSquared();
-            float r = circle.Width / 2f;
+            float r = circleShape.Radius;
 
             // If there's no collision (and the circle's center isn't inside), early out.
             if (dSquared > r * r && !inside)
@@ -256,8 +268,8 @@ namespace physics.Engine
             }
 
             // Transform the collision normal back into world space using the box's rotation.
-            cos = (float)Math.Cos(box.Angle);
-            sin = (float)Math.Sin(box.Angle);
+            cos = (float)Math.Cos(boxObj.Angle);
+            sin = (float)Math.Sin(boxObj.Angle);
             Vector2f normalWorld = new Vector2f(
                  normalLocal.X * cos - normalLocal.Y * sin,
                  normalLocal.X * sin + normalLocal.Y * cos
@@ -265,11 +277,11 @@ namespace physics.Engine
             m.Normal = normalWorld;
 
             // Set the contact point on the circle's perimeter along the collision normal.
-            m.ContactPoint = circle.Center - m.Normal * r;
+            m.ContactPoint = circleObj.Center - m.Normal * r;
 
-            // Set the LastContactPoint point for box and circle
-            box.LastContactPoint = m.ContactPoint;
-            circle.LastContactPoint = m.ContactPoint;
+            // Set the LastContactPoint for both box and circle.
+            boxObj.LastContactPoint = m.ContactPoint;
+            circleObj.LastContactPoint = m.ContactPoint;
 
             return true;
         }
@@ -304,17 +316,23 @@ namespace physics.Engine
 
         public static void ResolveCollisionRotational(ref Manifold m)
         {
-            var A = m.A;
-            var B = m.B;
+            // Retrieve the two physics objects.
+            PhysicsObject A = m.A;
+            PhysicsObject B = m.B;
 
-            // Vectors from centers to contact point
+            // For each object, if it's rotational, get its angular velocity and inverse inertia; otherwise, treat as zero.
+            float angularVelA = (A is RotatingPhysicsObject ra) ? ra.AngularVelocity : 0f;
+            float iInertiaA = (A is RotatingPhysicsObject ra2) ? ra2.IInertia : 0f;
+            float angularVelB = (B is RotatingPhysicsObject rb) ? rb.AngularVelocity : 0f;
+            float iInertiaB = (B is RotatingPhysicsObject rb2) ? rb2.IInertia : 0f;
+
+            // Compute vectors from centers to contact point.
             Vector2f rA = m.ContactPoint - A.Center;
             Vector2f rB = m.ContactPoint - B.Center;
 
-            // Compute the relative velocity at the contact point,
-            // including both linear and rotational contributions.
-            Vector2f vA_contact = A.Velocity + Perpendicular(rA) * A.AngularVelocity;
-            Vector2f vB_contact = B.Velocity + Perpendicular(rB) * B.AngularVelocity;
+            // Compute the relative velocity at the contact point (including any rotational contribution).
+            Vector2f vA_contact = A.Velocity + Perpendicular(rA) * angularVelA;
+            Vector2f vB_contact = B.Velocity + Perpendicular(rB) * angularVelB;
             Vector2f relativeVelocity = vB_contact - vA_contact;
 
             float velAlongNormal = Extensions.Extensions.DotProduct(relativeVelocity, m.Normal);
@@ -323,16 +341,15 @@ namespace physics.Engine
 
             float e = Math.Min(A.Restitution, B.Restitution);
 
-            // Calculate scalar cross products for the normal.
+            // Compute cross products for the normal.
             float rA_cross_N = Cross(rA, m.Normal);
             float rB_cross_N = Cross(rB, m.Normal);
 
-            // Compute denominator with both linear and rotational inertia contributions.
+            // Denominator includes linear inertia plus rotational contributions.
             float invMassSum = A.IMass + B.IMass +
-                               (rA_cross_N * rA_cross_N) * A.IInertia +
-                               (rB_cross_N * rB_cross_N) * B.IInertia;
+                               (rA_cross_N * rA_cross_N) * iInertiaA +
+                               (rB_cross_N * rB_cross_N) * iInertiaB;
 
-            // Compute normal impulse scalar.
             float j = -(1 + e) * velAlongNormal;
             j /= invMassSum;
 
@@ -341,49 +358,58 @@ namespace physics.Engine
             if (!A.Locked)
             {
                 A.Velocity -= impulse * A.IMass;
-                A.AngularVelocity -= Cross(rA, impulse) * A.IInertia;
+                if (A is RotatingPhysicsObject raUpdate)
+                {
+                    raUpdate.AngularVelocity -= Cross(rA, impulse) * iInertiaA;
+                }
             }
             if (!B.Locked)
             {
                 B.Velocity += impulse * B.IMass;
-                B.AngularVelocity += Cross(rB, impulse) * B.IInertia;
+                if (B is RotatingPhysicsObject rbUpdate)
+                {
+                    rbUpdate.AngularVelocity += Cross(rB, impulse) * iInertiaB;
+                }
             }
 
-            // --- Now apply friction (tangential) impulse ---
-            // Compute tangent vector: remove the normal component from the relative velocity.
+            // --- Friction impulse ---
             Vector2f tangent = relativeVelocity - m.Normal * Extensions.Extensions.DotProduct(relativeVelocity, m.Normal);
             if (tangent.LengthSquared() > 0.0001f)
                 tangent = tangent.Normalize();
             else
                 tangent = new Vector2f(0, 0);
 
-            // Compute friction impulse scalar.
             float jt = -Extensions.Extensions.DotProduct(relativeVelocity, tangent);
 
-            // Denominator including rotational inertia along the tangent.
             float rA_cross_t = Cross(rA, tangent);
             float rB_cross_t = Cross(rB, tangent);
             float invMassSumFriction = A.IMass + B.IMass +
-                                       (rA_cross_t * rA_cross_t) * A.IInertia +
-                                       (rB_cross_t * rB_cross_t) * B.IInertia;
+                                       (rA_cross_t * rA_cross_t) * iInertiaA +
+                                       (rB_cross_t * rB_cross_t) * iInertiaB;
             jt /= invMassSumFriction;
 
-            // Coulomb friction: clamp friction impulse magnitude to μ times the normal impulse.
-            float mu = 0.7f; // Friction coefficient; adjust as needed.
+            // Clamp friction impulse (Coulomb friction).
+            float mu = Math.Max(A.Friction, B.Friction);
             jt = Math.Min(Math.Abs(jt), mu * Math.Abs(j));
-            jt = jt * (jt < 0 ? -1 : 1);  // restore the sign
+            jt = jt * (jt < 0 ? -1 : 1); // restore sign
 
             Vector2f frictionImpulse = tangent * jt;
 
             if (!A.Locked)
             {
                 A.Velocity += frictionImpulse * A.IMass;
-                A.AngularVelocity += Cross(rA, frictionImpulse) * A.IInertia;
+                if (A is RotatingPhysicsObject raFriction)
+                {
+                    raFriction.AngularVelocity += Cross(rA, frictionImpulse) * iInertiaA;
+                }
             }
             if (!B.Locked)
             {
                 B.Velocity -= frictionImpulse * B.IMass;
-                B.AngularVelocity -= Cross(rB, frictionImpulse) * B.IInertia;
+                if (B is RotatingPhysicsObject rbFriction)
+                {
+                    rbFriction.AngularVelocity -= Cross(rB, frictionImpulse) * iInertiaB;
+                }
             }
         }
 
@@ -420,7 +446,7 @@ namespace physics.Engine
             Vector2f rB = m.ContactPoint - m.B.Center;
 
             // For object A:
-            if (!m.A.Locked && rA.LengthSquared() > 0.0001f)
+            if (!m.A.Locked && m.A.CanRotate && rA.LengthSquared() > 0.0001f)
             {
                 // The farther the contact point is from the center, the smaller the required angular adjustment.
                 float angularErrorA = m.Penetration / rA.Length();
@@ -431,7 +457,7 @@ namespace physics.Engine
             }
 
             // For object B:
-            if (!m.B.Locked && rB.LengthSquared() > 0.0001f)
+            if (!m.B.Locked && m.A.CanRotate && rB.LengthSquared() > 0.0001f)
             {
                 float angularErrorB = m.Penetration / rB.Length();
                 float signB = Math.Sign(Cross(rB, m.Normal));

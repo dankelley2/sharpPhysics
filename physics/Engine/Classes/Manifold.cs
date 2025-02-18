@@ -1,4 +1,5 @@
-﻿using physics.Engine.Structs;
+﻿using physics.Engine.Objects;
+using physics.Engine.Structs;
 using SFML.System;
 
 namespace physics.Engine.Classes

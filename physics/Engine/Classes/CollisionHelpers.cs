@@ -3,29 +3,41 @@ using System.Collections.Generic;
 using SFML.System;
 using physics.Engine.Classes;
 using physics.Engine.Shaders;
+using physics.Engine.Objects;
+using physics.Engine.Shapes;
 
 public static class CollisionHelpers
 {
     // Computes the four corners of a rectangle (OBB) in world space.
     public static List<Vector2f> GetRectangleCorners(PhysicsObject obj)
     {
+        if (!(obj.Shape is BoxPhysShape box))
+        {
+            throw new ArgumentException("GetRectangleCorners requires a PhysicsObject with a BoxPhysShape.");
+        }
+
         List<Vector2f> corners = new List<Vector2f>(4);
-        float halfW = obj.Width / 2f;
-        float halfH = obj.Height / 2f;
-        // Corners in local space (assumed counterclockwise order)
+        float halfW = box.Width / 2f;
+        float halfH = box.Height / 2f;
+
+        // Define corners in local space in clockwise order.
+        // The Sutherland-Hodgman algorithm expects the clip polygon to be in counterclockwise order, however, we're in
+        // a coordinate system where the y-axis points down, so we define the corners in clockwise order.
+        // For example, starting at the bottom-right:
+        // bottom-right, bottom-left, top-left, top-right.
         Vector2f[] localCorners = new Vector2f[]
         {
-            new Vector2f( halfW,  halfH),
-            new Vector2f(-halfW,  halfH),
-            new Vector2f(-halfW, -halfH),
-            new Vector2f( halfW, -halfH)
+        new Vector2f( halfW, -halfH),   // bottom-right
+        new Vector2f(-halfW, -halfH),   // bottom-left
+        new Vector2f(-halfW,  halfH),   // top-left
+        new Vector2f( halfW,  halfH)    // top-right
         };
 
         float cos = (float)Math.Cos(obj.Angle);
         float sin = (float)Math.Sin(obj.Angle);
         foreach (var lc in localCorners)
         {
-            // Rotate and translate to world space.
+            // Rotate the local corner and translate to world space.
             float worldX = obj.Center.X + lc.X * cos - lc.Y * sin;
             float worldY = obj.Center.Y + lc.X * sin + lc.Y * cos;
             corners.Add(new Vector2f(worldX, worldY));
@@ -33,13 +45,10 @@ public static class CollisionHelpers
         return corners;
     }
 
+
+
     public static List<Vector2f> SutherlandHodgmanClip(List<Vector2f> subjectPolygon, List<Vector2f> clipPolygon)
     {
-
-        subjectPolygon.Reverse();
-        clipPolygon.Reverse();
-
-
         // Start with the subject polygon.
         List<Vector2f> poly = new List<Vector2f>(subjectPolygon);
         // For each edge of the clip polygon:
@@ -140,11 +149,6 @@ public static class CollisionHelpers
         return area / 2f;
     }
 
-    private static bool AreEqual(Vector2f a, Vector2f b, float tolerance)
-    {
-        return Math.Abs(a.X - b.X) < tolerance && Math.Abs(a.Y - b.Y) < tolerance;
-    }
-
 
     // Returns true if point p is inside the half-space defined by edge from a to b.
     // Assumes clip polygon is defined in counterclockwise order.
@@ -179,6 +183,7 @@ public static class CollisionHelpers
     {
         List<Vector2f> polyA = GetRectangleCorners(m.A);
         List<Vector2f> polyB = GetRectangleCorners(m.B);
+
         List<Vector2f> intersection = SutherlandHodgmanClip(polyA, polyB);
         if (intersection.Count == 0)
         {

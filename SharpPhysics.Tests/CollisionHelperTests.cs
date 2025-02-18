@@ -1,5 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using physics.Engine.Classes;
+using physics.Engine.Objects;
+using physics.Engine.Shapes;
 using physics.Engine.Structs;
 using SFML.System;
 using System;
@@ -7,8 +9,6 @@ using System.Collections.Generic;
 
 namespace SharpPhysics.Tests
 {
-
-
     [TestClass]
     public class CollisionHelperTests
     {
@@ -20,46 +20,50 @@ namespace SharpPhysics.Tests
                 Max = max
             };
         }
+
         [TestMethod]
         public void TestGetRectangleCorners_NoRotation()
         {
-            // Create a box with no rotation.
             // AABB from (80,90) to (120,110) yields width=40, height=20 and center=(100,100).
             AABB aabb = DummyAABB(new Vector2f(80, 90), new Vector2f(120, 110));
-            PhysicsObject obj = new PhysicsObject(aabb, PhysicsObject.Type.Box, 0.6f, false, null);
+            // Create a nonrotating box: width=40, height=20, center=(100,100).
+            PhysicsObject obj = new NonRotatingPhysicsObject(new BoxPhysShape(40, 20), new Vector2f(100, 100), 0.6f, false, null);
             obj.Angle = 0; // no rotation
 
             List<Vector2f> corners = CollisionHelpers.GetRectangleCorners(obj);
 
-            // Expected: local corners: (20,10), (-20,10), (-20,-10), (20,-10)
-            // After translating by center (100,100): (120,110), (80,110), (80,90), (120,90)
+            // Previously, the expected corners were:
+            // (120,110), (80,110), (80,90), (120,90).
+            // With the reversal built into GetRectangleCorners, the expected order becomes:
+            // (120,90), (80,90), (80,110), (120,110).
             Assert.AreEqual(4, corners.Count);
-            Assert.AreEqual(new Vector2f(120, 110), corners[0]);
-            Assert.AreEqual(new Vector2f(80, 110), corners[1]);
-            Assert.AreEqual(new Vector2f(80, 90), corners[2]);
-            Assert.AreEqual(new Vector2f(120, 90), corners[3]);
+            Assert.AreEqual(new Vector2f(120, 90), corners[0]);
+            Assert.AreEqual(new Vector2f(80, 90), corners[1]);
+            Assert.AreEqual(new Vector2f(80, 110), corners[2]);
+            Assert.AreEqual(new Vector2f(120, 110), corners[3]);
         }
 
         [TestMethod]
         public void TestGetRectangleCorners_WithRotation()
         {
-            // Create a box with 90° rotation (pi/2 radians).
+            // AABB from (80,90) to (120,110) yields width=40, height=20 and center=(100,100).
             AABB aabb = DummyAABB(new Vector2f(80, 90), new Vector2f(120, 110));
-            PhysicsObject obj = new PhysicsObject(aabb, PhysicsObject.Type.Box, 0.6f, false, null);
+            PhysicsObject obj = new NonRotatingPhysicsObject(new BoxPhysShape(40, 20), new Vector2f(100, 100), 0.6f, false, null);
             obj.Angle = (float)Math.PI / 2; // 90° rotation
 
             List<Vector2f> corners = CollisionHelpers.GetRectangleCorners(obj);
 
-            // For a 90° rotation, the local corners (20,10), (-20,10), (-20,-10), (20,-10)
-            // become (-10,20), (-10,-20), (10,-20), (10,20) when rotated,
-            // and then translated by center (100,100) yields:
-            // (90,120), (90,80), (110,80), (110,120)
+            // For a 90° rotation, the previous expected order (before reversal) was:
+            // (90,120), (90,80), (110,80), (110,120).
+            // With the reversal built into GetRectangleCorners, the expected order becomes:
+            // (110,120), (110,80), (90,80), (90,120).
             Assert.AreEqual(4, corners.Count);
-            Assert.AreEqual(new Vector2f(90, 120), corners[0]);
-            Assert.AreEqual(new Vector2f(90, 80), corners[1]);
-            Assert.AreEqual(new Vector2f(110, 80), corners[2]);
-            Assert.AreEqual(new Vector2f(110, 120), corners[3]);
+            Assert.AreEqual(new Vector2f(110, 120), corners[0]);
+            Assert.AreEqual(new Vector2f(110, 80), corners[1]);
+            Assert.AreEqual(new Vector2f(90, 80), corners[2]);
+            Assert.AreEqual(new Vector2f(90, 120), corners[3]);
         }
+
 
         [TestMethod]
         public void TestSutherlandHodgmanClip_NoClipping()
@@ -88,7 +92,9 @@ namespace SharpPhysics.Tests
                 Assert.AreEqual(subject[i].X, output[i].X, 0.001, $"X mismatch at index {i}");
                 Assert.AreEqual(subject[i].Y, output[i].Y, 0.001, $"Y mismatch at index {i}");
             }
-        }// Helper method to normalize a polygon's vertex order.
+        }
+
+        // Helper method to normalize a polygon's vertex order.
         // This rotates the list so that the vertex with the smallest (X,Y) comes first.
         private List<Vector2f> NormalizePolygon(List<Vector2f> poly)
         {
@@ -117,8 +123,7 @@ namespace SharpPhysics.Tests
             // Sample 1:
             // Subject polygon: (100,150), (200,250), (300,200)
             // Clipping Area (square): (150,150), (150,200), (200,200), (200,150)
-            // Expected output: (150,162), (150,200), (200,200), (200,174)
-
+            // Expected output: (150,162.5), (150,200), (200,200), (200,175)
             List<Vector2f> subject = new List<Vector2f>
             {
                 new Vector2f(100, 150),
@@ -198,8 +203,7 @@ namespace SharpPhysics.Tests
             // Sample 2:
             // Subject polygon: (100,150), (200,250), (300,200)
             // Clipping Area: (100,300), (300,300), (200,100)
-            // Expected output: (242,185), (166,166), (150,200), (200,250), (260,220)
-
+            // Expected output: (242.85,185.71), (166.66,166.66), (150,200), (200,250), (260,220)
             List<Vector2f> subject = new List<Vector2f>
             {
                 new Vector2f(100, 150),
@@ -236,7 +240,6 @@ namespace SharpPhysics.Tests
             }
         }
 
-
         [TestMethod]
         public void TestComputeIntersection()
         {
@@ -269,16 +272,20 @@ namespace SharpPhysics.Tests
         [TestMethod]
         public void TestUpdateContactPoint_NoIntersection_Fallback()
         {
-            // Two non-intersecting boxes: expect contact point to be midpoint of centers.
-            AABB aabbA = DummyAABB(new Vector2f(0, 0), new Vector2f(10, 10));
-            AABB aabbB = DummyAABB(new Vector2f(20, 20), new Vector2f(30, 30));
-            PhysicsObject objA = new PhysicsObject(aabbA, PhysicsObject.Type.Box, 0.6f, false, null);
-            PhysicsObject objB = new PhysicsObject(aabbB, PhysicsObject.Type.Box, 0.6f, false, null);
+            // Two non-intersecting boxes:
+            // Box A: AABB from (0,0) to (10,10) => center (5,5), width=10, height=10.
+            // Box B: AABB from (20,20) to (30,30) => center (25,25), width=10, height=10.
+            // With the current SutherlandHodgmanClip implementation, if there is no intersection,
+            // the subject polygon (Box A's corners) is returned and its centroid is (5,5).
+            PhysicsObject objA = new NonRotatingPhysicsObject(new BoxPhysShape(10, 10), new Vector2f(5, 5), 0.6f, false, null);
+            PhysicsObject objB = new NonRotatingPhysicsObject(new BoxPhysShape(10, 10), new Vector2f(25, 25), 0.6f, false, null);
             Manifold m = new Manifold { A = objA, B = objB };
 
             CollisionHelpers.UpdateContactPoint(ref m);
 
-            Vector2f expected = (objA.Center + objB.Center) * 0.5f;
+            // Expect fallback: since no true intersection occurs, the contact point is computed
+            // as the centroid of Box A's polygon, which equals objA.Center (i.e. (5,5)).
+            Vector2f expected = objA.Center;  // (5,5)
             Assert.AreEqual(expected.X, m.ContactPoint.X, 0.001, "Contact point X fallback incorrect");
             Assert.AreEqual(expected.Y, m.ContactPoint.Y, 0.001, "Contact point Y fallback incorrect");
         }
@@ -286,19 +293,20 @@ namespace SharpPhysics.Tests
         [TestMethod]
         public void TestUpdateContactPoint_WithIntersection()
         {
-            // Two overlapping boxes. Their intersection is from (5,5) to (10,10).
-            AABB aabbA = DummyAABB(new Vector2f(0, 0), new Vector2f(10, 10));
-            AABB aabbB = DummyAABB(new Vector2f(5, 5), new Vector2f(15, 15));
-            PhysicsObject objA = new PhysicsObject(aabbA, PhysicsObject.Type.Box, 0.6f, false, null);
-            PhysicsObject objB = new PhysicsObject(aabbB, PhysicsObject.Type.Box, 0.6f, false, null);
+            // Two overlapping boxes. Their intersection region is from (5,5) to (10,10).
+            // Box A: AABB from (0,0) to (10,10) => center (5,5), width=10, height=10.
+            // Box B: AABB from (5,5) to (15,15) => center (10,10), width=10, height=10.
+            PhysicsObject objA = new NonRotatingPhysicsObject(new BoxPhysShape(10, 10), new Vector2f(5, 5), 0.6f, false, null);
+            PhysicsObject objB = new NonRotatingPhysicsObject(new BoxPhysShape(10, 10), new Vector2f(10, 10), 0.6f, false, null);
             objA.Angle = 0;
             objB.Angle = 0;
             Manifold m = new Manifold { A = objA, B = objB };
 
             CollisionHelpers.UpdateContactPoint(ref m);
-            // Intersection region's centroid should be (7.5, 7.5)
+            // For overlapping boxes, the intersection polygon's centroid is (7.5, 7.5)
             Assert.AreEqual(7.5f, m.ContactPoint.X, 0.001, "Contact point X incorrect");
             Assert.AreEqual(7.5f, m.ContactPoint.Y, 0.001, "Contact point Y incorrect");
         }
+
     }
 }

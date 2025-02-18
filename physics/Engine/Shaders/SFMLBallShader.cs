@@ -1,6 +1,9 @@
 using SFML.Graphics;
 using SFML.System;
-using physics.Engine.Classes;
+using physics.Engine.Objects;
+using physics.Engine.Shapes;
+using System;
+using CircleShape = SFML.Graphics.CircleShape;
 
 namespace physics.Engine.Shaders
 {
@@ -12,23 +15,31 @@ namespace physics.Engine.Shaders
 
         public override void PreDraw(PhysicsObject obj, RenderTarget target)
         {
-            Circle.Radius = obj.Width / 2;
-            Circle.Position = new Vector2f(obj.Center.X - obj.Width / 2 + 3, obj.Center.Y - obj.Height / 2 + 5);
+            if (!(obj.Shape is CirclePhysShape c))
+            {
+                throw new ArgumentException("GetRectangleCorners requires a PhysicsObject with a BoxShape.");
+            }
+            Circle.Radius = c.Radius;
+            Circle.Position = new Vector2f(obj.Aabb.Min.X + 3, obj.Aabb.Min.Y + 5);
             Circle.FillColor = ShadowColor;
             target.Draw(Circle);
         }
 
         public override void Draw(PhysicsObject obj, RenderTarget target)
         {
-            Circle.Position = new Vector2f(obj.Center.X - obj.Width / 2, obj.Center.Y - obj.Height / 2);
+            if (!(obj.Shape is CirclePhysShape c))
+            {
+                throw new ArgumentException("GetRectangleCorners requires a PhysicsObject with a BoxShape.");
+            }
+            Circle.Position = obj.Aabb.Min;
             Circle.FillColor = LightGrayColor;
             target.Draw(Circle);
 
             // Draw highlight
-            Circle.Radius = obj.Width * 0.3f;
+            Circle.Radius = c.Radius * 0.3f;
             Circle.Position = new Vector2f(
-                obj.Center.X - Circle.Radius + obj.Width * 0.1f,
-                obj.Center.Y - Circle.Radius + obj.Height * 0.1f);
+                obj.Aabb.Min.X + c.Radius * 0.2f,
+                obj.Aabb.Min.Y + c.Radius * 0.2f);
             Circle.FillColor = Color.White;
             target.Draw(Circle);
         }
