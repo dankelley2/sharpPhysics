@@ -1,16 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 
 namespace physics.Engine.Classes
 {
     public class ManifoldPool
     {
-        private readonly Stack<Manifold> _pool = new Stack<Manifold>();
+        private readonly ConcurrentStack<Manifold> _pool = new ConcurrentStack<Manifold>();
 
         public Manifold Get()
         {
-            if (_pool.Count > 0)
+            if (_pool.TryPop(out Manifold m))
             {
-                Manifold m = _pool.Pop();
                 m.Reset();
                 return m;
             }

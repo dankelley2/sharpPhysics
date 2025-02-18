@@ -8,6 +8,10 @@ using physics.Engine.Helpers;
 using physics.Engine.Shapes;
 using physics.Engine.Structs;
 using SFML.System;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace physics.Engine
 {
@@ -31,6 +35,7 @@ namespace physics.Engine
         private double accumulator = 0;
 
         public static PhysicsObject ActiveObject;
+        private WorkerThreadPool _workerPool = new WorkerThreadPool(Environment.ProcessorCount);
         public static readonly List<SFMLShader> ListShaders = new List<SFMLShader>();
         public static readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
         public static readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
@@ -336,85 +341,110 @@ namespace physics.Engine
 
         private void UpdatePhysics(float dt)
         {
-            // Loop over physics iterations.
-            for (int iter = 0; iter < PHYSICS_ITERATIONS; iter++)
+            // === Collision Phase ===
+            int pairCount = ListCollisionPairs.Count;
+            int workerCount = _workerPool.Count; // e.g., 8
+            int segmentSize = (pairCount + workerCount - 1) / workerCount; // round up
+            var collisionCountdown = new CountdownEvent(workerCount);
+
+            for (int seg = 0; seg < workerCount; seg++)
             {
-                // Use a for-loop to iterate over collision pairs.
-                for (int i = 0; i < ListCollisionPairs.Count; i++)
+                int start = seg * segmentSize;
+                int end = Math.Min(start + segmentSize, pairCount);
+                _workerPool.Enqueue(() =>
                 {
-                    var pair = ListCollisionPairs[i];
-                    var objA = pair.A;
-                    var objB = pair.B;
-
-                    // Cache shape references.
-                    var shapeA = objA.Shape;
-                    var shapeB = objB.Shape;
-
-                    // Retrieve a manifold from the pool.
-                    Manifold m = _manifoldPool.Get();
-                    bool collision = false;
-
-                    // Set ordering: if objA is a circle and objB is a box, swap them.
-                    if (shapeA is CirclePhysShape && shapeB is BoxPhysShape)
+                    for (int phys = 0; phys < PHYSICS_ITERATIONS; phys++)
                     {
-                        m.A = objB;
-                        m.B = objA;
-                    }
-                    else
-                    {
-                        m.A = objA;
-                        m.B = objB;
-                    }
-
-                    // Cache again for m.A and m.B.
-                    var shapeA2 = m.A.Shape;
-                    var shapeB2 = m.B.Shape;
-
-                    // Determine collision detection method based on shape types.
-                    if (shapeA2 is BoxPhysShape)
-                    {
-                        if (shapeB2 is BoxPhysShape)
+                        for (int i = start; i < end; i++)
                         {
-                            collision = Collision.AABBvsAABB(ref m);
+                            var pair = ListCollisionPairs[i];
+                            var objA = pair.A;
+                            var objB = pair.B;
+                            var shapeA = objA.Shape;
+                            var shapeB = objB.Shape;
+
+                            // Retrieve a manifold from the thread-safe pool.
+                            Manifold m = _manifoldPool.Get();
+                            bool collision = false;
+
+                            // Set ordering: if objA is a circle and objB is a box, swap.
+                            if (shapeA is CirclePhysShape && shapeB is BoxPhysShape)
+                            {
+                                m.A = objB;
+                                m.B = objA;
+                            }
+                            else
+                            {
+                                m.A = objA;
+                                m.B = objB;
+                            }
+
+                            // Cache shapes for m.A and m.B.
+                            var shapeA2 = m.A.Shape;
+                            var shapeB2 = m.B.Shape;
+
+                            // Determine collision detection method.
+                            if (shapeA2 is BoxPhysShape)
+                            {
+                                if (shapeB2 is BoxPhysShape)
+                                {
+                                    collision = Collision.AABBvsAABB(ref m);
+                                    if (collision)
+                                    {
+                                        CollisionHelpers.UpdateContactPoint(ref m);
+                                    }
+                                }
+                                else if (shapeB2 is CirclePhysShape)
+                                {
+                                    collision = Collision.AABBvsCircle(ref m);
+                                }
+                            }
+                            else if (shapeA2 is CirclePhysShape && shapeB2 is CirclePhysShape)
+                            {
+                                collision = Collision.CirclevsCircle(ref m);
+                            }
+
                             if (collision)
                             {
-                                CollisionHelpers.UpdateContactPoint(ref m);
+                                Collision.ResolveCollisionRotational(ref m);
+                                Collision.PositionalCorrection(ref m);
+                                Collision.AngularPositionalCorrection(ref m);
+                            }
+                            else
+                            {
+                                _manifoldPool.Return(m);
                             }
                         }
-                        else if (shapeB2 is CirclePhysShape)
-                        {
-                            collision = Collision.AABBvsCircle(ref m);
-                        }
                     }
-                    else if (shapeA2 is CirclePhysShape && shapeB2 is CirclePhysShape)
-                    {
-                        collision = Collision.CirclevsCircle(ref m);
-                    }
-
-                    // Resolve collision if detected.
-                    if (collision)
-                    {
-                        Collision.ResolveCollisionRotational(ref m);
-                        Collision.PositionalCorrection(ref m);
-                        Collision.AngularPositionalCorrection(ref m);
-                    }
-                    else
-                    {
-                        // Return manifold to pool if no collision.
-                        _manifoldPool.Return(m);
-                    }
-                }
+                    collisionCountdown.Signal();
+                });
             }
+            collisionCountdown.Wait();
 
-            // Process static objects.
-            for (int i = 0; i < ListStaticObjects.Count; i++)
+            // === Static Objects Phase ===
+            int staticCount = ListStaticObjects.Count;
+            int staticSegmentSize = (staticCount + workerCount - 1) / workerCount;
+            var staticCountdown = new CountdownEvent(workerCount);
+            for (int seg = 0; seg < workerCount; seg++)
             {
-                var staticObj = ListStaticObjects[i];
-                ApplyConstants(staticObj, dt);
-                staticObj.Move(dt);
-                staticObj.UpdateRotation(dt);
+                int start = seg * staticSegmentSize;
+                int end = Math.Min(start + staticSegmentSize, staticCount);
+                _workerPool.Enqueue(() =>
+                {
+                    for (int i = start; i < end; i++)
+                    {
+                        var staticObj = ListStaticObjects[i];
+                        ApplyConstants(staticObj, dt);
+                        staticObj.Move(dt);
+                        staticObj.UpdateRotation(dt);
+                    }
+                    staticCountdown.Signal();
+                });
             }
+            staticCountdown.Wait();
         }
+
+
 
 
 

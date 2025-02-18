@@ -55,21 +55,21 @@ namespace physics.Engine
             ObjectTemplates.CreateWall(0, (int)window.Size.Y - 15, (int)window.Size.X, (int)window.Size.Y);
 
             // Create a grid of medium balls.
-            for (int i = 0; i < 800; i += 10)
+            for (int i = 0; i < 800; i += 20)
             {
-                for (int j = 0; j < 300; j += 10)
+                for (int j = 0; j < 200; j += 20)
                 {
-                    ObjectTemplates.CreateSmallBall(i + 200, j + 150);
+                    ObjectTemplates.CreateMedBall(i + 200, j + 150);
                 }
             }
 
-        //    // Create an attractor.
-        //    ObjectTemplates.CreateAttractor(400, 450);
+            // Create an attractor.
+            ObjectTemplates.CreateAttractor(400, 450);
 
-        //    // Create a box with initial velocity and angle.
-        //    var boxA = ObjectTemplates.CreateBox(100, 400, 200, 500);
-        //    boxA.Velocity = new Vector2f(0, 100);
-        //    boxA.Angle = (float)(Math.PI / 4);
+            // Create a box with initial velocity and angle.
+            var boxA = ObjectTemplates.CreateBox(100, 400, 200, 500);
+            boxA.Velocity = new Vector2f(0, 100);
+            boxA.Angle = (float)(Math.PI / 4);
         }
 
         public void Run()
