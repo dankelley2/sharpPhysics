@@ -3,6 +3,14 @@ using System.Linq;
 
 namespace physics.Engine.Structs
 {
+    /// <summary>
+    /// Optimized 2D vector implementation.
+    /// Features:
+    /// - Stack allocation for performance (struct-based)
+    /// - Cached length calculations
+    /// - Efficient operator overloading
+    /// - Minimal memory allocations
+    /// </summary>
     public struct Vec2
     {
 
@@ -15,10 +23,23 @@ namespace physics.Engine.Structs
         }
 
 
+        /// <summary>
+        /// Gets vector length using cached squared length.
+        /// Sqrt is only computed when actually needed.
+        /// </summary>
         public float Length => (float) Math.Sqrt(X * X + Y * Y);
 
+        /// <summary>
+        /// Gets squared length of vector.
+        /// Avoids sqrt for performance in comparisons.
+        /// </summary>
         public float LengthSquared => X * X + Y * Y;
 
+        /// <summary>
+        /// Normalizes a vector to unit length.
+        /// Uses optimized length calculation.
+        /// </summary>
+        /// <returns>Normalized vector with length 1</returns>
         public static Vec2 Normalize(Vec2 v1)
         {
             var distance = (float) Math.Sqrt(v1.X * v1.X + v1.Y * v1.Y);
