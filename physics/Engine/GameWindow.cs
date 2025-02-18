@@ -22,7 +22,6 @@ namespace physics.Engine
         private bool isMousePressedLeft = false;
         private bool isMousePressedRight = false;
         private Vector2f startPoint;
-        private Vector2f endPoint;
         private bool isGrabbing = false;
         private Vector2f mousePos;
 
@@ -36,7 +35,6 @@ namespace physics.Engine
         private long msPerDrawCycle;
         private long msPhysicsTime;
 
-        private int radius = 10;
         private Font debugFont;
         private Text debugText;
 

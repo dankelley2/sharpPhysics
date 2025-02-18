@@ -17,6 +17,11 @@ namespace physics.Engine.Classes
         public static AABB GetRotatedAABB(PhysicsObject obj)
         {
             // Calculate the original width and height.
+            if (obj.Angle == 0)
+            {
+                return obj.Aabb;
+            }
+
             float originalWidth = obj.Aabb.Max.X - obj.Aabb.Min.X;
             float originalHeight = obj.Aabb.Max.Y - obj.Aabb.Min.Y;
 
