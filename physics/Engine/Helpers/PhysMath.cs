@@ -9,9 +9,22 @@ using physics.Engine.Structs;
 
 namespace physics.Engine.Helpers
 {
+    /// <summary>
+    /// Provides optimized mathematical operations for physics calculations.
+    /// Features:
+    /// - Decimal precision dot products for accuracy
+    /// - Efficient bounding box corrections
+    /// - Vector clamping and rounding optimizations
+    /// - Angle conversion utilities
+    /// </summary>
     public static class PhysMath
     {
 
+        /// <summary>
+        /// Calculates dot product with decimal precision for accuracy.
+        /// Uses LINQ for efficient array operations.
+        /// </summary>
+        /// <returns>Decimal precision dot product result</returns>
         public static decimal DotProduct(PointF pa, PointF pb)
         {
             decimal[] a = { (decimal)pa.X, (decimal)pa.Y };
@@ -19,6 +32,11 @@ namespace physics.Engine.Helpers
             return a.Zip(b, (x, y) => x * y).Sum();
         }
 
+        /// <summary>
+        /// Ensures AABB min/max points are correctly ordered.
+        /// Handles cases where min > max on either axis.
+        /// </summary>
+        /// <param name="aabb">AABB to correct</param>
         public static void CorrectBoundingBox(ref AABB aabb)
         {
             PointF p1 = new PointF(Math.Min(aabb.Min.X, aabb.Max.X), Math.Min(aabb.Min.Y, aabb.Max.Y));
@@ -36,6 +54,13 @@ namespace physics.Engine.Helpers
             p2 = new_p2;
         }
 
+        /// <summary>
+        /// Clamps vector components between min and max values.
+        /// Optimized to avoid unnecessary comparisons.
+        /// </summary>
+        /// <param name="vector">Vector to clamp</param>
+        /// <param name="min">Minimum values for each component</param>
+        /// <param name="max">Maximum values for each component</param>
         public static void Clamp(ref Vec2 vector, Vec2 min, Vec2 max)
         {
             vector.X = Math.Max(min.X, Math.Min(max.X, vector.X));
