@@ -7,6 +7,16 @@ using physics.Engine.Structs;
 
 namespace physics.Engine
 {
+    /// <summary>
+    /// Core physics simulation system managing object interactions and updates.
+    /// Implements fixed timestep updates, spatial hashing for broad phase collision detection,
+    /// and optimized gravity calculations. Uses accumulator pattern for stable physics.
+    /// Features:
+    /// - Fixed timestep with configurable FPS and iteration count
+    /// - Spatial hashing for efficient broad phase collision detection
+    /// - Point-based gravity with inverse square law falloff
+    /// - Optimized object management with removal queue
+    /// </summary>
     public class PhysicsSystem
     {
         #region Public Properties
@@ -239,6 +249,16 @@ namespace physics.Engine
             }
         }
 
+        /// <summary>
+        /// Calculates gravitational forces from point gravity sources.
+        /// Uses inverse square law with optimized distance calculations.
+        /// Features:
+        /// - Force cutoff radius for performance
+        /// - Zero-force handling for stability
+        /// - Efficient squared distance comparison
+        /// </summary>
+        /// <param name="obj">Object to calculate gravity for</param>
+        /// <returns>Combined gravitational force vector</returns>
         private Vec2 CalculatePointGravity(PhysicsObject obj)
         {
             var forces = new Vec2(0, 0);
@@ -296,6 +316,16 @@ namespace physics.Engine
             }
         }
 
+        /// <summary>
+        /// Updates physics state including collisions and object positions.
+        /// Performs multiple iterations per frame for stability.
+        /// Features:
+        /// - Collision detection and resolution
+        /// - Positional updates with delta time
+        /// - Applies gravity and friction
+        /// - Handles object removal
+        /// </summary>
+        /// <param name="dt">Time step duration in seconds</param>
         private void UpdatePhysics(float dt)
         {
             for (int i = 0; i < PHYSICS_ITERATIONS; i++)
@@ -375,6 +405,14 @@ namespace physics.Engine
 
         #region Private Events
 
+        /// <summary>
+        /// Generates collision pairs using spatial hashing for broad phase collision detection.
+        /// Features:
+        /// - Grid-based spatial partitioning with optimized cell size
+        /// - Efficient pair generation using hash sets to avoid duplicates
+        /// - Handles objects spanning multiple cells
+        /// - O(n) complexity for uniform object distribution
+        /// </summary>
         private void BroadPhase_GeneratePairs()
         {
             ListCollisionPairs.Clear();
