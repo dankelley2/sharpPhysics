@@ -7,6 +7,11 @@ using physics.Engine.Structs;
 
 namespace physics.Engine
 {
+    /// <summary>
+    /// Core physics simulation system managing object interactions and updates.
+    /// Implements fixed timestep updates, spatial hashing for broad phase collision detection,
+    /// and optimized gravity calculations. Uses accumulator pattern for stable physics.
+    /// </summary>
     public class PhysicsSystem
     {
         #region Public Properties

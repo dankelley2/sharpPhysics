@@ -4,6 +4,11 @@ using physics.Engine.Structs;
 
 namespace physics.Engine
 {
+    /// <summary>
+    /// Provides collision detection and resolution algorithms for 2D physics simulation.
+    /// Implements efficient collision checks and response calculations for different shape types.
+    /// Uses optimized math operations and early-out checks for performance.
+    /// </summary>
     internal static class Collision
     {
 
@@ -84,6 +89,13 @@ namespace physics.Engine
             return false;
         }
 
+        /// <summary>
+        /// Detects collision between two circles using an optimized distance check.
+        /// Uses squared distances to avoid expensive sqrt operations until necessary.
+        /// Handles special case of coincident circles.
+        /// </summary>
+        /// <param name="m">Collision manifold containing circle objects and collision data</param>
+        /// <returns>True if circles are colliding, false otherwise</returns>
         public static bool CirclevsCircle(ref Manifold m)
         {
             // Setup a couple pointers to each object
@@ -123,6 +135,13 @@ namespace physics.Engine
             return true;
         }
 
+        /// <summary>
+        /// Detects collision between an AABB and a circle using Voronoi regions.
+        /// Handles both external collisions and the case where the circle is inside the AABB.
+        /// Uses efficient point containment tests and clamping for optimization.
+        /// </summary>
+        /// <param name="m">Collision manifold containing the objects and collision data</param>
+        /// <returns>True if objects are colliding, false otherwise</returns>
         public static bool AABBvsCircle(ref Manifold m)
         {
             // Setup a couple pointers to each object
@@ -215,6 +234,14 @@ namespace physics.Engine
             return true;
         }
 
+        /// <summary>
+        /// Resolves collision using impulse-based dynamics.
+        /// j = -(1 + e) * Vrel • n / (1/Ma + 1/Mb)
+        /// where e is restitution, Vrel is relative velocity, n is collision normal,
+        /// and Ma,Mb are object masses.
+        /// Handles special cases like locked objects and NaN normals.
+        /// </summary>
+        /// <param name="m">Collision manifold containing objects and collision data</param>
         public static void ResolveCollision(ref Manifold m)
         {
             var rv = m.B.Velocity - m.A.Velocity;

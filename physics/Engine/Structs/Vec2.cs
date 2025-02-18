@@ -3,6 +3,12 @@ using System.Linq;
 
 namespace physics.Engine.Structs
 {
+    /// <summary>
+    /// Represents a 2D vector with optimized operations.
+    /// Uses stack allocation for better performance and provides
+    /// operator overloading for natural mathematical syntax.
+    /// Caches length calculations and provides efficient normalization.
+    /// </summary>
     public struct Vec2
     {
 
