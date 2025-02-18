@@ -336,20 +336,26 @@ namespace physics.Engine
 
         private void UpdatePhysics(float dt)
         {
-            for (int i = 0; i < PHYSICS_ITERATIONS; i++)
+            // Loop over physics iterations.
+            for (int iter = 0; iter < PHYSICS_ITERATIONS; iter++)
             {
-                for(int j = 0; j < ListCollisionPairs.Count; j++)
+                // Use a for-loop to iterate over collision pairs.
+                for (int i = 0; i < ListCollisionPairs.Count; i++)
                 {
-                    var objA = ListCollisionPairs[j].A;
-                    var objB = ListCollisionPairs[j].B;
+                    var pair = ListCollisionPairs[i];
+                    var objA = pair.A;
+                    var objB = pair.B;
 
-                    // Retrieve a manifold from the pool instead of creating a new instance.
+                    // Cache shape references.
+                    var shapeA = objA.Shape;
+                    var shapeB = objB.Shape;
+
+                    // Retrieve a manifold from the pool.
                     Manifold m = _manifoldPool.Get();
                     bool collision = false;
 
-                    // Set the ordering based on shape types (swap if necessary):
-                    // If objA's shape is a Circle and objB's shape is a Box, swap them.
-                    if (objA.Shape is CirclePhysShape && objB.Shape is BoxPhysShape)
+                    // Set ordering: if objA is a circle and objB is a box, swap them.
+                    if (shapeA is CirclePhysShape && shapeB is BoxPhysShape)
                     {
                         m.A = objB;
                         m.B = objA;
@@ -360,10 +366,14 @@ namespace physics.Engine
                         m.B = objB;
                     }
 
-                    // Perform collision detection based on shape types.
-                    if (m.A.Shape is BoxPhysShape)
+                    // Cache again for m.A and m.B.
+                    var shapeA2 = m.A.Shape;
+                    var shapeB2 = m.B.Shape;
+
+                    // Determine collision detection method based on shape types.
+                    if (shapeA2 is BoxPhysShape)
                     {
-                        if (m.B.Shape is BoxPhysShape)
+                        if (shapeB2 is BoxPhysShape)
                         {
                             collision = Collision.AABBvsAABB(ref m);
                             if (collision)
@@ -371,17 +381,17 @@ namespace physics.Engine
                                 CollisionHelpers.UpdateContactPoint(ref m);
                             }
                         }
-                        else if (m.B.Shape is CirclePhysShape)
+                        else if (shapeB2 is CirclePhysShape)
                         {
                             collision = Collision.AABBvsCircle(ref m);
                         }
                     }
-                    else if (m.A.Shape is CirclePhysShape && m.B.Shape is CirclePhysShape)
+                    else if (shapeA2 is CirclePhysShape && shapeB2 is CirclePhysShape)
                     {
                         collision = Collision.CirclevsCircle(ref m);
                     }
 
-                    // If a collision was detected, resolve it and store the manifold.
+                    // Resolve collision if detected.
                     if (collision)
                     {
                         Collision.ResolveCollisionRotational(ref m);
@@ -390,20 +400,22 @@ namespace physics.Engine
                     }
                     else
                     {
-                        // No collision: return the manifold to the pool.
+                        // Return manifold to pool if no collision.
                         _manifoldPool.Return(m);
                     }
                 }
             }
 
-            // Process static objects as before.
-            for (var i = 0; i < ListStaticObjects.Count; i++)
+            // Process static objects.
+            for (int i = 0; i < ListStaticObjects.Count; i++)
             {
-                ApplyConstants(ListStaticObjects[i], dt);
-                ListStaticObjects[i].Move(dt);
-                ListStaticObjects[i].UpdateRotation(dt);
+                var staticObj = ListStaticObjects[i];
+                ApplyConstants(staticObj, dt);
+                staticObj.Move(dt);
+                staticObj.UpdateRotation(dt);
             }
         }
+
 
 
         #endregion
