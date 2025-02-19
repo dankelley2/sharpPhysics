@@ -8,6 +8,7 @@ using physics.Engine.Helpers;
 using physics.Engine.Shapes;
 using physics.Engine.Structs;
 using SFML.System;
+using physics.Engine.Constraints;
 
 namespace physics.Engine
 {
@@ -36,6 +37,7 @@ namespace physics.Engine
         public static readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
         public static readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
         private readonly ManifoldPool _manifoldPool = new ManifoldPool();
+        public List<Constraint> Constraints = new List<Constraint>();
 
         internal IEnumerable<PhysicsObject> GetMoveableObjects()
         {
@@ -84,7 +86,7 @@ namespace physics.Engine
             // Create the circle shape using the given radius.
             IShape shape = new CirclePhysShape(radius);
             // For a circle, the center is the provided location.
-            var obj = new RotatingPhysicsObject(shape, loc, restitution, locked, shader);
+            var obj = new PhysicsObject(shape, loc, restitution, locked, shader, canRotate: true);
             ListStaticObjects.Add(obj);
             return obj;
         }
@@ -103,7 +105,7 @@ namespace physics.Engine
 
             // Create a box shape with the computed dimensions.
             IShape shape = new BoxPhysShape(width, height);
-            var obj = new NonRotatingPhysicsObject(shape, center, 0.95f, locked, shader, mass);
+            var obj = new PhysicsObject(shape, center, 0.95f, locked, shader, mass);
             ListStaticObjects.Add(obj);
             return obj;
         }
@@ -122,7 +124,7 @@ namespace physics.Engine
 
             // Create the box shape.
             IShape shape = new BoxPhysShape(width, height);
-            var obj = new RotatingPhysicsObject(shape, center, 0.5f, locked, shader, mass);
+            var obj = new PhysicsObject(shape, center, 0.5f, locked, shader, mass, canRotate: true);
             ListStaticObjects.Add(obj);
             return obj;
         }
@@ -268,8 +270,6 @@ namespace physics.Engine
             // Assign the modified velocity back.
             obj.Velocity = velocity;
 
-            // obj.AngularVelocity *= friction * 0.01F;
-
             if (obj.Center.Y > 2000 || obj.Center.Y < -2000 || obj.Center.X > 2000 || obj.Center.X < -2000)
             {
                 RemovalQueue.Enqueue(obj);
@@ -334,11 +334,22 @@ namespace physics.Engine
             }
         }
 
+        public void HandleConstraints(float dt)
+        {
+            foreach (var constraint in Constraints)
+            {
+                constraint.ApplyConstraint(dt);
+            }
+        }
+
         private void UpdatePhysics(float dt)
         {
             // Loop over physics iterations.
             for (int iter = 0; iter < PHYSICS_ITERATIONS; iter++)
             {
+                //TODO: Constraints
+                //HandleConstraints(dt);
+                
                 // Use a for-loop to iterate over collision pairs.
                 for (int i = 0; i < ListCollisionPairs.Count; i++)
                 {

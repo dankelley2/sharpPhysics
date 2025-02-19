@@ -53,5 +53,19 @@ namespace physics.Engine.Helpers
         {
             return (float)(180 / Math.PI) * rads;
         }
+
+        /// <summary>
+        /// Rotates a vector by a given angle (in radians).
+        /// </summary>
+        /// <param name="v">The vector to rotate.</param>
+        /// <param name="angle">The rotation angle in radians.</param>
+        /// <returns>The rotated vector.</returns>
+        public static Vector2f RotateVector(Vector2f v, float angle)
+        {
+            float cos = (float)Math.Cos(angle);
+            float sin = (float)Math.Sin(angle);
+            return new Vector2f(v.X * cos - v.Y * sin, v.X * sin + v.Y * cos);
+        }
+
     }
 }

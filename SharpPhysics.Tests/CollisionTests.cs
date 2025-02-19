@@ -44,15 +44,15 @@ namespace SharpPhysics.Tests
             AABB aabbA = new AABB { Min = new Vector2f(0, 0), Max = new Vector2f(10, 10) };
             AABB aabbB = new AABB { Min = new Vector2f(5, 5), Max = new Vector2f(15, 15) };
 
-            PhysicsObject A = new NonRotatingPhysicsObject(
+            PhysicsObject A = new PhysicsObject(
                 new BoxPhysShape(10, 10),
                 new Vector2f(5, 5),
-                0.6f, false, null);
+                0.6f, false, null, canRotate: true);
 
-            PhysicsObject B = new NonRotatingPhysicsObject(
+            PhysicsObject B = new PhysicsObject(
                 new BoxPhysShape(10, 10),
                 new Vector2f(10, 10),
-                0.6f, false, null);
+                0.6f, false, null, canRotate: true);
 
             // No rotation.
             A.Angle = 0;
@@ -80,15 +80,15 @@ namespace SharpPhysics.Tests
             AABB aabbA = new AABB { Min = new Vector2f(0, 0), Max = new Vector2f(10, 10) };
             AABB aabbB = new AABB { Min = new Vector2f(7, 7), Max = new Vector2f(17, 17) };
 
-            PhysicsObject A = new NonRotatingPhysicsObject(
+            PhysicsObject A = new PhysicsObject(
                 new CirclePhysShape(5),
                 new Vector2f(5, 5),
-                0.6f, false, null);
+                0.6f, false, null, canRotate: true);
 
-            PhysicsObject B = new NonRotatingPhysicsObject(
+            PhysicsObject B = new PhysicsObject(
                 new CirclePhysShape(5),
                 new Vector2f(12, 12),
-                0.6f, false, null);
+                0.6f, false, null, canRotate: true);
 
             // For circles, rotation is irrelevant.
             A.Angle = 0;
@@ -114,15 +114,15 @@ namespace SharpPhysics.Tests
             AABB aabbBox = new AABB { Min = new Vector2f(0, 0), Max = new Vector2f(20, 20) };
             AABB aabbCircle = new AABB { Min = new Vector2f(15, 15), Max = new Vector2f(25, 25) };
 
-            PhysicsObject box = new NonRotatingPhysicsObject(
+            PhysicsObject box = new PhysicsObject(
                 new BoxPhysShape(20, 20),
                 new Vector2f(10, 10),
-                0.6f, false, null);
+                0.6f, false, null, canRotate: true);
 
-            PhysicsObject circle = new NonRotatingPhysicsObject(
+            PhysicsObject circle = new PhysicsObject(
                 new CirclePhysShape(5),
                 new Vector2f(20, 20),
-                0.6f, false, null);
+                0.6f, false, null, canRotate: true);
 
             // Use 0 rotation for clarity.
             box.Angle = 0;
@@ -147,15 +147,15 @@ namespace SharpPhysics.Tests
             AABB aabbA = new AABB { Min = new Vector2f(0, 0), Max = new Vector2f(10, 10) };
             AABB aabbB = new AABB { Min = new Vector2f(8, 8), Max = new Vector2f(18, 18) };
 
-            PhysicsObject A = new NonRotatingPhysicsObject(
+            PhysicsObject A = new PhysicsObject(
                 new BoxPhysShape(10, 10),
                 new Vector2f(5, 5),
-                0.8f, false, null);
+                0.8f, false, null, canRotate: true);
 
-            PhysicsObject B = new NonRotatingPhysicsObject(
+            PhysicsObject B = new PhysicsObject(
                 new BoxPhysShape(10, 10),
                 new Vector2f(13, 13),
-                0.8f, false, null);
+                0.8f, false, null, canRotate: true);
 
             A.Velocity = new Vector2f(5, 0);
             B.Velocity = new Vector2f(-5, 0);
@@ -186,15 +186,15 @@ namespace SharpPhysics.Tests
             // Two circles with some angular velocity.
             // Circle A: center (5,5), radius=5.
             // Circle B: center (13,13), radius=5.
-            RotatingPhysicsObject A = new RotatingPhysicsObject(
+            PhysicsObject A = new PhysicsObject(
                 new CirclePhysShape(5),
                 new Vector2f(5, 5),
-                0.8f, false, null);
+                0.8f, false, null, canRotate: true);
 
-            RotatingPhysicsObject B = new RotatingPhysicsObject(
+            PhysicsObject B = new PhysicsObject(
                 new CirclePhysShape(5),
                 new Vector2f(13, 13),
-                0.8f, false, null);
+                0.8f, false, null, canRotate: true);
 
             A.AngularVelocity = 1.0f;
             B.AngularVelocity = -1.0f;
@@ -230,15 +230,15 @@ namespace SharpPhysics.Tests
             AABB aabbA = new AABB { Min = new Vector2f(0, 0), Max = new Vector2f(10, 10) };
             AABB aabbB = new AABB { Min = new Vector2f(8, 8), Max = new Vector2f(18, 18) };
 
-            PhysicsObject A = new NonRotatingPhysicsObject(
+            PhysicsObject A = new PhysicsObject(
                 new BoxPhysShape(10, 10),
                 new Vector2f(5, 5),
-                0.8f, false, null);
+                0.8f, false, null, canRotate: true);
 
-            PhysicsObject B = new NonRotatingPhysicsObject(
+            PhysicsObject B = new PhysicsObject(
                 new BoxPhysShape(10, 10),
                 new Vector2f(13, 13),
-                0.8f, false, null);
+                0.8f, false, null, canRotate: true);
 
             A.Angle = 0;
             B.Angle = 0;
@@ -266,15 +266,15 @@ namespace SharpPhysics.Tests
             AABB aabbA = new AABB { Min = new Vector2f(0, 0), Max = new Vector2f(10, 10) };
             AABB aabbB = new AABB { Min = new Vector2f(8, 8), Max = new Vector2f(18, 18) };
 
-            PhysicsObject A = new RotatingPhysicsObject(
+            PhysicsObject A = new PhysicsObject(
                 new BoxPhysShape(10, 10),
                 new Vector2f(5, 5),
-                0.8f, false, null);
+                0.8f, false, null, canRotate: true);
 
-            PhysicsObject B = new RotatingPhysicsObject(
+            PhysicsObject B = new PhysicsObject(
                 new BoxPhysShape(10, 10),
                 new Vector2f(13, 13),
-                0.8f, false, null);
+                0.8f, false, null, canRotate: true);
 
             A.Angle = 0;
             B.Angle = 0;
@@ -304,15 +304,15 @@ namespace SharpPhysics.Tests
             AABB aabbB = new AABB { Min = new Vector2f(10, 0), Max = new Vector2f(20, 20) };
 
             // Use RotatingPhysicsObject so angular correction is available.
-            PhysicsObject boxA = new RotatingPhysicsObject(
+            PhysicsObject boxA = new PhysicsObject(
                 new BoxPhysShape(20, 10),
                 new Vector2f(10, 10),
-                0.6f, false, null);
+                0.6f, false, null, canRotate: true);
 
-            PhysicsObject boxB = new RotatingPhysicsObject(
+            PhysicsObject boxB = new PhysicsObject(
                 new BoxPhysShape(10, 20),
                 new Vector2f(15, 10),
-                0.6f, false, null);
+                0.6f, false, null, canRotate: true);
 
             // Set box A angle to 0; box B angle to 90° (π/2 radians).
             boxA.Angle = 0;

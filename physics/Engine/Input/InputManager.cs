@@ -128,7 +128,7 @@ namespace physics.Engine.Input
                     float minY = Math.Min(BoxStartPoint.Y, BoxEndPoint.Y);
                     float maxX = Math.Max(BoxStartPoint.X, BoxEndPoint.X);
                     float maxY = Math.Max(BoxStartPoint.Y, BoxEndPoint.Y);
-                    ObjectTemplates.CreateBox(minX, minY, maxX, maxY);
+                    ObjectTemplates.CreateBox(new Vector2f(minX, minY), (int)maxX - (int)minX, (int)maxY - (int)minY);
                     IsCreatingBox = false;
                 }
                 IsMousePressedRight = false;

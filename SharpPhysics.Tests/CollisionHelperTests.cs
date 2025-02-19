@@ -27,7 +27,7 @@ namespace SharpPhysics.Tests
             // AABB from (80,90) to (120,110) yields width=40, height=20 and center=(100,100).
             AABB aabb = DummyAABB(new Vector2f(80, 90), new Vector2f(120, 110));
             // Create a nonrotating box: width=40, height=20, center=(100,100).
-            PhysicsObject obj = new NonRotatingPhysicsObject(new BoxPhysShape(40, 20), new Vector2f(100, 100), 0.6f, false, null);
+            PhysicsObject obj = new PhysicsObject(new BoxPhysShape(40, 20), new Vector2f(100, 100), 0.6f, false, null);
             obj.Angle = 0; // no rotation
 
             List<Vector2f> corners = CollisionHelpers.GetRectangleCorners(obj);
@@ -48,7 +48,7 @@ namespace SharpPhysics.Tests
         {
             // AABB from (80,90) to (120,110) yields width=40, height=20 and center=(100,100).
             AABB aabb = DummyAABB(new Vector2f(80, 90), new Vector2f(120, 110));
-            PhysicsObject obj = new NonRotatingPhysicsObject(new BoxPhysShape(40, 20), new Vector2f(100, 100), 0.6f, false, null);
+            PhysicsObject obj = new PhysicsObject(new BoxPhysShape(40, 20), new Vector2f(100, 100), 0.6f, false, null);
             obj.Angle = (float)Math.PI / 2; // 90° rotation
 
             List<Vector2f> corners = CollisionHelpers.GetRectangleCorners(obj);
@@ -277,8 +277,8 @@ namespace SharpPhysics.Tests
             // Box B: AABB from (20,20) to (30,30) => center (25,25), width=10, height=10.
             // With the current SutherlandHodgmanClip implementation, if there is no intersection,
             // the subject polygon (Box A's corners) is returned and its centroid is (5,5).
-            PhysicsObject objA = new NonRotatingPhysicsObject(new BoxPhysShape(10, 10), new Vector2f(5, 5), 0.6f, false, null);
-            PhysicsObject objB = new NonRotatingPhysicsObject(new BoxPhysShape(10, 10), new Vector2f(25, 25), 0.6f, false, null);
+            PhysicsObject objA = new PhysicsObject(new BoxPhysShape(10, 10), new Vector2f(5, 5), 0.6f, false, null);
+            PhysicsObject objB = new PhysicsObject(new BoxPhysShape(10, 10), new Vector2f(25, 25), 0.6f, false, null);
             Manifold m = new Manifold { A = objA, B = objB };
 
             CollisionHelpers.UpdateContactPoint(ref m);
@@ -296,8 +296,8 @@ namespace SharpPhysics.Tests
             // Two overlapping boxes. Their intersection region is from (5,5) to (10,10).
             // Box A: AABB from (0,0) to (10,10) => center (5,5), width=10, height=10.
             // Box B: AABB from (5,5) to (15,15) => center (10,10), width=10, height=10.
-            PhysicsObject objA = new NonRotatingPhysicsObject(new BoxPhysShape(10, 10), new Vector2f(5, 5), 0.6f, false, null);
-            PhysicsObject objB = new NonRotatingPhysicsObject(new BoxPhysShape(10, 10), new Vector2f(10, 10), 0.6f, false, null);
+            PhysicsObject objA = new PhysicsObject(new BoxPhysShape(10, 10), new Vector2f(5, 5), 0.6f, false, null);
+            PhysicsObject objB = new PhysicsObject(new BoxPhysShape(10, 10), new Vector2f(10, 10), 0.6f, false, null);
             objA.Angle = 0;
             objB.Angle = 0;
             Manifold m = new Manifold { A = objA, B = objB };

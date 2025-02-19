@@ -92,23 +92,21 @@ namespace physics.Engine.Classes.ObjectTemplates
             return oPhysicsObject;
         }
 
-        public static PhysicsObject CreateWall(float minX, float minY, float maxX, float maxY)
+        public static PhysicsObject CreateWall(Vector2f origin, int width, int height)
         {
-            int width = (int)(maxX - minX);
             SFMLShader shader = GetShader<SFMLWallShader>(width);
-            return PhysicsSystem.CreateStaticBox(new Vector2f(minX, minY), new Vector2f(maxX, maxY), true, shader, 1000000);
+            Vector2f max = origin + new Vector2f(width, height);
+            return PhysicsSystem.CreateStaticBox(origin, max, true, shader, 1000000);
         }
 
-        public static PhysicsObject CreateBox(float minX, float minY, float maxX, float maxY)
+        public static PhysicsObject CreateBox(Vector2f origin, int width, int height)
         {
-            int width = (int)(maxX - minX);
-            int height = (int)(maxY - minY);
             SFMLShader shader = GetShader<SFMLBoxShader>(width);
-
-            //Compute mass from xy dimensions
+            // Compute mass from dimensions.
             float mass = width * height;
-
-            return PhysicsSystem.CreateStaticBox2(new Vector2f(minX, minY), new Vector2f(maxX, maxY), false, shader, mass);
+            Vector2f max = origin + new Vector2f(width, height);
+            return PhysicsSystem.CreateStaticBox2(origin, max, false, shader, mass);
         }
+
     }
 }

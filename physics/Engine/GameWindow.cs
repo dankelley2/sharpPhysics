@@ -7,6 +7,7 @@ using physics.Engine.Classes;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Input;
 using physics.Engine.Rendering;
+using physics.Engine.Constraints;
 
 namespace physics.Engine
 {
@@ -49,28 +50,52 @@ namespace physics.Engine
         private void InitializeGame()
         {
             // Create walls.
-            ObjectTemplates.CreateWall(0, 0, 15, (int)window.Size.Y);
-            ObjectTemplates.CreateWall((int)window.Size.X - 15, 0, (int)window.Size.X, (int)window.Size.Y);
-            ObjectTemplates.CreateWall(0, 0, (int)window.Size.X, 15);
-            ObjectTemplates.CreateWall(0, (int)window.Size.Y - 15, (int)window.Size.X, (int)window.Size.Y);
+            ObjectTemplates.CreateWall(new Vector2f(0, 0), 15, (int)window.Size.Y);
+            ObjectTemplates.CreateWall(new Vector2f((int)window.Size.X - 15, 0), 15, (int)window.Size.Y);
+            ObjectTemplates.CreateWall(new Vector2f(0, 0), (int)window.Size.X, 15);
+            ObjectTemplates.CreateWall(new Vector2f(0, (int)window.Size.Y - 15), (int)window.Size.X, 15);
 
-            // Create a grid of medium balls.
-            for (int i = 0; i < 800; i += 20)
-            {
-                for (int j = 0; j < 200; j += 20)
-                {
-                    ObjectTemplates.CreateMedBall(i + 200, j + 150);
-                }
-            }
+            //// Create a grid of medium balls.
+            //for (int i = 0; i < 800; i += 20)
+            //{
+            //    for (int j = 0; j < 200; j += 20)
+            //    {
+            //        ObjectTemplates.CreateMedBall(i + 200, j + 150);
+            //    }
+            //}
 
-            // Create an attractor.
-            ObjectTemplates.CreateAttractor(400, 450);
+            //// Create an attractor.
+            //ObjectTemplates.CreateAttractor(400, 450);
 
-            // Create a box with initial velocity and angle.
-            var boxA = ObjectTemplates.CreateBox(100, 400, 200, 500);
-            boxA.Velocity = new Vector2f(0, 100);
-            boxA.Angle = (float)(Math.PI / 4);
+            //// Create a box with initial velocity and angle.
+            //// Origin vector (top left)
+            //var boxAOrigin = new Vector2f(100, 400);
+            //var boxA = ObjectTemplates.CreateBox(boxAOrigin, 200, 500);
+            //boxA.Velocity = new Vector2f(0, 0);
+            //boxA.Angle = (float)(Math.PI / 4);
+
+            // Create the chassis as a box.
+            var chassisOrigin = new Vector2f(400, 400);
+            var chassis = ObjectTemplates.CreateBox(chassisOrigin, 500, 100);
+            chassis.CanRotate = true; // Allow chassis rotation
+            chassis.Angle = 0;
+
+            //Create two wheels as circles.
+           var leftWheel = ObjectTemplates.CreateMedBall(400, 550);
+            leftWheel.CanRotate = true;
+
+            // Create constraints linking the wheels to the chassis.
+            // For each wheel, we attach its center to a fixed point on the chassis along the vertical axis.
+            Vector2f leftAnchorChassis = new Vector2f(-250, 100);  // local offset from chassis center
+            Vector2f leftAnchorWheel = new Vector2f(0, 0);         // wheel's center
+            //var leftWheelConstraint = new AxisConstraint(chassis, leftWheel, leftAnchorChassis, leftAnchorWheel);
+
+            // Add the constraints to your physics system.
+            //physicsSystem.Constraints.Add(leftWheelConstraint);
+
         }
+
+
 
         public void Run()
         {

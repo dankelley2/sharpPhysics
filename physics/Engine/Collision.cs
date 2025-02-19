@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using physics.Engine.Classes;
 using physics.Engine.Extensions;
 using physics.Engine.Objects;
@@ -193,8 +194,6 @@ namespace physics.Engine
             }
         }
 
-
-
         public static bool AABBvsCircle(ref Manifold m)
         {
             // m.A is the box and m.B is the circle.
@@ -286,7 +285,6 @@ namespace physics.Engine
             return true;
         }
 
-
         public static void ResolveCollision(ref Manifold m)
         {
             var rv = m.B.Velocity - m.A.Velocity;
@@ -321,10 +319,10 @@ namespace physics.Engine
             PhysicsObject B = m.B;
 
             // For each object, if it's rotational, get its angular velocity and inverse inertia; otherwise, treat as zero.
-            float angularVelA = (A is RotatingPhysicsObject ra) ? ra.AngularVelocity : 0f;
-            float iInertiaA = (A is RotatingPhysicsObject ra2) ? ra2.IInertia : 0f;
-            float angularVelB = (B is RotatingPhysicsObject rb) ? rb.AngularVelocity : 0f;
-            float iInertiaB = (B is RotatingPhysicsObject rb2) ? rb2.IInertia : 0f;
+            float angularVelA = A.AngularVelocity;
+            float iInertiaA = A.IInertia;
+            float angularVelB = B.AngularVelocity;
+            float iInertiaB = B.IInertia;
 
             // Compute vectors from centers to contact point.
             Vector2f rA = m.ContactPoint - A.Center;
@@ -358,17 +356,17 @@ namespace physics.Engine
             if (!A.Locked)
             {
                 A.Velocity -= impulse * A.IMass;
-                if (A is RotatingPhysicsObject raUpdate)
+                if (A.CanRotate)
                 {
-                    raUpdate.AngularVelocity -= Cross(rA, impulse) * iInertiaA;
+                    A.AngularVelocity -= Cross(rA, impulse) * iInertiaA;
                 }
             }
             if (!B.Locked)
             {
                 B.Velocity += impulse * B.IMass;
-                if (B is RotatingPhysicsObject rbUpdate)
+                if (B.CanRotate)
                 {
-                    rbUpdate.AngularVelocity += Cross(rB, impulse) * iInertiaB;
+                    B.AngularVelocity += Cross(rB, impulse) * iInertiaB;
                 }
             }
 
@@ -398,17 +396,17 @@ namespace physics.Engine
             if (!A.Locked)
             {
                 A.Velocity += frictionImpulse * A.IMass;
-                if (A is RotatingPhysicsObject raFriction)
+                if (A.CanRotate)
                 {
-                    raFriction.AngularVelocity += Cross(rA, frictionImpulse) * iInertiaA;
+                    A.AngularVelocity += Cross(rA, frictionImpulse) * iInertiaA;
                 }
             }
             if (!B.Locked)
             {
                 B.Velocity -= frictionImpulse * B.IMass;
-                if (B is RotatingPhysicsObject rbFriction)
+                if (B.CanRotate)
                 {
-                    rbFriction.AngularVelocity -= Cross(rB, frictionImpulse) * iInertiaB;
+                    B.AngularVelocity -= Cross(rB, frictionImpulse) * iInertiaB;
                 }
             }
         }
