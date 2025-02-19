@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    <NoWarn>$(NoWarn);NU1507</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="CSFML" Version="2.6.1" />
+    <PackageVersion Include="MSTest" Version="3.8.2" />
+    <PackageVersion Include="SFML.Audio" Version="2.6.0" />
+    <PackageVersion Include="SFML.Graphics" Version="2.6.0" />
+    <PackageVersion Include="SFML.Net" Version="2.6.0" />
+    <PackageVersion Include="SFML.System" Version="2.6.0" />
+    <PackageVersion Include="SFML.Window" Version="2.6.0" />
+  </ItemGroup>
+</Project>
