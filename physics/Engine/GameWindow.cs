@@ -60,14 +60,7 @@ namespace physics.Engine
             {
                 for (int j = 0; j < 200; j += 20)
                 {
-                    if (j % 40 == 0)
-                    {
                         ObjectTemplates.CreateMedBall(i + 200, j + 150);
-                    }
-                    else
-                    {
-                        ObjectTemplates.CreateSmallBall(i + 200, j + 150);
-                    }
                 }
             }
 

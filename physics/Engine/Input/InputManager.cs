@@ -109,7 +109,7 @@ namespace physics.Engine.Input
             {
                 if (IsGrabbing)
                 {
-                    physicsSystem.SetVelocityOfActive(new Vector2f(0, 0));
+                    //physicsSystem.SetVelocityOfActive(new Vector2f(0, 0));
                     physicsSystem.ReleaseActiveObject();
                     IsGrabbing = false;
                     return;
