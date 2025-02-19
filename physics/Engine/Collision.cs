@@ -319,10 +319,10 @@ namespace physics.Engine
             PhysicsObject B = m.B;
 
             // For each object, if it's rotational, get its angular velocity and inverse inertia; otherwise, treat as zero.
-            float angularVelA = A.AngularVelocity;
-            float iInertiaA = A.IInertia;
-            float angularVelB = B.AngularVelocity;
-            float iInertiaB = B.IInertia;
+            float angularVelA = A.CanRotate ? A.AngularVelocity : 0F;
+            float iInertiaA =   A.CanRotate ? A.IInertia        : 0F;
+            float angularVelB = B.CanRotate ? B.AngularVelocity : 0F;
+            float iInertiaB =   B.CanRotate ? B.IInertia        : 0F;
 
             // Compute vectors from centers to contact point.
             Vector2f rA = m.ContactPoint - A.Center;

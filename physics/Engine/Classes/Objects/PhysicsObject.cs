@@ -66,9 +66,7 @@ namespace physics.Engine.Objects
             RoundSpeedToZero();
             Center += Velocity * dt;
             // Update AABB including current rotation.
-
-            if (CanRotate)
-                Aabb = Shape.GetAABB(Center, Angle);
+            Aabb = Shape.GetAABB(Center, Angle);
         }
 
         protected void RoundSpeedToZero()
@@ -86,8 +84,9 @@ namespace physics.Engine.Objects
         {
             if (Locked)
                 return;
-
+            
             Center += dVector;
+            // Update AABB including current rotation.
             Aabb = Shape.GetAABB(Center, Angle);
         }
 
@@ -104,7 +103,6 @@ namespace physics.Engine.Objects
             if (Math.Abs(AngularVelocity) < 0.001f)
                 AngularVelocity = 0;
 
-            // Update AABB to reflect the new rotation.
             Aabb = Shape.GetAABB(Center, Angle);
         }
 
