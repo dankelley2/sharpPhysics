@@ -1,5 +1,6 @@
 ﻿
 using physics.Engine.Objects;
+using physics.Engine.Shaders;
 using SFML.System;
 
 namespace physics.Engine.Classes.ObjectTemplates

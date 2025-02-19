@@ -4,6 +4,7 @@ using physics.Engine.Shapes;
 using System;
 using physics.Engine.Classes;
 using System.Collections.Generic;
+using physics.Engine.Shaders;
 
 namespace physics.Engine.Objects
 {

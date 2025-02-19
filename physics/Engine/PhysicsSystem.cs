@@ -9,6 +9,7 @@ using physics.Engine.Shapes;
 using physics.Engine.Structs;
 using SFML.System;
 using physics.Engine.Constraints;
+using physics.Engine.Shaders;
 
 namespace physics.Engine
 {
