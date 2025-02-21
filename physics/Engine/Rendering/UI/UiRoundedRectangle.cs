@@ -8,17 +8,9 @@ namespace physics.Engine.Rendering.UI
     public class UiRoundedRectangle : aUiElement
     {
         Vector2f[] _points;
-        Vector2f _origin; // center of the rectangle
-        Vector2f _size;
-        float _cornerRadius;
 
         public UiRoundedRectangle(Vector2f size, float radius, int quality)
         {
-            _size = size;
-            _cornerRadius = radius;
-            // Compute the rectangle center (for the triangle fan)
-            _origin = new Vector2f(size.X / 2, size.Y / 2);
-
             // Determine arc quality per corner.
             // (Assumes that "quality" is the total number of points, so each quadrant gets quality/4 points.)
             int arcQuality = Math.Max(2, quality / 4);
@@ -76,9 +68,6 @@ namespace physics.Engine.Rendering.UI
         {
             // Draw the rounded rectangle using a TriangleFan.
             VertexArray fan = new VertexArray(PrimitiveType.TriangleFan);
-
-            // First vertex: center of the rectangle.
-            //fan.Append(new Vertex(_origin, Color.White));
 
             // Append all the outline (arc) points.
             foreach (var pt in _points)
