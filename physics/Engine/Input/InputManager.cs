@@ -28,7 +28,7 @@ namespace physics.Engine.Input
         public Vector2f PanStartPos { get; private set; }
 
         private float launchTimer = 0f;
-        private const float LaunchInterval = 0.025f;
+        private const float LaunchInterval = 0.035f;
 
         public InputManager(RenderWindow window, PhysicsSystem physicsSystem, View view)
         {
@@ -58,7 +58,7 @@ namespace physics.Engine.Input
                 {
                     ActionTemplates.launch(
                         physicsSystem,
-                        ObjectTemplates.CreateSmallBall(StartPoint.X, StartPoint.Y),
+                        ObjectTemplates.CreateMedBall(StartPoint.X, StartPoint.Y),
                         StartPoint,
                         MousePosition);
                     launchTimer = 0f;

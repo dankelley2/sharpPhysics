@@ -2,6 +2,8 @@
 using SFML.System;
 using System;
 using physics.Engine.Classes;
+using System.Collections.Generic;
+using physics.Engine.Rendering.UI;
 
 namespace physics.Engine.Rendering
 {
@@ -12,6 +14,7 @@ namespace physics.Engine.Rendering
         private PhysicsSystem physicsSystem;
         private Text debugText;
         private Font debugFont;
+        private List<aUiElement> _uiElements = new List<aUiElement>();
 
         public Renderer(RenderWindow window, View view, PhysicsSystem physicsSystem)
         {
@@ -26,6 +29,9 @@ namespace physics.Engine.Rendering
                 FillColor = Color.White,
                 Position = new Vector2f(40, 40)
             };
+
+            aUiElement roundedRect = new UiRoundedRectangle(new Vector2f(600, 200), 20, 32);
+            _uiElements.Add(roundedRect);
         }
 
         public void Render(long msPhysicsTime, long msDrawTime, long msFrameTime,
@@ -69,6 +75,12 @@ namespace physics.Engine.Rendering
                     sfmlShader.Draw(obj, window);
                     sfmlShader.PostDraw(obj, window);
                 }
+            }
+
+            // Draw all UI elements
+            for (int i = 0; i < _uiElements.Count; i++)
+            {
+                _uiElements[i].Draw(window);
             }
 
             window.Display();
