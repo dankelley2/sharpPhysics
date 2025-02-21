@@ -32,7 +32,11 @@ namespace physics.Engine
 
         public GameWindow(uint width, uint height, string title)
         {
-            window = new RenderWindow(new VideoMode(width, height), title, Styles.Close);
+            // Create context settings with antialiasing
+            ContextSettings settings = new ContextSettings();
+            settings.AntialiasingLevel = 8; // You can adjust this value as needed
+
+            window = new RenderWindow(new VideoMode(width, height), title, Styles.Close, settings);
             window.Closed += (s, e) => window.Close();
 
             // Create and set a view covering the whole window.

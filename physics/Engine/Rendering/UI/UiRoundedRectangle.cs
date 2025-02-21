@@ -1,7 +1,10 @@
 ﻿using SFML.Graphics;
 using SFML.System;
 using System;
+using System.CodeDom.Compiler;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace physics.Engine.Rendering.UI
 {
@@ -11,15 +14,28 @@ namespace physics.Engine.Rendering.UI
 
         public UiRoundedRectangle(Vector2f size, float radius, int quality)
         {
+            _points = GeneratedRoundedRectangleBorderPoints(size, 2f, radius, quality).ToArray();
+        }
+
+        private IEnumerable<Vector2f> GeneratedRoundedRectangleBorderPoints(Vector2f size, float thickness, float radius, int quality)
+        {
+            return MergeEveryOther(GeneratedRoundedRectanglePoints(size, radius, quality, thickness), GeneratedRoundedRectanglePoints(size, radius, quality, 0));
+        }
+
+        private IEnumerable<Vector2f> GeneratedRoundedRectanglePoints(Vector2f size, float radius, int quality, float thickness = 0)
+        {
             // Determine arc quality per corner.
             // (Assumes that "quality" is the total number of points, so each quadrant gets quality/4 points.)
             int arcQuality = Math.Max(2, quality / 4);
 
+            // thickness for outline (if any)
+            radius += thickness;
+
             // Compute the centers for the four corner circles:
-            Vector2f bottomRightCenter = new Vector2f(size.X - radius, size.Y - radius);
-            Vector2f bottomLeftCenter = new Vector2f(radius, size.Y - radius);
-            Vector2f topLeftCenter = new Vector2f(radius, radius);
-            Vector2f topRightCenter = new Vector2f(size.X - radius, radius);
+            Vector2f bottomRightCenter = new Vector2f(size.X - radius + thickness , size.Y - radius + thickness);
+            Vector2f bottomLeftCenter = new Vector2f(radius - thickness , size.Y - radius + thickness);
+            Vector2f topLeftCenter = new Vector2f(radius - thickness, radius - thickness);
+            Vector2f topRightCenter = new Vector2f(size.X - radius + thickness, radius - thickness);
 
             // Generate arc points for each corner:
             List<Vector2f> bottomRightArc = GetArcPoints(bottomRightCenter, radius, 0f, 90f, arcQuality);
@@ -36,7 +52,7 @@ namespace physics.Engine.Rendering.UI
                 .. topRightArc,
             ];
 
-            _points = finalPoints.ToArray();
+            return finalPoints;
         }
 
         /// <summary>
@@ -67,7 +83,7 @@ namespace physics.Engine.Rendering.UI
         protected override void DrawSelf(RenderTarget target)
         {
             // Draw the rounded rectangle using a TriangleFan.
-            VertexArray fan = new VertexArray(PrimitiveType.TriangleFan);
+            VertexArray fan = new VertexArray(PrimitiveType.TriangleStrip);
 
             // Append all the outline (arc) points.
             foreach (var pt in _points)
@@ -76,10 +92,39 @@ namespace physics.Engine.Rendering.UI
             }
 
             // Close the fan by repeating the first outline point.
-            if (_points.Length > 0)
+            if (_points.Length > 1)
+            {
                 fan.Append(new Vertex(_points[0], Color.White));
+                fan.Append(new Vertex(_points[1], Color.White));
+            }
 
-            target.Draw(fan);
+                target.Draw(fan);
         }
+
+        public static IEnumerable<Vector2f> MergeEveryOther(IEnumerable<Vector2f> first, IEnumerable<Vector2f> second)
+        {
+            using (var enum1 = first.GetEnumerator())
+            using (var enum2 = second.GetEnumerator())
+            {
+                bool hasFirst = enum1.MoveNext();
+                bool hasSecond = enum2.MoveNext();
+
+                // Continue until both enumerators are exhausted.
+                while (hasFirst || hasSecond)
+                {
+                    if (hasFirst)
+                    {
+                        yield return enum1.Current;
+                        hasFirst = enum1.MoveNext();
+                    }
+                    if (hasSecond)
+                    {
+                        yield return enum2.Current;
+                        hasSecond = enum2.MoveNext();
+                    }
+                }
+            }
+        }
+
     }
 }
