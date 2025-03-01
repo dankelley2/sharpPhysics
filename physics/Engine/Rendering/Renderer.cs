@@ -22,8 +22,9 @@ namespace physics.Engine.Rendering
             this.view = view;
             this.physicsSystem = physicsSystem;
 
-            // Initialize debug font and text.
-            debugFont = new Font(@"C:\Windows\Fonts\arial.ttf"); // Ensure this is a valid font path.
+            // Load the font from the embedded Resources folder.
+            // This path is relative to the working directory (usually the output folder).
+            debugFont = new Font("Resources/good_timing_bd.otf");
             debugText = new Text("", debugFont, 12)
             {
                 FillColor = Color.White,
