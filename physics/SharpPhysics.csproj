@@ -11,9 +11,6 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="Engine\Structs\Vector2fExtesnions.cs" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="SFML.Net" />
   </ItemGroup>
   <ItemGroup>

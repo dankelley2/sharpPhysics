@@ -414,8 +414,8 @@ namespace physics.Engine
 
         public static void PositionalCorrection(ref Manifold m)
         {
-            var percent = 0.4f; // usually 20% to 80%
-            var slop = 0.01f;    // usually 0.01 to 0.1
+            var percent = 0.6f; // usually 20% to 80%
+            var slop = 0.05f;    // usually 0.01 to 0.1
 
             // Only correct penetration beyond the slop.
             float penetration = Math.Max(m.Penetration - slop, 0.0f);
@@ -437,7 +437,7 @@ namespace physics.Engine
         public static void AngularPositionalCorrection(ref Manifold m)
         {
             // Tuning factor for angular correction; adjust as needed.
-            const float angularCorrectionPercent = 0.05f;
+            const float angularCorrectionPercent = 0.01f;
 
             // Compute lever arms (r vectors) from each object's center to the contact point.
             Vector2f rA = m.ContactPoint - m.A.Center;

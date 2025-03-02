@@ -171,14 +171,14 @@ namespace physics.Engine.Input
         private void OnMouseWheelScrolled(object sender, MouseWheelScrollEventArgs e)
         {
             // Scrolling up zooms in; scrolling down zooms out.
-            if (e.Delta > 0)
-            {
-                view.Zoom(0.9f);
-            }
-            else
-            {
-                view.Zoom(1.1f);
-            }
+            // if (e.Delta > 0)
+            // {
+            //     view.Zoom(0.9f);
+            // }
+            // else
+            // {
+            //     view.Zoom(1.1f);
+            // }
         }
 
         private void OnKeyPressed(object sender, KeyEventArgs e)

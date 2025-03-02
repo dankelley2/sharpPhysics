@@ -17,7 +17,7 @@ namespace physics.Engine
     {
         #region Public Properties
 
-        public float GravityScale = 0F;
+        public float GravityScale = 30F;
         public Vector2f Gravity { get; set; }
         public float Friction { get; set; }
 
