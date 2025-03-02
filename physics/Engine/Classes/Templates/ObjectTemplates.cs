@@ -72,7 +72,7 @@ namespace physics.Engine.Classes.ObjectTemplates
         {
             int diameter = 10;
             SFMLShader shader = GetShader<SFMLBallVelocityShader>(diameter);
-            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.6F, false, shader);
+            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.8F, false, shader);
         }
 
         public static PhysicsObject CreateWater(float originX, float originY)

@@ -170,6 +170,8 @@ namespace physics.Engine.Input
 
         private void OnMouseWheelScrolled(object sender, MouseWheelScrollEventArgs e)
         {
+
+            Console.WriteLine("Scroll delta: " + e.Delta);
             // Scrolling up zooms in; scrolling down zooms out.
             // if (e.Delta > 0)
             // {
