@@ -33,9 +33,31 @@ namespace physics.Engine.Rendering.UI
         {
             if (child != null)
             {
+                // Avoid self or cyclic references
+                if (child == this || IsDescendantOf(child))
+                {
+                    throw new InvalidOperationException("Cannot add a UiElement as a child of itself or one of its descendants.");
+                }
+
+                // If the child already has a parent, remove it from that parent's children
+                if (child.Parent != null && child.Parent != this)
+                {
+                    child.Parent.RemoveChild(child);
+                }
                 child.Parent = this;
                 Children.Add(child);
             }
+        }
+
+        private bool IsDescendantOf(UiElement possibleAncestor)
+        {
+            UiElement current = this.Parent;
+            while (current != null)
+            {
+                if (current == possibleAncestor) return true;
+                current = current.Parent;
+            }
+            return false;
         }
 
         public void RemoveChild(UiElement child)
