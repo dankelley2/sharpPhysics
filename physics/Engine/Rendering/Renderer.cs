@@ -14,7 +14,7 @@ namespace physics.Engine.Rendering
         private PhysicsSystem physicsSystem;
         private Text debugText;
         private Font debugFont;
-        private List<aUiElement> _uiElements = new List<aUiElement>();
+        private List<UiElement> _uiElements = new List<UiElement>();
 
         public Renderer(RenderWindow window, View view, PhysicsSystem physicsSystem)
         {
@@ -31,7 +31,7 @@ namespace physics.Engine.Rendering
                 Position = new Vector2f(40, 40)
             };
 
-            aUiElement roundedRect = new UiRoundedRectangle(new Vector2f(140, 80), 5, 32);
+            UiElement roundedRect = new UiRoundedRectangle(new Vector2f(140, 80), 5, 32);
             roundedRect.Position = new Vector2f(30, 30);
             _uiElements.Add(roundedRect);
         }

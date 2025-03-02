@@ -8,8 +8,10 @@ using System.Text.RegularExpressions;
 
 namespace physics.Engine.Rendering.UI
 {
-    public class UiRoundedRectangle : aUiElement
+    public class UiRoundedRectangle : UiElement
     {
+        public Color OutlineColor { get; set; } = Color.White;
+
         private Vector2f[] _points;
 
         public UiRoundedRectangle(Vector2f size, float radius, int quality)
@@ -83,22 +85,22 @@ namespace physics.Engine.Rendering.UI
         protected override void DrawSelf(RenderTarget target)
         {
             // Draw the rounded rectangle using a TriangleFan.
-            VertexArray fan = new VertexArray(PrimitiveType.TriangleStrip);
+            VertexArray triStrip = new VertexArray(PrimitiveType.TriangleStrip);
 
             // Append all the outline (arc) points.
             foreach (var pt in _points)
             {
-                fan.Append(new Vertex(pt + Position, Color.White));
+                triStrip.Append(new Vertex(pt + Position, Color.White));
             }
 
             // Close the fan by repeating the first outline point.
             if (_points.Length > 1)
             {
-                fan.Append(new Vertex(_points[0] + Position, Color.White));
-                fan.Append(new Vertex(_points[1] + Position, Color.White));
+                triStrip.Append(new Vertex(_points[0] + Position, this.OutlineColor));
+                triStrip.Append(new Vertex(_points[1] + Position, this.OutlineColor));
             }
 
-                target.Draw(fan);
+                target.Draw(triStrip);
         }
 
         public static IEnumerable<Vector2f> MergeEveryOther(IEnumerable<Vector2f> first, IEnumerable<Vector2f> second)
