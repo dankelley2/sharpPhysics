@@ -10,7 +10,7 @@ namespace physics.Engine.Rendering.UI
 {
     public class UiRoundedRectangle : aUiElement
     {
-        Vector2f[] _points;
+        private Vector2f[] _points;
 
         public UiRoundedRectangle(Vector2f size, float radius, int quality)
         {
@@ -88,14 +88,14 @@ namespace physics.Engine.Rendering.UI
             // Append all the outline (arc) points.
             foreach (var pt in _points)
             {
-                fan.Append(new Vertex(pt, Color.White));
+                fan.Append(new Vertex(pt + Position, Color.White));
             }
 
             // Close the fan by repeating the first outline point.
             if (_points.Length > 1)
             {
-                fan.Append(new Vertex(_points[0], Color.White));
-                fan.Append(new Vertex(_points[1], Color.White));
+                fan.Append(new Vertex(_points[0] + Position, Color.White));
+                fan.Append(new Vertex(_points[1] + Position, Color.White));
             }
 
                 target.Draw(fan);
