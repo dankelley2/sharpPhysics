@@ -1,6 +1,7 @@
 # sharpPhysics
 2D physics engine in C#
 
+![image](https://github.com/user-attachments/assets/5780a59d-bd7c-469f-8c92-f8b03be4f223)
 ![image](https://github.com/user-attachments/assets/83f52229-d30a-47b0-9467-e96b4445126b)
 ![image](https://github.com/user-attachments/assets/f51c6901-9197-45fd-956d-20997dabc3d1)
 ![image](https://github.com/user-attachments/assets/b32b5011-4df3-4fcf-81ab-707044529b9f)
@@ -12,8 +13,6 @@ Controls as of right now:
 * RMB: Delete objects on click / mouse move
 * MMB Scroll: zoom
 * MMB Hold: pan screen
-* P: Switch to poolball shader
-* V: Switch to velocity shader
 * G: Create Gravity orb
 * SPACE: Stop all object momentum (momentarily)
 
