@@ -40,9 +40,6 @@ namespace physics.Engine.Classes.ObjectTemplates
             return (T)innerDict[diameter];
         }
 
-
-        private static Random r = new Random();
-
         public static PhysicsObject CreateSmallBall(float originX, float originY)
         {
             // Using a diameter of 5.
@@ -51,35 +48,11 @@ namespace physics.Engine.Classes.ObjectTemplates
             return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.6F, false, shader);
         }
 
-        public static PhysicsObject CreateSizedBall(float originX, float originY)
-        {
-            // Random diameter between 5 and 15.
-            int diameter = r.Next(5, 15);
-            SFMLShader shader = GetShader<SFMLBallVelocityShader>(diameter);
-            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.6F, false, shader);
-        }
-
-        public static PhysicsObject CreateSmallBall_Magnet(float originX, float originY)
-        {
-            int diameter = 5;
-            SFMLShader shader = GetShader<SFMLBallVelocityShader>(diameter);
-            var oPhysicsObject = PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.6F, false, shader);
-            PhysicsSystem.ListGravityObjects.Add(oPhysicsObject);
-            return oPhysicsObject;
-        }
-
         public static PhysicsObject CreateMedBall(float originX, float originY)
         {
             int diameter = 10;
             SFMLShader shader = GetShader<SFMLBallVelocityShader>(diameter);
-            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.6F, false, shader);
-        }
-
-        public static PhysicsObject CreateWater(float originX, float originY)
-        {
-            int diameter = 5;
-            SFMLShader shader = GetShader<SFMLBallVelocityShader>(diameter);
-            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.99F, false, shader);
+            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.8F, false, shader);
         }
 
         public static PhysicsObject CreateAttractor(float originX, float originY)

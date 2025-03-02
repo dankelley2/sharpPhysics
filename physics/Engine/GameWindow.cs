@@ -3,11 +3,9 @@ using SFML.System;
 using SFML.Window;
 using System;
 using System.Diagnostics;
-using physics.Engine.Classes;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Input;
 using physics.Engine.Rendering;
-using physics.Engine.Constraints;
 
 namespace physics.Engine
 {
@@ -32,7 +30,11 @@ namespace physics.Engine
 
         public GameWindow(uint width, uint height, string title)
         {
-            window = new RenderWindow(new VideoMode(width, height), title, Styles.Close);
+            // Create context settings with antialiasing
+            ContextSettings settings = new ContextSettings();
+            settings.AntialiasingLevel = 8; // You can adjust this value as needed
+
+            window = new RenderWindow(new VideoMode(width, height), title, Styles.Close, settings);
             window.Closed += (s, e) => window.Close();
 
             // Create and set a view covering the whole window.
@@ -56,23 +58,31 @@ namespace physics.Engine
             ObjectTemplates.CreateWall(new Vector2f(0, (int)window.Size.Y - 15), (int)window.Size.X, 15);
 
             // Create a grid of medium balls.
-            for (int i = 0; i < 800; i += 20)
+            for (int i = 0; i < 600; i += 20)
             {
                 for (int j = 0; j < 200; j += 20)
                 {
-                        ObjectTemplates.CreateMedBall(i + 200, j + 150);
+                        ObjectTemplates.CreateMedBall(i + 400, j + 150);
                 }
             }
 
             // Create an attractor.
-            ObjectTemplates.CreateAttractor(400, 450);
+            //ObjectTemplates.CreateAttractor(400, 450);
 
             // Create a box with initial velocity and angle.
             // Origin vector (top left)
-            var boxAOrigin = new Vector2f(100, 400);
-            var boxA = ObjectTemplates.CreateBox(boxAOrigin, 100, 100);
-            boxA.Velocity = new Vector2f(0, 0);
-            boxA.Angle = (float)(Math.PI / 4);
+            var boxAOrigin = new Vector2f(100, 100);
+            ObjectTemplates.CreateBox(boxAOrigin, 200, 50);
+
+            var boxBOrigin = new Vector2f(100, 250);
+            ObjectTemplates.CreateBox(boxBOrigin, 200, 50);
+
+            var boxCOrigin = new Vector2f(100, 400);
+            ObjectTemplates.CreateBox(boxCOrigin, 200, 50);
+
+            var boxDOrigin = new Vector2f(100, 550);
+            ObjectTemplates.CreateBox(boxDOrigin, 200, 50);
+
 
            // // Create the chassis as a box.
            // var chassisOrigin = new Vector2f(400, 400);

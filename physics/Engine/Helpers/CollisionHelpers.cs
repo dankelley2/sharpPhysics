@@ -50,7 +50,7 @@ public static class CollisionHelpers
     public static List<Vector2f> SutherlandHodgmanClip(List<Vector2f> subjectPolygon, List<Vector2f> clipPolygon)
     {
         // Start with the subject polygon.
-        List<Vector2f> poly = new List<Vector2f>(subjectPolygon);
+        List<Vector2f> poly = new (subjectPolygon);
         // For each edge of the clip polygon:
         int clipCount = clipPolygon.Count;
         for (int i = 0; i < clipCount; i++)
@@ -158,7 +158,7 @@ public static class CollisionHelpers
         return Cross(b - a, p - a) >= 0;
     }
 
-    // Computes the centroid (center of mass) of a polygon.
+        // Computes the centroid (center of mass) of a polygon.
     public static Vector2f ComputeCentroid(List<Vector2f> polygon)
     {
         float accumulatedArea = 0f;
@@ -171,8 +171,12 @@ public static class CollisionHelpers
             centerX += (polygon[j].X + polygon[i].X) * temp;
             centerY += (polygon[j].Y + polygon[i].Y) * temp;
         }
-        if (Math.Abs(accumulatedArea) < 1e-7f)
+
+        // Much greater than the recommended epsilon of 1e-6, but the system becomes unstable below this
+        if (Math.Abs(accumulatedArea) < 0.5f)
             return polygon[0];
+
+        // Multiply accumulatedArea by 3 to get the proper divisor (6 * area).
         accumulatedArea *= 3f;
         return new Vector2f(centerX / accumulatedArea, centerY / accumulatedArea);
     }

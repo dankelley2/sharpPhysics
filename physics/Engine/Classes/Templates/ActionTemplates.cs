@@ -12,7 +12,7 @@ namespace physics.Engine.Classes.ObjectTemplates
             physSystem.ActivateAtPoint(StartPointF);
             Vector2f delta = (new Vector2f { X = EndPointF.X, Y = EndPointF.Y } -
                           new Vector2f { X = StartPointF.X, Y = StartPointF.Y });
-            physSystem.AddVelocityToActive(-delta);
+            physSystem.AddVelocityToActive(delta * 2);
         }
 
         public static void changeShader(PhysicsSystem physSystem, SFMLShader shader)

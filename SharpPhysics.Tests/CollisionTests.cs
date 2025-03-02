@@ -170,7 +170,7 @@ namespace SharpPhysics.Tests
             Vector2f initialAVel = A.Velocity;
             Vector2f initialBVel = B.Velocity;
 
-            Collision.ResolveCollision(ref m);
+            Collision.ResolveCollisionRotational(ref m);
 
             Assert.AreNotEqual(initialAVel.X, A.Velocity.X, "A's velocity X should change after collision resolution.");
             Assert.AreNotEqual(initialBVel.X, B.Velocity.X, "B's velocity X should change after collision resolution.");

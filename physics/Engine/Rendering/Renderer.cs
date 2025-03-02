@@ -2,6 +2,8 @@
 using SFML.System;
 using System;
 using physics.Engine.Classes;
+using System.Collections.Generic;
+using physics.Engine.Rendering.UI;
 
 namespace physics.Engine.Rendering
 {
@@ -12,6 +14,7 @@ namespace physics.Engine.Rendering
         private PhysicsSystem physicsSystem;
         private Text debugText;
         private Font debugFont;
+        private List<UiElement> _uiElements = new List<UiElement>();
 
         public Renderer(RenderWindow window, View view, PhysicsSystem physicsSystem)
         {
@@ -19,13 +22,18 @@ namespace physics.Engine.Rendering
             this.view = view;
             this.physicsSystem = physicsSystem;
 
-            // Initialize debug font and text.
-            debugFont = new Font(@"C:\Windows\Fonts\arial.ttf"); // Ensure this is a valid font path.
+            // Load the font from the embedded Resources folder.
+            // This path is relative to the working directory (usually the output folder).
+            debugFont = new Font("Resources/good_timing_bd.otf");
             debugText = new Text("", debugFont, 12)
             {
                 FillColor = Color.White,
                 Position = new Vector2f(40, 40)
             };
+
+            UiElement roundedRect = new UiRoundedRectangle(new Vector2f(140, 80), 5, 32);
+            roundedRect.Position = new Vector2f(30, 30);
+            _uiElements.Add(roundedRect);
         }
 
         public void Render(long msPhysicsTime, long msDrawTime, long msFrameTime,
@@ -69,6 +77,12 @@ namespace physics.Engine.Rendering
                     sfmlShader.Draw(obj, window);
                     sfmlShader.PostDraw(obj, window);
                 }
+            }
+
+            // Draw all UI elements
+            for (int i = 0; i < _uiElements.Count; i++)
+            {
+                _uiElements[i].Draw(window);
             }
 
             window.Display();
