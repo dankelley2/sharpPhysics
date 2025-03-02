@@ -59,6 +59,25 @@ namespace physics.Engine.Shapes
             return Math.Abs(localX) <= Width / 2 && Math.Abs(localY) <= Height / 2;
         }
 
+        /// <summary>
+        /// Gets the local point of a point in world space.
+        /// </summary>
+        /// <param name="point"></param>
+        /// <param name="center"></param>
+        /// <param name="angle"></param>
+        /// <returns></returns>
+        public Vector2f GetLocalPoint(Vector2f point, Vector2f center, float angle)
+        {
+            // Translate point to local space relative to center.
+            Vector2f localPoint = point - center;
+            // Rotate the point by -angle to remove the rotation of the box.
+            float cos = (float)Math.Cos(-angle);
+            float sin = (float)Math.Sin(-angle);
+            float localX = localPoint.X * cos - localPoint.Y * sin;
+            float localY = localPoint.X * sin + localPoint.Y * cos;
+            return new Vector2f(localX, localY);
+        }
+
         public float GetWidth()
         {
             return Width;

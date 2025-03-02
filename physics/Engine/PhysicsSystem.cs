@@ -106,7 +106,7 @@ namespace physics.Engine
 
             // Create a box shape with the computed dimensions.
             IShape shape = new BoxPhysShape(width, height);
-            var obj = new PhysicsObject(shape, center, 0.95f, locked, shader, mass);
+            var obj = new PhysicsObject(shape, center, 0.5f, locked, shader, mass);
             ListStaticObjects.Add(obj);
             return obj;
         }

@@ -31,7 +31,7 @@ namespace physics.Engine.Rendering
                 Position = new Vector2f(40, 40)
             };
 
-            aUiElement roundedRect = new UiRoundedRectangle(new Vector2f(140, 80), 10, 32);
+            aUiElement roundedRect = new UiRoundedRectangle(new Vector2f(140, 80), 5, 32);
             roundedRect.Position = new Vector2f(30, 30);
             _uiElements.Add(roundedRect);
         }
