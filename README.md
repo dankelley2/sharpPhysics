@@ -4,6 +4,7 @@
 * Arbitrary Polygon physics in experimental branch:
 
 ![image](https://github.com/user-attachments/assets/748ab34d-d570-4e6d-9157-5661fad7351d)
+![image](https://github.com/user-attachments/assets/228bfc7f-c784-4b9b-90ea-41914142d307)
 
 * Older Screenshots
 ![image](https://github.com/user-attachments/assets/5780a59d-bd7c-469f-8c92-f8b03be4f223)
