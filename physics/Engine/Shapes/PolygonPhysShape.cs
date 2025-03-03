@@ -11,8 +11,7 @@ namespace physics.Engine.Shapes
         /// <summary>
         /// Local-space vertices of the polygon, in clockwise or counterclockwise order.
         /// </summary>
-        public List<Vector2f> LocalVertices { get; }
-        List<Vector2f> IShape.LocalVertices { get => LocalVertices; set => throw new NotImplementedException(); }
+        public List<Vector2f> LocalVertices { get; set; }
 
         // Precomputed bounding box in local space, just for convenience (or you can compute on the fly).
         private float _localMinX;
@@ -26,10 +25,19 @@ namespace physics.Engine.Shapes
         /// </summary>
         public PolygonPhysShape(IEnumerable<Vector2f> vertices)
         {
-            LocalVertices = new List<Vector2f>(vertices);
+            LocalVertices = new(vertices);
 
-            // Precompute local bounding extents for width/height.
-            // Also, you may want to ensure the polygon is convex here (optional).
+            Vector2f centroid = CollisionHelpers.ComputeCentroid(LocalVertices);
+
+            // Then shift each vertex so the centroid is at (0,0)
+            for (int i = 0; i < LocalVertices.Count; i++)
+            {
+                var v = LocalVertices[i];
+                v -= centroid;
+                LocalVertices[i] = v;
+            }
+
+            // 4) Recalculate _localMinX, etc., now that we've shifted everything
             _localMinX = float.MaxValue;
             _localMaxX = float.MinValue;
             _localMinY = float.MaxValue;
@@ -43,6 +51,7 @@ namespace physics.Engine.Shapes
                 if (v.Y > _localMaxY) _localMaxY = v.Y;
             }
         }
+
 
         /// <summary>
         /// The Axis-Aligned Bounding Box for this polygon when placed at 'center' and rotated by 'angle'.
@@ -80,43 +89,37 @@ namespace physics.Engine.Shapes
         }
 
         /// <summary>
-        /// Returns the polygon's area (using the shoelace formula).
+        /// Returns the polygon's area (using the shoelace formula), 
+        /// always returning a positive value for both CW and CCW vertices.
         /// </summary>
         public float GetArea()
         {
-            // Shoelace formula for the local vertices.
-            // area = |(sum over i of (x_i * y_{i+1} - x_{i+1} * y_i)) / 2|
-            float area = 0f;
+            float total = 0f;
             int count = LocalVertices.Count;
+
+            // Sum over edges, possibly negative for CW ordering
             for (int i = 0; i < count; i++)
             {
                 int j = (i + 1) % count;
-                area += LocalVertices[i].X * LocalVertices[j].Y - LocalVertices[j].X * LocalVertices[i].Y;
+                total += (LocalVertices[i].X * LocalVertices[j].Y) 
+                    - (LocalVertices[j].X * LocalVertices[i].Y);
             }
-            return Math.Abs(area) * 0.5f;
+
+            // Multiply by 0.5 and take absolute value so the area is positive
+            return Math.Abs(total * 0.5f);
         }
 
-        /// <summary>
-        /// Moment of inertia for a solid convex polygon of uniform density.
-        /// This uses a standard polygon inertia derivation: (1/12) * mass * (width^2 + height^2) for a bounding box 
-        /// or a more direct formula for general polygons. Below is a typical direct approach for polygons.
-        /// 
-        /// For more complex shapes or concave polygons, additional checks may be needed.
-        /// </summary>
         public float GetMomentOfInertia(float mass)
         {
-            // We'll use a standard formula for polygon inertia about the origin, then scale by mass / area.
-            // Reference: https://en.wikipedia.org/wiki/List_of_moments_of_inertia#List_of_2D_shapes
-            // You might want to compute area once, store it, etc.
-
-            float area = GetArea();
+            // 1) Compute the polygon’s area using the shoelace formula.
+            float area = GetArea(); 
             if (area < 1e-6f)
                 return 0f; // Degenerate polygon
 
-            float denom = 0;
-            float numer = 0;
+            float crossSum = 0f;
+            float numer = 0f;
 
-            // We iterate over edges
+            // 2) Sum over each edge in the polygon.
             for (int i = 0; i < LocalVertices.Count; i++)
             {
                 int j = (i + 1) % LocalVertices.Count;
@@ -124,27 +127,23 @@ namespace physics.Engine.Shapes
                 Vector2f v1 = LocalVertices[j];
 
                 float cross = (v0.X * v1.Y - v1.X * v0.Y);
-                float x0_sq = v0.X * v0.X + v0.X * v1.X + v1.X * v1.X;
-                float y0_sq = v0.Y * v0.Y + v0.Y * v1.Y + v1.Y * v1.Y;
+                float termX = (v0.X * v0.X) + (v0.X * v1.X) + (v1.X * v1.X);
+                float termY = (v0.Y * v0.Y) + (v0.Y * v1.Y) + (v1.Y * v1.Y);
 
-                numer += cross * (x0_sq + y0_sq);
-                denom += cross;
+                numer += cross * (termX + termY);
+                crossSum += cross;
             }
 
-            // scale factor
-            float iPoly = (1f / 12f) * numer;
-            iPoly = Math.Abs(iPoly);
+            crossSum = Math.Abs(crossSum);
+            if (crossSum < 1e-8f)
+                return 0f;  // Nearly degenerate polygon
 
-            // The “raw” polygon inertia is about the origin; we must divide by absolute cross-sum to handle sign
-            float crossSum = Math.Abs(denom);
-            iPoly /= crossSum;
-
-            // Scale by mass. 
-            // Because we used the polygon formula that’s effectively for “unit density,” multiply by total mass / area:
-            float iResult = iPoly * (mass / area);
-
-            return iResult;
+            // 3) Use the standard formula:
+            // I = (mass/(6 * sum(cross))) * numer
+            float iPoly = (mass * numer) / (6f * crossSum);
+            return Math.Abs(iPoly);
         }
+
 
         /// <summary>
         /// Returns true if the given world-space point is inside this polygon, assuming the polygon is 

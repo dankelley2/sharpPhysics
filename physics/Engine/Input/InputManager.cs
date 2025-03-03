@@ -56,11 +56,11 @@ namespace physics.Engine.Input
                 launchTimer += deltaTime;
                 if (launchTimer >= LaunchInterval)
                 {
-                    // ActionTemplates.launch(
-                    //     physicsSystem,
-                    //     ObjectTemplates.CreateMedBall(StartPoint.X, StartPoint.Y),
-                    //     StartPoint,
-                    //     MousePosition);
+                    ActionTemplates.launch(
+                        physicsSystem,
+                        ObjectTemplates.CreateMedBall(StartPoint.X, StartPoint.Y),
+                        StartPoint,
+                        MousePosition);
                     launchTimer = 0f;
                 }
             }

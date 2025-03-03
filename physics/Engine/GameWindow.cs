@@ -44,14 +44,14 @@ namespace physics.Engine
             ObjectTemplates.CreateWall(new Vector2f(0, 0), (int)worldWidth, 15);
             ObjectTemplates.CreateWall(new Vector2f(0, (int)worldHeight - 15), (int)worldWidth, 15);
 
-            // // Create a grid of medium balls.
-            // for (int i = 0; i < 600; i += 20)
-            // {
-            //     for (int j = 0; j < 200; j += 20)
-            //     {
-            //             ObjectTemplates.CreateMedBall(i + 400, j + 150);
-            //     }
-            // }
+            // Create a grid of medium balls.
+            for (int i = 0; i < 600; i += 20)
+            {
+                for (int j = 0; j < 200; j += 20)
+                {
+                        ObjectTemplates.CreateMedBall(i + 400, j + 150);
+                }
+            }
 
             // Create an attractor.
             //ObjectTemplates.CreateAttractor(400, 450);
@@ -61,16 +61,16 @@ namespace physics.Engine
             var boxAOrigin = new Vector2f(100, 100);
             ObjectTemplates.CreateBox(boxAOrigin, 200, 50);
 
-            // var boxBOrigin = new Vector2f(100, 250);
-            // ObjectTemplates.CreateBox(boxBOrigin, 200, 50);
+            var boxBOrigin = new Vector2f(100, 250);
+            ObjectTemplates.CreateBox(boxBOrigin, 200, 50);
 
-            // var boxCOrigin = new Vector2f(100, 400);
-            // ObjectTemplates.CreateBox(boxCOrigin, 200, 50);
+            var boxCOrigin = new Vector2f(100, 400);
+            ObjectTemplates.CreateBox(boxCOrigin, 200, 50);
 
-            // var boxDOrigin = new Vector2f(100, 550);
-            // ObjectTemplates.CreateBox(boxDOrigin, 200, 50);
+            var boxDOrigin = new Vector2f(100, 550);
+            ObjectTemplates.CreateBox(boxDOrigin, 200, 50);
 
-            ObjectTemplates.CreatePolygonBox(new Vector2f(300, 400));
+            ObjectTemplates.CreatePolygonBox(new Vector2f(600, 700));
 
            // // Create the chassis as a box.
            // var chassisOrigin = new Vector2f(400, 400);

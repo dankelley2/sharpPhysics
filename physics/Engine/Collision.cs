@@ -175,114 +175,6 @@ namespace physics.Engine
             return obj.Shape.GetTransformedVertices(obj.Center, obj.Angle);
         }
 
-
-        public static bool BoxVsBox(ref Manifold m)
-        {
-            var A = m.A;
-            var B = m.B;
-
-            if (A.Locked && B.Locked)
-                return false;
-
-            // Compute half extents for each box.
-            float a_halfX = A.Shape.GetWidth() / 2f;
-            float a_halfY = A.Shape.GetHeight() / 2f;
-            float b_halfX = B.Shape.GetWidth() / 2f;
-            float b_halfY = B.Shape.GetHeight() / 2f;
-
-            // Compute the local axes for each box.
-            // For object A:
-            Vector2f A_axis0 = new Vector2f((float)Math.Cos(A.Angle), (float)Math.Sin(A.Angle));
-            Vector2f A_axis1 = new Vector2f(-A_axis0.Y, A_axis0.X);
-            // For object B:
-            Vector2f B_axis0 = new Vector2f((float)Math.Cos(B.Angle), (float)Math.Sin(B.Angle));
-            Vector2f B_axis1 = new Vector2f(-B_axis0.Y, B_axis0.X);
-
-            // Compute the rotation matrix R where R[i][j] =PhysMath.Dot(A_axis[i], B_axis[j])
-            float R00 = PhysMath.Dot(A_axis0, B_axis0);
-            float R01 =PhysMath.Dot(A_axis0, B_axis1);
-            float R10 =PhysMath.Dot(A_axis1, B_axis0);
-            float R11 =PhysMath.Dot(A_axis1, B_axis1);
-
-            // Compute translation vector t from A's center to B's center and
-            // express it in A's local coordinate system.
-            Vector2f t = B.Center - A.Center;
-            Vector2f tA = new Vector2f(PhysMath.Dot(t, A_axis0),PhysMath.Dot(t, A_axis1));
-
-            float penetration = float.MaxValue;
-            Vector2f bestAxis = new Vector2f();
-
-            // Test axis A_axis0.
-            {
-                float ra = a_halfX;
-                float rb = b_halfX * Math.Abs(R00) + b_halfY * Math.Abs(R01);
-                float overlap = (ra + rb) - Math.Abs(tA.X);
-                if (overlap < 0)
-                    return false;
-                if (overlap < penetration)
-                {
-                    penetration = overlap;
-                    bestAxis = A_axis0 * (tA.X < 0 ? -1 : 1);
-                }
-            }
-
-            // Test axis A_axis1.
-            {
-                float ra = a_halfY;
-                float rb = b_halfX * Math.Abs(R10) + b_halfY * Math.Abs(R11);
-                float overlap = (ra + rb) - Math.Abs(tA.Y);
-                if (overlap < 0)
-                    return false;
-                if (overlap < penetration)
-                {
-                    penetration = overlap;
-                    bestAxis = A_axis1 * (tA.Y < 0 ? -1 : 1);
-                }
-            }
-
-            // Compute t expressed in B's coordinate system.
-            Vector2f tB = new Vector2f(PhysMath.Dot(t, B_axis0),PhysMath.Dot(t, B_axis1));
-
-            // Test axis B_axis0.
-            {
-                float ra = a_halfX * Math.Abs(R00) + a_halfY * Math.Abs(R10);
-                float rb = b_halfX;
-                float overlap = (ra + rb) - Math.Abs(tB.X);
-                if (overlap < 0)
-                    return false;
-                if (overlap < penetration)
-                {
-                    penetration = overlap;
-                    // Flip the axis so it points from A to B.
-                    bestAxis = B_axis0 * (tB.X < 0 ? -1 : 1);
-                }
-            }
-
-            // Test axis B_axis1.
-            {
-                float ra = a_halfX * Math.Abs(R01) + a_halfY * Math.Abs(R11);
-                float rb = b_halfY;
-                float overlap = (ra + rb) - Math.Abs(tB.Y);
-                if (overlap < 0)
-                    return false;
-                if (overlap < penetration)
-                {
-                    penetration = overlap;
-                    bestAxis = B_axis1 * (tB.Y < 0 ? -1 : 1);
-                }
-            }
-
-            // If we get here, there is an intersection.
-            m.Normal = bestAxis;
-            m.Penetration = penetration;
-            // Set a simple collision point as the midpoint between the centers.
-            m.ContactPoint = (A.Center + B.Center) * 0.5f;
-
-            m.A.LastContactPoint = m.ContactPoint;
-            m.B.LastContactPoint = m.ContactPoint;
-            return true;
-        }
-
         public static bool CirclevsCircle(ref Manifold m)
         {
             PhysicsObject A = m.A;
@@ -341,96 +233,66 @@ namespace physics.Engine
             }
         }
 
-        public static bool BoxVsCircle(ref Manifold m)
+    public static bool PolygonVsCircle(ref Manifold m)
+    {
+        // m.A is assumed to be the polygon; m.B must be the circle.
+        PhysicsObject polyObj = m.A;
+        PhysicsObject circleObj = m.B;
+
+        if (!(circleObj.Shape is CirclePhysShape circleShape))
+            throw new ArgumentException("PolygonVsCircle requires m.B to have a CirclePhysShape.");
+
+        // Get polygon vertices in world space.
+        List<Vector2f> poly = GetWorldVertices(polyObj);
+        Vector2f circleCenter = circleObj.Center;
+        float radius = circleShape.Radius;
+
+        // Find the closest point on the polygon's perimeter to the circle's center.
+        float minDistSq = float.MaxValue;
+        Vector2f closestPoint = new Vector2f();
+
+        for (int i = 0; i < poly.Count; i++)
         {
-            // m.A is the box and m.B is the circle.
-            PhysicsObject boxObj = m.A;
-            PhysicsObject circleObj = m.B;
-
-            if (!(boxObj.Shape is BoxPhysShape boxShape))
-                throw new ArgumentException("AABBvsCircle requires m.A to have a BoxPhysShape.");
-            if (!(circleObj.Shape is CirclePhysShape circleShape))
-                throw new ArgumentException("AABBvsCircle requires m.B to have a CirclePhysShape.");
-
-            // Calculate half extents of the box.
-            float x_extent = boxShape.Width / 2f;
-            float y_extent = boxShape.Height / 2f;
-
-            // Translate the circle center into the box's local space.
-            // Step 1: Get vector from box center to circle center.
-            Vector2f circleToBox = circleObj.Center - boxObj.Center;
-            // Step 2: Rotate that vector by -box.Angle.
-            float cos = (float)Math.Cos(-boxObj.Angle);
-            float sin = (float)Math.Sin(-boxObj.Angle);
-            Vector2f circleLocal = new Vector2f(
-                 circleToBox.X * cos - circleToBox.Y * sin,
-                 circleToBox.X * sin + circleToBox.Y * cos
-            );
-
-            // Find the closest point in the box (in local space) to the circle's center.
-            Vector2f closestLocal = new Vector2f(
-                 PhysMath.Clamp(-x_extent, x_extent, circleLocal.X),
-                 PhysMath.Clamp(-y_extent, y_extent, circleLocal.Y)
-            );
-
-            bool inside = false;
-            // If the circle's local center is inside the box, then no clamping occurred.
-            if (circleLocal.X == closestLocal.X && circleLocal.Y == closestLocal.Y)
+            int j = (i + 1) % poly.Count;
+            Vector2f a = poly[i];
+            Vector2f b = poly[j];
+            Vector2f pt = ClosestPointOnSegment(a, b, circleCenter);
+            float distSq = (circleCenter - pt).LengthSquared();
+            if (distSq < minDistSq)
             {
-                inside = true;
-                // Push the closest point to the nearest box edge.
-                if (Math.Abs(circleLocal.X) < Math.Abs(circleLocal.Y))
-                {
-                    closestLocal.X = (circleLocal.X > 0) ? x_extent : -x_extent;
-                }
-                else
-                {
-                    closestLocal.Y = (circleLocal.Y > 0) ? y_extent : -y_extent;
-                }
+                minDistSq = distSq;
+                closestPoint = pt;
             }
-
-            // Compute the difference between the circle's local center and the closest point.
-            Vector2f diffLocal = circleLocal - closestLocal;
-            float dSquared = diffLocal.LengthSquared();
-            float r = circleShape.Radius;
-
-            // If there's no collision (and the circle's center isn't inside), early out.
-            if (dSquared > r * r && !inside)
-                return false;
-
-            float d = (dSquared > 0) ? (float)Math.Sqrt(dSquared) : 0f;
-
-            Vector2f normalLocal;
-            if (inside)
-            {
-                // When inside, the normal should point from the box toward the circle.
-                normalLocal = (-diffLocal).Normalize();
-                m.Penetration = r - d;
-            }
-            else
-            {
-                normalLocal = diffLocal.Normalize();
-                m.Penetration = r - d;
-            }
-
-            // Transform the collision normal back into world space using the box's rotation.
-            cos = (float)Math.Cos(boxObj.Angle);
-            sin = (float)Math.Sin(boxObj.Angle);
-            Vector2f normalWorld = new Vector2f(
-                 normalLocal.X * cos - normalLocal.Y * sin,
-                 normalLocal.X * sin + normalLocal.Y * cos
-            );
-            m.Normal = normalWorld;
-
-            // Set the contact point on the circle's perimeter along the collision normal.
-            m.ContactPoint = circleObj.Center - m.Normal * r;
-
-            // Set the LastContactPoint for both box and circle.
-            boxObj.LastContactPoint = m.ContactPoint;
-            circleObj.LastContactPoint = m.ContactPoint;
-
-            return true;
         }
+
+        // If the closest distance is greater than the circle's radius, there is no collision.
+        if (minDistSq > radius * radius)
+            return false;
+
+        // Compute collision details.
+        float d = (float)Math.Sqrt(minDistSq);
+        Vector2f normal = (d > 0) ? (circleCenter - closestPoint) / d : new Vector2f(1, 0); // Arbitrary if centers coincide.
+        m.Normal = normal;
+        m.Penetration = radius - d;
+        // Approximate contact point: on the circle's perimeter along the collision normal.
+        m.ContactPoint = circleCenter - normal * radius;
+
+        polyObj.LastContactPoint = m.ContactPoint;
+        circleObj.LastContactPoint = m.ContactPoint;
+
+        return true;
+    }
+
+    /// <summary>
+    /// Helper: Returns the point on the segment [a, b] that is closest to point p.
+    /// </summary>
+    private static Vector2f ClosestPointOnSegment(Vector2f a, Vector2f b, Vector2f p)
+    {
+        Vector2f ab = b - a;
+        float t = PhysMath.Dot(p - a, ab) / ab.LengthSquared();
+        t = Math.Max(0, Math.Min(1, t));
+        return a + ab * t;
+    }
 
         public static void ResolveCollisionRotational(ref Manifold m)
         {
@@ -574,7 +436,7 @@ namespace physics.Engine
             }
 
             // For object B:
-            if (!m.B.Locked && m.A.CanRotate && rB.LengthSquared() > 0.0001f)
+            if (!m.B.Locked && m.B.CanRotate && rB.LengthSquared() > 0.0001f)
             {
                 float angularErrorB = m.Penetration / rB.Length();
                 float signB = Math.Sign(PhysMath.Cross(rB, m.Normal));

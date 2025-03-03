@@ -108,7 +108,7 @@ namespace physics.Engine
 
             // Create a box shape with the computed dimensions.
             IShape shape = new BoxPhysShape(width, height);
-            var obj = new PhysicsObject(shape, center, 0.5f, locked, shader, mass);
+            var obj = new PhysicsObject(shape, center, 0.2f, locked, shader, mass);
             ListStaticObjects.Add(obj);
             return obj;
         }
@@ -127,29 +127,26 @@ namespace physics.Engine
 
             // Create the box shape.
             IShape shape = new BoxPhysShape(width, height);
-            var obj = new PhysicsObject(shape, center, 0.5f, locked, shader, mass, canRotate: true);
-            obj.Friction = 1.0f;
+            var obj = new PhysicsObject(shape, center, 0.2f, locked, shader, mass, canRotate: true);
+            obj.Friction = 0.8f;
             ListStaticObjects.Add(obj);
             return obj;
         }
 
         public static PhysicsObject CreatePolygon(Vector2f origin, Vector2f[] points, SFMLShader shader)
         {
-            // Compute the corrected bounding box.
-
             var pointsTemp = new Vector2f[]
             {
-                new Vector2f(100, -100),
-                new Vector2f(-100, -100),
-                new Vector2f(-100, 100),
-                new Vector2f(0, 150),
-                new Vector2f(100, 100)
+                new Vector2f(100, -25),
+                new Vector2f(-100, -25),
+                new Vector2f(-100, 25),
+                new Vector2f(-50, 150),
+                new Vector2f(100, 25)
             };
-            //pointsTemp = pointsTemp.Reverse().ToArray();
             // Create the polygon shape.
             IShape shape = new PolygonPhysShape(pointsTemp);
-            var obj = new PhysicsObject(shape, origin, 0.5f, false, shader, mass: 100, canRotate: false);
-            obj.Friction = 1.0f;
+            var obj = new PhysicsObject(shape, origin, 0.2f, false, shader, canRotate: true);
+            obj.Friction = 0.8f;
             ListStaticObjects.Add(obj);
             return obj;
         }
@@ -391,7 +388,7 @@ namespace physics.Engine
                     bool collision = false;
 
                     // Set ordering: if objA is a circle and objB is a box, swap them.
-                    if (shapeA is CirclePhysShape && shapeB is BoxPhysShape)
+                    if (shapeA is CirclePhysShape && (shapeB is BoxPhysShape or PolygonPhysShape))
                     {
                         m.A = objB;
                         m.B = objA;
@@ -409,7 +406,7 @@ namespace physics.Engine
                     // Determine collision detection method based on shape types.
                     if (shapeA2 is BoxPhysShape or PolygonPhysShape)
                     {
-                        if (shapeB2 is  BoxPhysShape or PolygonPhysShape)
+                        if (shapeB2 is BoxPhysShape or PolygonPhysShape)
                         {
                             collision = Collision.PolygonVsPolygon(ref m);
                             if (collision)
@@ -419,7 +416,7 @@ namespace physics.Engine
                         }
                         else if (shapeB2 is CirclePhysShape)
                         {
-                            collision = Collision.BoxVsCircle(ref m);
+                            collision = Collision.PolygonVsCircle(ref m);
                         }
                     }
                     else if (shapeA2 is CirclePhysShape && shapeB2 is CirclePhysShape)
