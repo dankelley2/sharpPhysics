@@ -126,6 +126,7 @@ namespace physics.Engine
             // Create the box shape.
             IShape shape = new BoxPhysShape(width, height);
             var obj = new PhysicsObject(shape, center, 0.5f, locked, shader, mass, canRotate: true);
+            obj.Friction = 1.0f;
             ListStaticObjects.Add(obj);
             return obj;
         }

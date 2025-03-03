@@ -56,12 +56,6 @@ namespace physics.Engine.Shaders
             _anglularTracker.Rotation = obj.Angle * 180 / (float)Math.PI;
             _anglularTracker.FillColor = Color.White;
             target.Draw(_anglularTracker);
-
-            // Draw a small circle at the object's last contact point.
-            //CircleShape contactCircle = new CircleShape(3); // radius 3
-            //contactCircle.FillColor = _contactPointColor;
-            //contactCircle.Position = new Vector2f(obj.LastContactPoint.X - 3, obj.LastContactPoint.Y - 3);
-            //target.Draw(contactCircle);
         }
 
         public override void PostDraw(PhysicsObject obj, RenderTarget target)

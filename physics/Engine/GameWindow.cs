@@ -11,7 +11,6 @@ namespace physics.Engine
 {
     public class GameWindow
     {
-        private RenderWindow window;
         private PhysicsSystem physicsSystem = new PhysicsSystem();
         private Clock clock = new Clock();
         private Stopwatch stopwatch = new Stopwatch();
@@ -24,38 +23,26 @@ namespace physics.Engine
         private long msDrawTime;
         private long msPhysicsTime;
 
-        private View view;
         private InputManager inputManager;
         private Renderer renderer;
 
         public GameWindow(uint width, uint height, string title)
         {
-            // Create context settings with antialiasing
-            ContextSettings settings = new ContextSettings();
-            settings.AntialiasingLevel = 8; // You can adjust this value as needed
+            // Instantiate the renderer and input manager.
+            renderer = new Renderer(width, height, title);
+            inputManager = new InputManager(renderer.Window, physicsSystem, renderer.GameView);
 
-            window = new RenderWindow(new VideoMode(width, height), title, Styles.Close, settings);
-            window.Closed += (s, e) => window.Close();
-
-            // Create and set a view covering the whole window.
-            view = new View(new FloatRect(0, 0, width, height));
-            window.SetFramerateLimit(144);
-
-            // Instantiate the input manager and renderer.
-            inputManager = new InputManager(window, physicsSystem, view);
-            renderer = new Renderer(window, view, physicsSystem);
-
-            InitializeGame();
+            InitializeGame(width, height);
             stopwatch.Start();
         }
 
-        private void InitializeGame()
+        private void InitializeGame(uint worldWidth, uint worldHeight)
         {
             // Create walls.
-            ObjectTemplates.CreateWall(new Vector2f(0, 0), 15, (int)window.Size.Y);
-            ObjectTemplates.CreateWall(new Vector2f((int)window.Size.X - 15, 0), 15, (int)window.Size.Y);
-            ObjectTemplates.CreateWall(new Vector2f(0, 0), (int)window.Size.X, 15);
-            ObjectTemplates.CreateWall(new Vector2f(0, (int)window.Size.Y - 15), (int)window.Size.X, 15);
+            ObjectTemplates.CreateWall(new Vector2f(0, 0), 15, (int)worldHeight);
+            ObjectTemplates.CreateWall(new Vector2f((int)worldWidth - 15, 0), 15, (int)worldHeight);
+            ObjectTemplates.CreateWall(new Vector2f(0, 0), (int)worldWidth, 15);
+            ObjectTemplates.CreateWall(new Vector2f(0, (int)worldHeight - 15), (int)worldWidth, 15);
 
             // Create a grid of medium balls.
             for (int i = 0; i < 600; i += 20)
@@ -109,30 +96,38 @@ namespace physics.Engine
 
         public void Run()
         {
-            while (window.IsOpen)
+            while (renderer.Window.IsOpen)
             {
-                window.DispatchEvents();
+                // Handle window events
+                renderer.Window.DispatchEvents();
 
+                // Log
                 long frameStartTime = stopwatch.ElapsedMilliseconds;
+
+                // Log
+                long physicsStart = stopwatch.ElapsedMilliseconds;
 
                 // Get delta time and cap it.
                 float deltaTime = clock.Restart().AsSeconds();
                 deltaTime = Math.Min(deltaTime, MAX_DELTA_TIME);
 
-                // Update input-related actions (ball launching, object grabbing, etc.).
-                long physicsStart = stopwatch.ElapsedMilliseconds;
+                // Update Inputs
                 inputManager.Update(deltaTime);
-                physicsSystem.Tick(deltaTime);
-                msPhysicsTime = stopwatch.ElapsedMilliseconds - physicsStart;
 
-                // Render the current frame.
+                // Tick the physics system
+                physicsSystem.Tick(deltaTime);
+
+                // Log
+                msPhysicsTime = stopwatch.ElapsedMilliseconds - physicsStart;
                 long renderStart = stopwatch.ElapsedMilliseconds;
+
+                // Render the current Frame
                 renderer.Render(msPhysicsTime, msDrawTime, msFrameTime,
                                   inputManager.IsCreatingBox,
                                   inputManager.BoxStartPoint,
                                   inputManager.BoxEndPoint);
+                // Log
                 msDrawTime = stopwatch.ElapsedMilliseconds - renderStart;
-
                 msFrameTime = stopwatch.ElapsedMilliseconds - frameStartTime;
             }
         }

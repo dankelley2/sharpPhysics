@@ -172,15 +172,15 @@ namespace physics.Engine.Input
         {
 
             Console.WriteLine("Scroll delta: " + e.Delta);
-            // Scrolling up zooms in; scrolling down zooms out.
-            // if (e.Delta > 0)
-            // {
-            //     view.Zoom(0.9f);
-            // }
-            // else
-            // {
-            //     view.Zoom(1.1f);
-            // }
+            //Scrolling up zooms in; scrolling down zooms out.
+             if (e.Delta > 0)
+            {
+                view.Zoom(0.9f);
+            }
+            else
+            {
+                view.Zoom(1.1f);
+            }
         }
 
         private void OnKeyPressed(object sender, KeyEventArgs e)
