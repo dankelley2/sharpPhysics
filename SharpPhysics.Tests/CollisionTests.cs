@@ -59,7 +59,7 @@ namespace SharpPhysics.Tests
             B.Angle = 0;
             Manifold m = new Manifold { A = A, B = B };
 
-            bool collides = Collision.AABBvsAABB(ref m);
+            bool collides = Collision.BoxVsBox(ref m);
             Assert.IsTrue(collides, "Boxes should collide.");
             Assert.IsTrue(m.Penetration > 0, "Penetration must be positive.");
             // Expect contact point to be the midpoint between centers.
@@ -129,7 +129,7 @@ namespace SharpPhysics.Tests
             circle.Angle = 0;
             Manifold m = new Manifold { A = box, B = circle };
 
-            bool collides = Collision.AABBvsCircle(ref m);
+            bool collides = Collision.BoxVsCircle(ref m);
             Assert.IsTrue(collides, "Box and circle should collide.");
             Assert.IsTrue(m.Penetration > 0, "Penetration should be positive.");
         }
@@ -326,7 +326,7 @@ namespace SharpPhysics.Tests
             Manifold m = new Manifold { A = boxA, B = boxB };
 
             // Perform collision detection with the manifold version.
-            bool collision = Collision.AABBvsAABB(ref m);
+            bool collision = Collision.BoxVsBox(ref m);
             Assert.IsTrue(collision, "Boxes should be colliding.");
 
             // Record the initial separation along the collision normal.

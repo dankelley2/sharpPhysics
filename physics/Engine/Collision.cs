@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using physics.Engine.Classes;
 using physics.Engine.Extensions;
+using physics.Engine.Helpers;
 using physics.Engine.Objects;
 using physics.Engine.Shapes;
 using physics.Engine.Structs;
@@ -22,7 +23,7 @@ namespace physics.Engine
             return true;
         }
 
-        public static bool AABBvsAABB(ref Manifold m)
+        public static bool BoxVsBox(ref Manifold m)
         {
             var A = m.A;
             var B = m.B;
@@ -44,16 +45,16 @@ namespace physics.Engine
             Vector2f B_axis0 = new Vector2f((float)Math.Cos(B.Angle), (float)Math.Sin(B.Angle));
             Vector2f B_axis1 = new Vector2f(-B_axis0.Y, B_axis0.X);
 
-            // Compute the rotation matrix R where R[i][j] = Dot(A_axis[i], B_axis[j])
-            float R00 = Dot(A_axis0, B_axis0);
-            float R01 = Dot(A_axis0, B_axis1);
-            float R10 = Dot(A_axis1, B_axis0);
-            float R11 = Dot(A_axis1, B_axis1);
+            // Compute the rotation matrix R where R[i][j] =PhysMath.Dot(A_axis[i], B_axis[j])
+            float R00 = PhysMath.Dot(A_axis0, B_axis0);
+            float R01 =PhysMath.Dot(A_axis0, B_axis1);
+            float R10 =PhysMath.Dot(A_axis1, B_axis0);
+            float R11 =PhysMath.Dot(A_axis1, B_axis1);
 
             // Compute translation vector t from A's center to B's center and
             // express it in A's local coordinate system.
             Vector2f t = B.Center - A.Center;
-            Vector2f tA = new Vector2f(Dot(t, A_axis0), Dot(t, A_axis1));
+            Vector2f tA = new Vector2f(PhysMath.Dot(t, A_axis0),PhysMath.Dot(t, A_axis1));
 
             float penetration = float.MaxValue;
             Vector2f bestAxis = new Vector2f();
@@ -87,7 +88,7 @@ namespace physics.Engine
             }
 
             // Compute t expressed in B's coordinate system.
-            Vector2f tB = new Vector2f(Dot(t, B_axis0), Dot(t, B_axis1));
+            Vector2f tB = new Vector2f(PhysMath.Dot(t, B_axis0),PhysMath.Dot(t, B_axis1));
 
             // Test axis B_axis0.
             {
@@ -128,13 +129,6 @@ namespace physics.Engine
             m.B.LastContactPoint = m.ContactPoint;
             return true;
         }
-
-        // Helper: Dot product.
-        private static float Dot(Vector2f a, Vector2f b)
-        {
-            return a.X * b.X + a.Y * b.Y;
-        }
-
 
         public static bool CirclevsCircle(ref Manifold m)
         {
@@ -194,7 +188,7 @@ namespace physics.Engine
             }
         }
 
-        public static bool AABBvsCircle(ref Manifold m)
+        public static bool BoxVsCircle(ref Manifold m)
         {
             // m.A is the box and m.B is the circle.
             PhysicsObject boxObj = m.A;
@@ -222,8 +216,8 @@ namespace physics.Engine
 
             // Find the closest point in the box (in local space) to the circle's center.
             Vector2f closestLocal = new Vector2f(
-                 Clamp(-x_extent, x_extent, circleLocal.X),
-                 Clamp(-y_extent, y_extent, circleLocal.Y)
+                 PhysMath.Clamp(-x_extent, x_extent, circleLocal.X),
+                 PhysMath.Clamp(-y_extent, y_extent, circleLocal.Y)
             );
 
             bool inside = false;
@@ -302,8 +296,8 @@ namespace physics.Engine
             Vector2f rB = m.ContactPoint - B.Center;
 
             // Compute the relative velocity at the contact point (including any rotational contribution).
-            Vector2f vA_contact = A.Velocity + Perpendicular(rA) * angularVelA;
-            Vector2f vB_contact = B.Velocity + Perpendicular(rB) * angularVelB;
+            Vector2f vA_contact = A.Velocity + PhysMath.Perpendicular(rA) * angularVelA;
+            Vector2f vB_contact = B.Velocity + PhysMath.Perpendicular(rB) * angularVelB;
             Vector2f relativeVelocity = vB_contact - vA_contact;
 
             float velAlongNormal = Extensions.Extensions.DotProduct(relativeVelocity, m.Normal);
@@ -313,8 +307,8 @@ namespace physics.Engine
             float e = Math.Min(A.Restitution, B.Restitution);
 
             // Compute cross products for the normal.
-            float rA_cross_N = Cross(rA, m.Normal);
-            float rB_cross_N = Cross(rB, m.Normal);
+            float rA_cross_N = PhysMath.Cross(rA, m.Normal);
+            float rB_cross_N = PhysMath.Cross(rB, m.Normal);
 
             // Denominator includes linear inertia plus rotational contributions.
             float invMassSum = A.IMass + B.IMass +
@@ -331,7 +325,7 @@ namespace physics.Engine
                 A.Velocity -= impulse * A.IMass;
                 if (A.CanRotate)
                 {
-                    A.AngularVelocity -= Cross(rA, impulse) * iInertiaA;
+                    A.AngularVelocity -= PhysMath.Cross(rA, impulse) * iInertiaA;
                 }
             }
             if (!B.Locked)
@@ -339,7 +333,7 @@ namespace physics.Engine
                 B.Velocity += impulse * B.IMass;
                 if (B.CanRotate)
                 {
-                    B.AngularVelocity += Cross(rB, impulse) * iInertiaB;
+                    B.AngularVelocity += PhysMath.Cross(rB, impulse) * iInertiaB;
                 }
             }
 
@@ -352,8 +346,8 @@ namespace physics.Engine
 
             float jt = -Extensions.Extensions.DotProduct(relativeVelocity, tangent);
 
-            float rA_cross_t = Cross(rA, tangent);
-            float rB_cross_t = Cross(rB, tangent);
+            float rA_cross_t = PhysMath.Cross(rA, tangent);
+            float rB_cross_t = PhysMath.Cross(rB, tangent);
             float invMassSumFriction = A.IMass + B.IMass +
                                        (rA_cross_t * rA_cross_t) * iInertiaA +
                                        (rB_cross_t * rB_cross_t) * iInertiaB;
@@ -371,7 +365,7 @@ namespace physics.Engine
                 A.Velocity += frictionImpulse * A.IMass;
                 if (A.CanRotate)
                 {
-                    A.AngularVelocity += Cross(rA, frictionImpulse) * iInertiaA;
+                    A.AngularVelocity += PhysMath.Cross(rA, frictionImpulse) * iInertiaA;
                 }
             }
             if (!B.Locked)
@@ -379,7 +373,7 @@ namespace physics.Engine
                 B.Velocity -= frictionImpulse * B.IMass;
                 if (B.CanRotate)
                 {
-                    B.AngularVelocity -= Cross(rB, frictionImpulse) * iInertiaB;
+                    B.AngularVelocity -= PhysMath.Cross(rB, frictionImpulse) * iInertiaB;
                 }
             }
         }
@@ -406,7 +400,6 @@ namespace physics.Engine
             }
         }
 
-
         public static void AngularPositionalCorrection(ref Manifold m)
         {
             // Tuning factor for angular correction; adjust as needed.
@@ -422,7 +415,7 @@ namespace physics.Engine
                 // The farther the contact point is from the center, the smaller the required angular adjustment.
                 float angularErrorA = m.Penetration / rA.Length();
                 // The sign of the correction is given by the cross product of rA and the collision normal.
-                float signA = Math.Sign(Cross(rA, m.Normal));
+                float signA = Math.Sign(PhysMath.Cross(rA, m.Normal));
                 // Adjust the angle by a fraction of the error.
                 m.A.Angle -= angularCorrectionPercent * angularErrorA * signA;
             }
@@ -431,28 +424,9 @@ namespace physics.Engine
             if (!m.B.Locked && m.A.CanRotate && rB.LengthSquared() > 0.0001f)
             {
                 float angularErrorB = m.Penetration / rB.Length();
-                float signB = Math.Sign(Cross(rB, m.Normal));
+                float signB = Math.Sign(PhysMath.Cross(rB, m.Normal));
                 m.B.Angle += angularCorrectionPercent * angularErrorB * signB;
             }
-        }
-
-        // Helper: Returns a vector perpendicular to v (i.e., rotated 90 degrees)
-        private static Vector2f Perpendicular(Vector2f v)
-        {
-            return new Vector2f(-v.Y, v.X);
-        }
-
-        // Helper: Cross product in 2D (returns a scalar)
-        // For vectors a and b, Cross(a, b) = a.X * b.Y - a.Y * b.X
-        private static float Cross(Vector2f a, Vector2f b)
-        {
-            return a.X * b.Y - a.Y * b.X;
-        }
-
-
-        private static float Clamp(float low, float high, float val)
-        {
-            return Math.Max(low, Math.Min(val, high));
         }
     }
 }

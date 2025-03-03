@@ -388,7 +388,7 @@ namespace physics.Engine
                     {
                         if (shapeB2 is BoxPhysShape)
                         {
-                            collision = Collision.AABBvsAABB(ref m);
+                            collision = Collision.BoxVsBox(ref m);
                             if (collision)
                             {
                                 CollisionHelpers.UpdateContactPoint(ref m);
@@ -396,7 +396,7 @@ namespace physics.Engine
                         }
                         else if (shapeB2 is CirclePhysShape)
                         {
-                            collision = Collision.AABBvsCircle(ref m);
+                            collision = Collision.BoxVsCircle(ref m);
                         }
                     }
                     else if (shapeA2 is CirclePhysShape && shapeB2 is CirclePhysShape)
