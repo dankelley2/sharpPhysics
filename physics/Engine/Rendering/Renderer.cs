@@ -49,7 +49,10 @@ namespace physics.Engine.Rendering
                 Position = new Vector2f(40, 40)
             };
 
-            UiElement roundedRect = new UiRoundedRectangle(new Vector2f(140, 80), 5, 32);
+            UiElement roundedRect = new UiRoundedRectangle(new Vector2f(140, 80), 5, 32)
+            {
+                OutlineColor = Color.Red
+            };
             roundedRect.Position = new Vector2f(30, 30);
             _uiElements.Add(roundedRect);
         }
