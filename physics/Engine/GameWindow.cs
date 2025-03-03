@@ -45,11 +45,11 @@ namespace physics.Engine
             ObjectTemplates.CreateWall(new Vector2f(0, (int)worldHeight - 15), (int)worldWidth, 15);
 
             // Create a grid of medium balls.
-            for (int i = 0; i < 600; i += 20)
+            for (int i = 0; i < 600; i += 50)
             {
-                for (int j = 0; j < 200; j += 20)
+                for (int j = 0; j < 200; j += 50)
                 {
-                        ObjectTemplates.CreateMedBall(i + 400, j + 150);
+                        ObjectTemplates.CreatePolygonBox(new Vector2f(i + 400, j + 150));
                 }
             }
 
@@ -69,27 +69,6 @@ namespace physics.Engine
 
             var boxDOrigin = new Vector2f(100, 550);
             ObjectTemplates.CreateBox(boxDOrigin, 200, 50);
-
-            ObjectTemplates.CreatePolygonBox(new Vector2f(600, 700));
-
-           // // Create the chassis as a box.
-           // var chassisOrigin = new Vector2f(400, 400);
-           // var chassis = ObjectTemplates.CreateBox(chassisOrigin, 500, 100);
-           // chassis.CanRotate = true; // Allow chassis rotation
-           // chassis.Angle = 0;
-
-           // //Create two wheels as circles.
-           //var leftWheel = ObjectTemplates.CreateMedBall(400, 550);
-           // leftWheel.CanRotate = true;
-
-           // // Create constraints linking the wheels to the chassis.
-           // // For each wheel, we attach its center to a fixed point on the chassis along the vertical axis.
-           // Vector2f leftAnchorChassis = new Vector2f(-250, 100);  // local offset from chassis center
-           // Vector2f leftAnchorWheel = new Vector2f(0, 0);         // wheel's center
-            //var leftWheelConstraint = new AxisConstraint(chassis, leftWheel, leftAnchorChassis, leftAnchorWheel);
-
-            // Add the constraints to your physics system.
-            //physicsSystem.Constraints.Add(leftWheelConstraint);
 
         }
 

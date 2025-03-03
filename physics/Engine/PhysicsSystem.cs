@@ -135,16 +135,8 @@ namespace physics.Engine
 
         public static PhysicsObject CreatePolygon(Vector2f origin, Vector2f[] points, SFMLShader shader)
         {
-            var pointsTemp = new Vector2f[]
-            {
-                new Vector2f(100, -25),
-                new Vector2f(-100, -25),
-                new Vector2f(-100, 25),
-                new Vector2f(-50, 150),
-                new Vector2f(100, 25)
-            };
             // Create the polygon shape.
-            IShape shape = new PolygonPhysShape(pointsTemp);
+            IShape shape = new PolygonPhysShape(points);
             var obj = new PhysicsObject(shape, origin, 0.2f, false, shader, canRotate: true);
             obj.Friction = 0.8f;
             ListStaticObjects.Add(obj);
