@@ -60,7 +60,7 @@ namespace physics.Engine.Objects
         /// </summary>
         public virtual void Move(float dt)
         {
-            if (Mass >= 1000000)
+            if (Locked)
                 return;
 
             RoundSpeedToZero();

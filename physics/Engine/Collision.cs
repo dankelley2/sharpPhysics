@@ -43,8 +43,8 @@ namespace physics.Engine
             //   List<Vector2f> polyA = CollisionHelpers.GetRectangleCorners(A);
             //   List<Vector2f> polyB = CollisionHelpers.GetRectangleCorners(B);
             // For a general PolygonPhysShape, you might do polygonShape.GetTransformedVertices(A.Center, A.Angle), etc.
-            List<Vector2f> polyA = GetWorldVertices(A);
-            List<Vector2f> polyB = GetWorldVertices(B);
+            Vector2f[] polyA = GetWorldVertices(A);
+            Vector2f[] polyB = GetWorldVertices(B);
 
             // The overall penetration and normal (to fill into the manifold).
             float minPenetration = float.MaxValue;
@@ -61,9 +61,9 @@ namespace physics.Engine
             */
 
             // Check edges from A
-            for (int i = 0; i < polyA.Count; i++)
+            for (int i = 0; i < polyA.Length; i++)
             {
-                int next = (i + 1) % polyA.Count;
+                int next = (i + 1) % polyA.Length;
                 // Edge = current -> next
                 Vector2f edge = polyA[next] - polyA[i];
                 // Normal = perpendicular; you can do (-edge.Y, edge.X)
@@ -75,9 +75,9 @@ namespace physics.Engine
             }
 
             // Check edges from B
-            for (int i = 0; i < polyB.Count; i++)
+            for (int i = 0; i < polyB.Length; i++)
             {
-                int next = (i + 1) % polyB.Count;
+                int next = (i + 1) % polyB.Length;
                 // Edge = current -> next
                 Vector2f edge = polyB[next] - polyB[i];
                 // Normal = perpendicular
@@ -118,8 +118,8 @@ namespace physics.Engine
         * penetration depth and best-axis if the new overlap is smaller.
         */
         private static bool ProjectAndCheckOverlap(
-            List<Vector2f> polyA,
-            List<Vector2f> polyB,
+            Vector2f[] polyA,
+            Vector2f[] polyB,
             Vector2f axis,
             ref float minPenetration,
             ref Vector2f bestAxis)
@@ -151,7 +151,7 @@ namespace physics.Engine
         /*
         * Projects all vertices of a polygon onto 'axis' and returns (min, max) scalar values.
         */
-        private static (float min, float max) ProjectPolygon(List<Vector2f> poly, Vector2f axis)
+        private static (float min, float max) ProjectPolygon(Vector2f[] poly, Vector2f axis)
         {
             float min = float.MaxValue;
             float max = float.MinValue;
@@ -170,7 +170,7 @@ namespace physics.Engine
         * For a BoxPhysShape, you can reuse CollisionHelpers.GetRectangleCorners.
         * For a PolygonPhysShape, you might store a local List<Vector2f> and transform each by center + rotation.
         */
-        private static List<Vector2f> GetWorldVertices(PhysicsObject obj)
+        private static Vector2f[] GetWorldVertices(PhysicsObject obj)
         {
             return obj.Shape.GetTransformedVertices(obj.Center, obj.Angle);
         }
@@ -243,7 +243,7 @@ namespace physics.Engine
             throw new ArgumentException("PolygonVsCircle requires m.B to have a CirclePhysShape.");
 
         // Get polygon vertices in world space.
-        List<Vector2f> poly = GetWorldVertices(polyObj);
+        Vector2f[] poly = GetWorldVertices(polyObj);
         Vector2f circleCenter = circleObj.Center;
         float radius = circleShape.Radius;
 
@@ -251,9 +251,9 @@ namespace physics.Engine
         float minDistSq = float.MaxValue;
         Vector2f closestPoint = new Vector2f();
 
-        for (int i = 0; i < poly.Count; i++)
+        for (int i = 0; i < poly.Length; i++)
         {
-            int j = (i + 1) % poly.Count;
+            int j = (i + 1) % poly.Length;
             Vector2f a = poly[i];
             Vector2f b = poly[j];
             Vector2f pt = ClosestPointOnSegment(a, b, circleCenter);

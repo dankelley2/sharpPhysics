@@ -25,7 +25,7 @@ namespace physics.Engine.Classes.ObjectTemplates
 
         public static void PopAndMultiply(PhysicsSystem physSystem)
         {
-            foreach(PhysicsObject obj in physSystem.GetMoveableObjects())
+            foreach(PhysicsObject obj in PhysicsSystem.ListStaticObjects)
             {
                 physSystem.ActivateAtPoint(new Vector2f(obj.Center.X, obj.Center.Y));
                 var velocity = obj.Velocity;

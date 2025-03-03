@@ -24,10 +24,10 @@ namespace physics.Engine.Shaders
             vertexes.Clear();
 
             // Convert local polygon vertices into world space
-            List<Vector2f> points = obj.Shape.GetTransformedVertices(obj.Center, obj.Angle);
+            Vector2f[] points = obj.Shape.GetTransformedVertices(obj.Center, obj.Angle);
 
             // Add each vertex to our VertexArray
-            for (int i = 0; i < points.Count; i++)
+            for (int i = 0; i < points.Length; i++)
             {
                 if (i == 0)
                     vertexes.Append(new Vertex(points[i], Color.Red));
@@ -38,7 +38,7 @@ namespace physics.Engine.Shaders
             }
 
             // Close the loop (connect last back to first)
-            if (points.Count > 0)
+            if (points.Length > 0)
             {
                 vertexes.Append(new Vertex(points[0], Color.White));
             }

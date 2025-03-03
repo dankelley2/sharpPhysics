@@ -86,7 +86,15 @@ namespace physics.Engine.Input
                 bool objectFound = physicsSystem.ActivateAtPoint(worldPos);
                 if (objectFound)
                 {
-                    physicsSystem.RemoveActiveObject();
+                    if (IsGrabbing)
+                    {
+                        PhysicsSystem.ActiveObject.CanRotate = false;
+                        PhysicsSystem.ActiveObject.Locked = true;
+                    }
+                    else
+                    {
+                        physicsSystem.RemoveActiveObject();
+                    }
                 }
                 else
                 {
@@ -191,7 +199,7 @@ namespace physics.Engine.Input
                     physicsSystem.FreezeStaticObjects();
                     break;
                 case Keyboard.Key.P:
-                    ActionTemplates.changeShader(physicsSystem, new SFMLBallShader());
+                    ActionTemplates.changeShader(physicsSystem, new SFMLPolyShader());
                     break;
                 case Keyboard.Key.V:
                     // Optionally switch shaders.

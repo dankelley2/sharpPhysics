@@ -49,15 +49,16 @@ namespace physics.Engine.Shapes
         /// Returns a list of the shape's vertices transformed into world space,
         /// using the provided center and angle.
         /// </summary>
-        public virtual List<Vector2f> GetTransformedVertices(Vector2f center, float angle)
+        public virtual Vector2f[] GetTransformedVertices(Vector2f center, float angle)
         {
-            var transformed = new List<Vector2f>(LocalVertices.Count);
+            var transformed = new Vector2f[LocalVertices.Count];
 
             float cos = (float)System.Math.Cos(angle);
             float sin = (float)System.Math.Sin(angle);
 
-            foreach (var local in LocalVertices)
+            for(int i = 0; i < LocalVertices.Count; i++)
             {
+                var local = LocalVertices[i];
                 // Rotate the local vertex
                 float rx = local.X * cos - local.Y * sin;
                 float ry = local.X * sin + local.Y * cos;
@@ -66,7 +67,7 @@ namespace physics.Engine.Shapes
                 float worldX = center.X + rx;
                 float worldY = center.Y + ry;
 
-                transformed.Add(new Vector2f(worldX, worldY));
+                transformed[i] = new Vector2f(worldX, worldY);
             }
 
             return transformed;
