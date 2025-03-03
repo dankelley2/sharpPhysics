@@ -185,8 +185,8 @@ public static class CollisionHelpers
     // It clips rectangle A's corners against rectangle B and computes the centroid of the intersection polygon.
     public static void UpdateContactPoint(ref Manifold m)
     {
-        List<Vector2f> polyA = GetRectangleCorners(m.A);
-        List<Vector2f> polyB = GetRectangleCorners(m.B);
+        List<Vector2f> polyA = m.A.Shape.GetTransformedVertices(m.A.Center, m.A.Angle);
+        List<Vector2f> polyB = m.B.Shape.GetTransformedVertices(m.B.Center, m.B.Angle);
 
         List<Vector2f> intersection = SutherlandHodgmanClip(polyA, polyB);
         if (intersection.Count == 0)

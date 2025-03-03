@@ -23,6 +23,159 @@ namespace physics.Engine
             return true;
         }
 
+        public static bool PolygonVsPolygon(ref Manifold m)
+        {
+            /*
+            * 1) Get the shapes (both assumed to be “polygons” here).
+            *    - If a shape is BoxPhysShape, you can generate the 4 corners via CollisionHelpers.GetRectangleCorners.
+            *    - If a shape is PolygonPhysShape, create a method GetTransformedVertices(PhysicsObject) that returns
+            *      all vertices in world space.
+            */
+            var A = m.A;
+            var B = m.B;
+
+            // Safety check: if both objects are locked, no need to resolve collision
+            if (A.Locked && B.Locked)
+                return false;
+
+            // Collect polygon vertices in *world space*.
+            // For example, if your shapes are BoxPhysShape, you can do:
+            //   List<Vector2f> polyA = CollisionHelpers.GetRectangleCorners(A);
+            //   List<Vector2f> polyB = CollisionHelpers.GetRectangleCorners(B);
+            // For a general PolygonPhysShape, you might do polygonShape.GetTransformedVertices(A.Center, A.Angle), etc.
+            List<Vector2f> polyA = GetWorldVertices(A);
+            List<Vector2f> polyB = GetWorldVertices(B);
+
+            // The overall penetration and normal (to fill into the manifold).
+            float minPenetration = float.MaxValue;
+            Vector2f bestAxis = new Vector2f();
+
+            /*
+            * 2) For SAT, we must:
+            *    - Take every edge of polygon A, compute its normal,
+            *      project both polygons onto that normal, and check for overlap.
+            *    - Repeat for every edge of polygon B.
+            *    - If any projection does not overlap, return false (no collision).
+            *    - Otherwise, find the minimum overlap of all tested axes. That overlap is our final penetration,
+            *      and the corresponding axis is our collision normal.
+            */
+
+            // Check edges from A
+            for (int i = 0; i < polyA.Count; i++)
+            {
+                int next = (i + 1) % polyA.Count;
+                // Edge = current -> next
+                Vector2f edge = polyA[next] - polyA[i];
+                // Normal = perpendicular; you can do (-edge.Y, edge.X)
+                Vector2f axis = new Vector2f(-edge.Y, edge.X).Normalize();
+
+                // Project both polygons onto 'axis'
+                if (!ProjectAndCheckOverlap(polyA, polyB, axis, ref minPenetration, ref bestAxis))
+                    return false;
+            }
+
+            // Check edges from B
+            for (int i = 0; i < polyB.Count; i++)
+            {
+                int next = (i + 1) % polyB.Count;
+                // Edge = current -> next
+                Vector2f edge = polyB[next] - polyB[i];
+                // Normal = perpendicular
+                Vector2f axis = new Vector2f(-edge.Y, edge.X).Normalize();
+
+                // Project both polygons onto 'axis'
+                if (!ProjectAndCheckOverlap(polyA, polyB, axis, ref minPenetration, ref bestAxis))
+                    return false;
+            }
+
+            // After you finalize bestAxis and minPenetration, ensure the normal points from A to B.
+            Vector2f centerDiff = B.Center - A.Center;
+            if (PhysMath.Dot(centerDiff, bestAxis) < 0)
+            {
+                bestAxis = -bestAxis;
+            }
+
+            // If we reach this point, there is a collision.
+            m.Normal = bestAxis;
+            m.Penetration = minPenetration;
+
+            // Approximate contact point: You can do a midpoint between centers as a fallback:
+            m.ContactPoint = (A.Center + B.Center) * 0.5f;
+
+            A.LastContactPoint = m.ContactPoint;
+            B.LastContactPoint = m.ContactPoint;
+
+            // If you want a more accurate contact point, you can do:
+            //   CollisionHelpers.UpdateContactPoint(ref m);
+            // (which uses Sutherland-Hodgman clipping to find the intersection polygon)
+
+            return true;
+        }
+
+        /*
+        * Example helper to project two polygons onto the given axis and check for overlap.
+        * If there is an overlap, we return true; otherwise, false. This also updates the minimum
+        * penetration depth and best-axis if the new overlap is smaller.
+        */
+        private static bool ProjectAndCheckOverlap(
+            List<Vector2f> polyA,
+            List<Vector2f> polyB,
+            Vector2f axis,
+            ref float minPenetration,
+            ref Vector2f bestAxis)
+        {
+            // 1) Project polygon A
+            (float minA, float maxA) = ProjectPolygon(polyA, axis);
+            // 2) Project polygon B
+            (float minB, float maxB) = ProjectPolygon(polyB, axis);
+
+            // 3) Check for gap
+            if (maxA < minB || maxB < minA)
+                return false; // No overlap => no collision
+
+            // 4) Overlap distance = min(maxA, maxB) - max(minA, minB)
+            float overlap = Math.Min(maxA, maxB) - Math.Max(minA, minB);
+
+            // Track the smallest overlap (for the final collision normal)
+            if (overlap < minPenetration)
+            {
+                minPenetration = overlap;
+                // Ensure the normal points from A to B (optional consistency)
+                // You can check the direction by comparing centers or by sign of Dot
+                bestAxis = axis;
+            }
+
+            return true;
+        }
+
+        /*
+        * Projects all vertices of a polygon onto 'axis' and returns (min, max) scalar values.
+        */
+        private static (float min, float max) ProjectPolygon(List<Vector2f> poly, Vector2f axis)
+        {
+            float min = float.MaxValue;
+            float max = float.MinValue;
+
+            foreach (var p in poly)
+            {
+                float dot = p.X * axis.X + p.Y * axis.Y; // Dot product
+                if (dot < min) min = dot;
+                if (dot > max) max = dot;
+            }
+            return (min, max);
+        }
+
+        /*
+        * Example helper to retrieve a shape's vertices in world space. 
+        * For a BoxPhysShape, you can reuse CollisionHelpers.GetRectangleCorners.
+        * For a PolygonPhysShape, you might store a local List<Vector2f> and transform each by center + rotation.
+        */
+        private static List<Vector2f> GetWorldVertices(PhysicsObject obj)
+        {
+            return obj.Shape.GetTransformedVertices(obj.Center, obj.Angle);
+        }
+
+
         public static bool BoxVsBox(ref Manifold m)
         {
             var A = m.A;

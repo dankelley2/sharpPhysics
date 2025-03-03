@@ -74,11 +74,18 @@ namespace physics.Engine.Classes.ObjectTemplates
 
         public static PhysicsObject CreateBox(Vector2f origin, int width, int height)
         {
-            SFMLShader shader = GetShader<SFMLBoxShader>(width);
+            SFMLShader shader = GetShader<SFMLPolyShader>(width);
             // Compute mass from dimensions.
             float mass = width * height;
             Vector2f max = origin + new Vector2f(width, height);
             return PhysicsSystem.CreateStaticBox2(origin, max, false, shader, mass);
+        }
+
+        public static PhysicsObject CreatePolygonBox(Vector2f origin)
+        {
+            SFMLShader shader = GetShader<SFMLPolyShader>(0);
+            // Compute mass from dimensions.
+            return PhysicsSystem.CreatePolygon(origin, new Vector2f[] {}, shader);
         }
 
     }

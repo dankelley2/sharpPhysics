@@ -1,16 +1,29 @@
 ﻿using SFML.System;
 using physics.Engine.Structs;
 using System;
+using System.Collections.Generic;
 
 namespace physics.Engine.Shapes
 {
     public class CirclePhysShape : IShape
     {
         public float Radius { get; }
+        
+        public List<Vector2f> LocalVertices { get; set; } = new List<Vector2f>();
 
         public CirclePhysShape(float radius)
         {
             Radius = radius;
+
+            // Build local vertices approximating a circle with 'resolution' points
+            // around local (0,0).
+            for (int i = 0; i < 36; i++)
+            {
+                float theta = (2f * (float)Math.PI * i) / 36f;
+                float x = Radius * (float)Math.Cos(theta);
+                float y = Radius * (float)Math.Sin(theta);
+                LocalVertices.Add(new Vector2f(x, y));
+            }
         }
 
         public AABB GetAABB(Vector2f center, float angle)

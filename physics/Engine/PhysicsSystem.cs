@@ -10,6 +10,8 @@ using physics.Engine.Structs;
 using SFML.System;
 using physics.Engine.Constraints;
 using physics.Engine.Shaders;
+using System.Numerics;
+using System.Linq;
 
 namespace physics.Engine
 {
@@ -126,6 +128,27 @@ namespace physics.Engine
             // Create the box shape.
             IShape shape = new BoxPhysShape(width, height);
             var obj = new PhysicsObject(shape, center, 0.5f, locked, shader, mass, canRotate: true);
+            obj.Friction = 1.0f;
+            ListStaticObjects.Add(obj);
+            return obj;
+        }
+
+        public static PhysicsObject CreatePolygon(Vector2f origin, Vector2f[] points, SFMLShader shader)
+        {
+            // Compute the corrected bounding box.
+
+            var pointsTemp = new Vector2f[]
+            {
+                new Vector2f(100, -100),
+                new Vector2f(-100, -100),
+                new Vector2f(-100, 100),
+                new Vector2f(0, 150),
+                new Vector2f(100, 100)
+            };
+            //pointsTemp = pointsTemp.Reverse().ToArray();
+            // Create the polygon shape.
+            IShape shape = new PolygonPhysShape(pointsTemp);
+            var obj = new PhysicsObject(shape, origin, 0.5f, false, shader, mass: 100, canRotate: false);
             obj.Friction = 1.0f;
             ListStaticObjects.Add(obj);
             return obj;
@@ -384,11 +407,11 @@ namespace physics.Engine
                     var shapeB2 = m.B.Shape;
 
                     // Determine collision detection method based on shape types.
-                    if (shapeA2 is BoxPhysShape)
+                    if (shapeA2 is BoxPhysShape or PolygonPhysShape)
                     {
-                        if (shapeB2 is BoxPhysShape)
+                        if (shapeB2 is  BoxPhysShape or PolygonPhysShape)
                         {
-                            collision = Collision.BoxVsBox(ref m);
+                            collision = Collision.PolygonVsPolygon(ref m);
                             if (collision)
                             {
                                 CollisionHelpers.UpdateContactPoint(ref m);
