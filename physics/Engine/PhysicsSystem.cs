@@ -416,10 +416,10 @@ namespace physics.Engine
                     if (collision)
                     {
                         // Add to object contact points once per physics tick
-                        if (iter == 0)
+                        if (iter == PHYSICS_ITERATIONS - 1)
                         {
-                            m.A.ContactPoints.Add(m.B, (m.ContactPoint, -m.Normal));
-                            m.B.ContactPoints.Add(m.A, (m.ContactPoint, m.Normal));
+                            m.A.ContactPoints.Add(m.B, (m.ContactPoint, m.Normal));
+                            m.B.ContactPoints.Add(m.A, (m.ContactPoint, -m.Normal));
                         }
 
                         // Resolve Collision

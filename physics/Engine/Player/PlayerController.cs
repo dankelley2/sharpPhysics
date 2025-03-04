@@ -10,7 +10,7 @@ namespace SharpPhysics.Engine.Player
     public class PlayerController
     {
         private float _speed = 150.0f;
-        private float _jumpForce = 150.0f;
+        private float _jumpForce = 180.0f;
         private bool _isGrounded => _groundObjects.Count > 0;
         private PhysicsObject _player;
 
@@ -33,7 +33,7 @@ namespace SharpPhysics.Engine.Player
         {
             // if normal is pointing down, add to ground objects
             var (_, normal) = pointNormal;
-            if (normal.Y < 0)
+            if (normal.Y > 0.4f)
             {
                 _groundObjects.Add(obj);
             }
