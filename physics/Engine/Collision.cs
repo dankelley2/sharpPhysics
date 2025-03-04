@@ -102,12 +102,8 @@ namespace physics.Engine
             // Approximate contact point: You can do a midpoint between centers as a fallback:
             m.ContactPoint = (A.Center + B.Center) * 0.5f;
 
-            A.LastContactPoint = m.ContactPoint;
-            B.LastContactPoint = m.ContactPoint;
-
-            // If you want a more accurate contact point, you can do:
-            //   CollisionHelpers.UpdateContactPoint(ref m);
-            // (which uses Sutherland-Hodgman clipping to find the intersection polygon)
+            // Update to accurate contact point after confirmed collision
+            CollisionHelpers.UpdateContactPoint(ref m);
 
             return true;
         }
@@ -217,10 +213,6 @@ namespace physics.Engine
                 Vector2f contactB = B.Center - m.Normal * rB;
                 m.ContactPoint = (contactA + contactB) * 0.5f;
 
-                // Store the contact point for both objects.
-                A.LastContactPoint = m.ContactPoint;
-                B.LastContactPoint = m.ContactPoint;
-
                 return true;
             }
             else
@@ -276,9 +268,6 @@ namespace physics.Engine
         m.Penetration = radius - d;
         // Approximate contact point: on the circle's perimeter along the collision normal.
         m.ContactPoint = circleCenter - normal * radius;
-
-        polyObj.LastContactPoint = m.ContactPoint;
-        circleObj.LastContactPoint = m.ContactPoint;
 
         return true;
     }

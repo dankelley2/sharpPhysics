@@ -5,6 +5,7 @@ using System;
 using physics.Engine.Classes;
 using System.Collections.Generic;
 using physics.Engine.Shaders;
+using System.Numerics;
 
 namespace physics.Engine.Objects
 {
@@ -20,11 +21,10 @@ namespace physics.Engine.Objects
         public float IMass { get; protected set; }
         public bool Locked { get; set; }
         public SFMLShader Shader { get; set; }
-        public Vector2f LastContactPoint { get; set; }
+        // Current contact points. The key is the oject, and the value is a tuple of (point, normal).
+        public readonly Dictionary<PhysicsObject, (Vector2f, Vector2f)> ContactPoints = new Dictionary<PhysicsObject, (Vector2f, Vector2f)>();
         public bool CanRotate { get; internal set; } = false;
-
         public readonly List<PhysicsObject> ConnectedObjects = new List<PhysicsObject>();
-
         public float AngularVelocity { get; set; }
         public float Inertia { get; private set; }
         public float IInertia { get; private set; }
@@ -36,6 +36,14 @@ namespace physics.Engine.Objects
         /// Orientation in radians.
         /// </summary>
         public float Angle { get; set; }
+
+        // --- New caching and events ---
+        // Event fired when a new contact point is added.
+        public event Action<PhysicsObject,(Vector2f, Vector2f)> ContactPointAdded;
+        // Event fired when a contact point is removed.
+        public event Action<PhysicsObject,(Vector2f, Vector2f)> ContactPointRemoved;
+        // Cached contacts from the previous update.
+        public readonly Dictionary<PhysicsObject, (Vector2f, Vector2f)> PreviousContactPoints = new Dictionary<PhysicsObject, (Vector2f, Vector2f)>();
 
         public PhysicsObject(IShape shape, Vector2f center, float restitution, bool locked, SFMLShader shader, float mass = 0, bool canRotate = false)
         {
@@ -53,6 +61,73 @@ namespace physics.Engine.Objects
             Inertia = Shape.GetMomentOfInertia(Mass);
             IInertia = (Inertia != 0) ? 1 / Inertia : 0;
             CanRotate = canRotate;
+        }
+
+        /// <summary>
+        /// Runs the object's update logic.
+        /// </summary>
+        /// <param name="dt"></param>
+        public void Update(float dt)
+        {
+            Move(dt);
+            UpdateRotation(dt);
+            UpdateContactPoints();
+        }
+
+        /// <summary>
+        /// Compares the current contact points to the previous frame’s contact points,
+        /// fires events for added and removed contacts, updates the cache, and then clears the current list.
+        /// This method is written to be allocation-efficient.
+        /// </summary>
+        public void UpdateContactPoints()
+        {
+            // If both the current and previous contacts are empty, there's nothing to do.
+            if (ContactPoints.Count == 0 && PreviousContactPoints.Count == 0)
+                return;
+
+            // If there are no subscribers to either event, update the cache and clear the current contacts.
+            if (ContactPointAdded == null && ContactPointRemoved == null)
+            {
+                PreviousContactPoints.Clear();
+                foreach (KeyValuePair<PhysicsObject,(Vector2f, Vector2f)> kv in ContactPoints)
+                {
+                    PreviousContactPoints.Add(kv.Key, kv.Value);
+                }
+                ContactPoints.Clear();
+                return;
+            }
+
+            // Cache the event delegates locally to avoid repeated null checks.
+            var addedHandler = ContactPointAdded;
+            var removedHandler = ContactPointRemoved;
+
+            // Fire events for newly added contacts.
+            foreach (KeyValuePair<PhysicsObject,(Vector2f, Vector2f)> kv in ContactPoints)
+            {
+                if (!PreviousContactPoints.ContainsKey(kv.Key))
+                {
+                    addedHandler?.Invoke(kv.Key, kv.Value);
+                }
+            }
+
+            // Fire events for contacts that were removed.
+            foreach (KeyValuePair<PhysicsObject,(Vector2f, Vector2f)> kv in PreviousContactPoints)
+            {
+                if (!ContactPoints.ContainsKey(kv.Key))
+                {
+                    removedHandler?.Invoke(kv.Key, kv.Value);
+                }
+            }
+
+            // Update the cached contacts by clearing and repopulating the dictionary.
+            PreviousContactPoints.Clear();
+            foreach (KeyValuePair<PhysicsObject,(Vector2f, Vector2f)> kv in ContactPoints)
+            {
+                PreviousContactPoints.Add(kv.Key, kv.Value);
+            }
+
+            // Clear the current contact points for the next update cycle.
+            ContactPoints.Clear();
         }
 
         /// <summary>

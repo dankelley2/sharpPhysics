@@ -198,8 +198,6 @@ public static class CollisionHelpers
         else
         {
             m.ContactPoint = ComputeCentroid(intersection);
-            m.A.LastContactPoint = m.ContactPoint;
-            m.B.LastContactPoint = m.ContactPoint;
         }
     }
 

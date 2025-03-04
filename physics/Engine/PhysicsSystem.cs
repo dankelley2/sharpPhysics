@@ -401,10 +401,6 @@ namespace physics.Engine
                         if (shapeB2 is BoxPhysShape or PolygonPhysShape)
                         {
                             collision = Collision.PolygonVsPolygon(ref m);
-                            if (collision)
-                            {
-                                CollisionHelpers.UpdateContactPoint(ref m);
-                            }
                         }
                         else if (shapeB2 is CirclePhysShape)
                         {
@@ -419,6 +415,14 @@ namespace physics.Engine
                     // Resolve collision if detected.
                     if (collision)
                     {
+                        // Add to object contact points once per physics tick
+                        if (iter == 0)
+                        {
+                            m.A.ContactPoints.Add(m.B, (m.ContactPoint, -m.Normal));
+                            m.B.ContactPoints.Add(m.A, (m.ContactPoint, m.Normal));
+                        }
+
+                        // Resolve Collision
                         Collision.ResolveCollisionRotational(ref m);
                         Collision.PositionalCorrection(ref m);
                         Collision.AngularPositionalCorrection(ref m);
@@ -436,8 +440,7 @@ namespace physics.Engine
             {
                 var staticObj = ListStaticObjects[i];
                 ApplyConstants(staticObj, dt);
-                staticObj.Move(dt);
-                staticObj.UpdateRotation(dt);
+                staticObj.Update(dt);
             }
         }
 

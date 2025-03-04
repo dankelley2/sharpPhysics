@@ -10,23 +10,25 @@ namespace physics.Engine.Shaders
 {
     public class SFMLPolyShader : SFMLShader
     {
-        // Stores the polygon's outline points
+        // Stores the polygon's outline points.
         private VertexArray vertexes = new VertexArray(PrimitiveType.LineStrip);
+        // Preallocated VertexArray for drawing contact normals.
+        private VertexArray contactLines = new VertexArray(PrimitiveType.Lines);
 
         public override void PreDraw(PhysicsObject obj, RenderTarget target)
         {
-            // No setup needed here
+            // No setup needed here.
         }
 
         public override void Draw(PhysicsObject obj, RenderTarget target)
         {
-            // Clear any previous points
+            // Clear previous polygon vertices.
             vertexes.Clear();
 
-            // Convert local polygon vertices into world space
+            // Get transformed vertices.
             Vector2f[] points = obj.Shape.GetTransformedVertices(obj.Center, obj.Angle);
 
-            // Add each vertex to our VertexArray
+            // Add vertices with some color coding.
             for (int i = 0; i < points.Length; i++)
             {
                 if (i == 0)
@@ -37,29 +39,41 @@ namespace physics.Engine.Shaders
                     vertexes.Append(new Vertex(points[i], Color.White));
             }
 
-            // Close the loop (connect last back to first)
+            // Close the loop.
             if (points.Length > 0)
             {
                 vertexes.Append(new Vertex(points[0], Color.White));
             }
-            
         }
 
         public override void PostDraw(PhysicsObject obj, RenderTarget target)
         {
-            // 1) Draw the polygon outline
+            // 1) Draw the polygon outline.
             target.Draw(vertexes);
 
-            // 2) Draw a small red circle around the object's center
+            // 2) Draw a small red circle at the object's center.
             float radius = 5f;
-            CircleShape circle = new CircleShape(radius);
-            circle.Origin = new Vector2f(radius, radius); // So it rotates/positions around its center
-            circle.Position = obj.Center;                 // Center of the polygon / PhysicsObject
-            circle.OutlineThickness = 1f;
-            circle.OutlineColor = Color.Red;
-            circle.FillColor = Color.Transparent;         
-
+            CircleShape circle = new CircleShape(radius)
+            {
+                Origin = new Vector2f(radius, radius),
+                Position = obj.Center,
+                OutlineThickness = 1f,
+                OutlineColor = Color.Red,
+                FillColor = Color.Transparent
+            };
             target.Draw(circle);
+
+            // 3) Draw a line from each contact point along its normal.
+            contactLines.Clear();
+            float lineLength = 10f; // Adjust this value to scale the drawn normals.
+            foreach (var kv in obj.PreviousContactPoints)
+            {
+                // kv.Key is the other PhysicsObject (unused here), and kv.Value is (contactPoint, normal).
+                (Vector2f contactPoint, Vector2f normal) = kv.Value;
+                contactLines.Append(new Vertex(contactPoint, Color.Yellow));
+                contactLines.Append(new Vertex(contactPoint + normal * lineLength, Color.Yellow));
+            }
+            target.Draw(contactLines);
         }
     }
 }
