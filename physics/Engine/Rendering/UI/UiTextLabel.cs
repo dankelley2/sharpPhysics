@@ -4,22 +4,12 @@ using System;
 
 namespace physics.Engine.Rendering.UI
 {
-    public class UiTextLabel : UiElement
+    public class UiTextLabel : UiElement, IDisposable
     {
         public string Text { get; set; }
         public Font Font { get; set; }
         public uint CharacterSize { get; set; } = 12;
         public Color TextColor { get; set; } = Color.White;
-
-        private Text _textDrawable;
-
-using System;
-
-namespace physics.Engine.Rendering.UI
-{
-    public class UiTextLabel : UiElement, IDisposable
-    {
-        // Properties...
         
         private Text _textDrawable;
         private bool _disposed = false;
@@ -56,9 +46,7 @@ namespace physics.Engine.Rendering.UI
                 _disposed = true;
             }
         }
-    }
-}
-
+    
         protected override void DrawSelf(RenderTarget target)
         {
             _textDrawable.DisplayedString = Text;
