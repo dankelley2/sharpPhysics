@@ -6,6 +6,7 @@ using System.Diagnostics;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Input;
 using physics.Engine.Rendering;
+using SharpPhysics.Engine.Player;
 
 namespace physics.Engine
 {
@@ -25,13 +26,13 @@ namespace physics.Engine
 
         private InputManager inputManager;
         private Renderer renderer;
+        private PlayerController playerController;
 
         public GameWindow(uint width, uint height, string title)
         {
             // Instantiate the renderer and input manager.
             renderer = new Renderer(width, height, title);
             inputManager = new InputManager(renderer.Window, physicsSystem, renderer.GameView);
-
             InitializeGame(width, height);
             stopwatch.Start();
         }
@@ -49,10 +50,13 @@ namespace physics.Engine
             {
                 for (int j = 0; j < 200; j += 50)
                 {
-                        ObjectTemplates.CreatePolygonBox(new Vector2f(i + 400, j + 150));
+                        ObjectTemplates.CreatePolygonTriangle(new Vector2f(i + 400, j + 150));
                 }
             }
 
+            var player = ObjectTemplates.CreatePolygonCapsule(new Vector2f(800, 20));
+
+            playerController = new PlayerController(player);
             // Create an attractor.
             //ObjectTemplates.CreateAttractor(400, 450);
 
@@ -93,6 +97,9 @@ namespace physics.Engine
 
                 // Update Inputs
                 inputManager.Update(deltaTime);
+
+                // Update the player
+                playerController.Update(inputManager.GetKeyState());
 
                 // Tick the physics system
                 physicsSystem.Tick(deltaTime);

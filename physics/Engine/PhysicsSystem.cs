@@ -133,11 +133,11 @@ namespace physics.Engine
             return obj;
         }
 
-        public static PhysicsObject CreatePolygon(Vector2f origin, Vector2f[] points, SFMLShader shader)
+        public static PhysicsObject CreatePolygon(Vector2f origin, Vector2f[] points, SFMLShader shader, bool locked = false, bool canRotate = true)
         {
             // Create the polygon shape.
             IShape shape = new PolygonPhysShape(points);
-            var obj = new PhysicsObject(shape, origin, 0.2f, false, shader, canRotate: true);
+            var obj = new PhysicsObject(shape, origin, 0.2f, locked, shader, canRotate: canRotate);
             obj.Friction = 0.8f;
             ListStaticObjects.Add(obj);
             return obj;
