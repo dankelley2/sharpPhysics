@@ -13,8 +13,24 @@ namespace physics.Engine.Rendering.UI
 
         private Text _textDrawable;
 
+using System;
+
+namespace physics.Engine.Rendering.UI
+{
+    public class UiTextLabel : UiElement, IDisposable
+    {
+        // Properties...
+        
+        private Text _textDrawable;
+        private bool _disposed = false;
+
         public UiTextLabel(string text, Font font)
         {
+            if (text == null)
+                throw new ArgumentNullException(nameof(text));
+            if (font == null)
+                throw new ArgumentNullException(nameof(font));
+                
             Text = text;
             Font = font;
             _textDrawable = new Text(Text, Font, CharacterSize)
@@ -22,6 +38,26 @@ namespace physics.Engine.Rendering.UI
                 FillColor = TextColor
             };
         }
+        
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    _textDrawable?.Dispose();
+                }
+                _disposed = true;
+            }
+        }
+    }
+}
 
         protected override void DrawSelf(RenderTarget target)
         {
