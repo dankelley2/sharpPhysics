@@ -37,7 +37,7 @@ namespace SharpPhysics.Tests
         #region AABB vs AABB (manifold version)
 
         [TestMethod]
-        public void Test_AABBvsAABB_Manifold_NoRotation()
+        public void Test_PolygonVsPolygon_Manifold_NoRotation()
         {
             // Box A: AABB from (0,0) to (10,10) => center (5,5), width 10, height 10.
             // Box B: AABB from (5,5) to (15,15) => center (10,10), width 10, height 10.
@@ -59,7 +59,7 @@ namespace SharpPhysics.Tests
             B.Angle = 0;
             Manifold m = new Manifold { A = A, B = B };
 
-            bool collides = Collision.AABBvsAABB(ref m);
+            bool collides = Collision.PolygonVsPolygon(ref m);
             Assert.IsTrue(collides, "Boxes should collide.");
             Assert.IsTrue(m.Penetration > 0, "Penetration must be positive.");
             // Expect contact point to be the midpoint between centers.
@@ -107,7 +107,7 @@ namespace SharpPhysics.Tests
         #region AABB vs Circle
 
         [TestMethod]
-        public void Test_AABBvsCircle_Overlap()
+        public void Test_BoxVsCircle_Overlap()
         {
             // Box: AABB from (0,0) to (20,20) => center (10,10), width=20, height=20.
             // Circle: AABB from (15,15) to (25,25) => center (20,20), radius = 5.
@@ -129,7 +129,7 @@ namespace SharpPhysics.Tests
             circle.Angle = 0;
             Manifold m = new Manifold { A = box, B = circle };
 
-            bool collides = Collision.AABBvsCircle(ref m);
+            bool collides = Collision.PolygonVsCircle(ref m);
             Assert.IsTrue(collides, "Box and circle should collide.");
             Assert.IsTrue(m.Penetration > 0, "Penetration should be positive.");
         }
@@ -326,7 +326,7 @@ namespace SharpPhysics.Tests
             Manifold m = new Manifold { A = boxA, B = boxB };
 
             // Perform collision detection with the manifold version.
-            bool collision = Collision.AABBvsAABB(ref m);
+            bool collision = Collision.PolygonVsPolygon(ref m);
             Assert.IsTrue(collision, "Boxes should be colliding.");
 
             // Record the initial separation along the collision normal.

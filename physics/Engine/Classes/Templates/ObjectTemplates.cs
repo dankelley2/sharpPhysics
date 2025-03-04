@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using physics.Engine.Helpers;
 using physics.Engine.Objects;
 using physics.Engine.Shaders;
 using physics.Engine.Structs;
@@ -74,11 +75,29 @@ namespace physics.Engine.Classes.ObjectTemplates
 
         public static PhysicsObject CreateBox(Vector2f origin, int width, int height)
         {
-            SFMLShader shader = GetShader<SFMLBoxShader>(width);
+            SFMLShader shader = GetShader<SFMLPolyShader>(width);
             // Compute mass from dimensions.
             float mass = width * height;
             Vector2f max = origin + new Vector2f(width, height);
             return PhysicsSystem.CreateStaticBox2(origin, max, false, shader, mass);
+        }
+
+        public static PhysicsObject CreatePolygonTriangle(Vector2f origin)
+        {
+            SFMLShader shader = GetShader<SFMLPolyShader>(0);
+            var points = new Vector2f[]
+            {
+                new Vector2f(25, -25),
+                new Vector2f(-25, -25),
+                new Vector2f(0, 12.5f)
+            };
+            return PhysicsSystem.CreatePolygon(origin, points, shader);
+        }
+
+        public static PhysicsObject CreatePolygonCapsule(Vector2f origin)
+        {
+            SFMLShader shader = GetShader<SFMLPolyShader>(0);
+            return PhysicsSystem.CreatePolygon(origin, PolygonShapeHelper.CreateCapsuleVertices(32, 20, 50).ToArray(), shader, canRotate: false);
         }
 
     }

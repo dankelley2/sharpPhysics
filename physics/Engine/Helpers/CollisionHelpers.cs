@@ -5,6 +5,7 @@ using physics.Engine.Classes;
 using physics.Engine.Shaders;
 using physics.Engine.Objects;
 using physics.Engine.Shapes;
+using System.Linq;
 
 public static class CollisionHelpers
 {
@@ -47,12 +48,12 @@ public static class CollisionHelpers
 
 
 
-    public static List<Vector2f> SutherlandHodgmanClip(List<Vector2f> subjectPolygon, List<Vector2f> clipPolygon)
+    public static List<Vector2f> SutherlandHodgmanClip(Vector2f[] subjectPolygon, Vector2f[] clipPolygon)
     {
         // Start with the subject polygon.
         List<Vector2f> poly = new (subjectPolygon);
         // For each edge of the clip polygon:
-        int clipCount = clipPolygon.Count;
+        int clipCount = clipPolygon.Length;
         for (int i = 0; i < clipCount; i++)
         {
             int next = (i + 1) % clipCount;
@@ -60,7 +61,7 @@ public static class CollisionHelpers
             Vector2f clipEdgeEnd = clipPolygon[next];
             poly = ClipEdge(poly, clipEdgeStart, clipEdgeEnd);
             if (poly.Count == 0)
-                return subjectPolygon;
+                return subjectPolygon.ToList();
         }
 
         return poly;
@@ -185,8 +186,8 @@ public static class CollisionHelpers
     // It clips rectangle A's corners against rectangle B and computes the centroid of the intersection polygon.
     public static void UpdateContactPoint(ref Manifold m)
     {
-        List<Vector2f> polyA = GetRectangleCorners(m.A);
-        List<Vector2f> polyB = GetRectangleCorners(m.B);
+        Vector2f[] polyA = m.A.Shape.GetTransformedVertices(m.A.Center, m.A.Angle);
+        Vector2f[] polyB = m.B.Shape.GetTransformedVertices(m.B.Center, m.B.Angle);
 
         List<Vector2f> intersection = SutherlandHodgmanClip(polyA, polyB);
         if (intersection.Count == 0)
@@ -197,8 +198,6 @@ public static class CollisionHelpers
         else
         {
             m.ContactPoint = ComputeCentroid(intersection);
-            m.A.LastContactPoint = m.ContactPoint;
-            m.B.LastContactPoint = m.ContactPoint;
         }
     }
 

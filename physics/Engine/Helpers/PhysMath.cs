@@ -10,6 +10,33 @@ namespace physics.Engine.Helpers
 {
     public static class PhysMath
     {
+
+
+        // Helper: Returns a vector perpendicular to v (i.e., rotated 90 degrees)
+        public static Vector2f Perpendicular(Vector2f v)
+        {
+            return new Vector2f(-v.Y, v.X);
+        }
+
+        // Helper: Cross product in 2D (returns a scalar)
+        // For vectors a and b, Cross(a, b) = a.X * b.Y - a.Y * b.X
+        public static float Cross(Vector2f a, Vector2f b)
+        {
+            return a.X * b.Y - a.Y * b.X;
+        }
+
+
+        public static float Clamp(float low, float high, float val)
+        {
+            return Math.Max(low, Math.Min(val, high));
+        }
+
+        // Helper: Dot product.
+        public static float Dot(Vector2f a, Vector2f b)
+        {
+            return a.X * b.X + a.Y * b.Y;
+        }
+
         public static decimal DotProduct(Vector2f pa, Vector2f pb)
         {
             decimal[] a = { (decimal)pa.X, (decimal)pa.Y };

@@ -6,6 +6,7 @@ using physics.Engine.Structs;
 using SFML.System;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SharpPhysics.Tests
 {
@@ -84,7 +85,7 @@ namespace SharpPhysics.Tests
                 new Vector2f(0, 4)
             };
 
-            List<Vector2f> output = CollisionHelpers.SutherlandHodgmanClip(subject, clip);
+            List<Vector2f> output = CollisionHelpers.SutherlandHodgmanClip(subject.ToArray(), clip.ToArray());
 
             Assert.AreEqual(subject.Count, output.Count);
             for (int i = 0; i < subject.Count; i++)
@@ -139,7 +140,7 @@ namespace SharpPhysics.Tests
                 new Vector2f(200, 150)
             };
 
-            List<Vector2f> output = CollisionHelpers.SutherlandHodgmanClip(subject, clip);
+            List<Vector2f> output = CollisionHelpers.SutherlandHodgmanClip(subject.ToArray(), clip.ToArray());
 
             List<Vector2f> expected = new List<Vector2f>
             {
@@ -179,7 +180,7 @@ namespace SharpPhysics.Tests
                 new Vector2f(1, 0),
             };
 
-            List<Vector2f> output = CollisionHelpers.SutherlandHodgmanClip(subject, clip);
+            List<Vector2f> output = CollisionHelpers.SutherlandHodgmanClip(subject.ToArray(), clip.ToArray());
 
             List<Vector2f> expected = new List<Vector2f>
             {
@@ -218,7 +219,7 @@ namespace SharpPhysics.Tests
                 new Vector2f(200, 100)
             };
 
-            List<Vector2f> output = CollisionHelpers.SutherlandHodgmanClip(subject, clip);
+            List<Vector2f> output = CollisionHelpers.SutherlandHodgmanClip(subject.ToArray(), clip.ToArray());
 
             List<Vector2f> expected = new List<Vector2f>
             {

@@ -5,6 +5,7 @@ using System;
 using physics.Engine.Classes;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Shaders;
+using physics.Engine.Objects;
 
 namespace physics.Engine.Input
 {
@@ -29,6 +30,10 @@ namespace physics.Engine.Input
 
         private float launchTimer = 0f;
         private const float LaunchInterval = 0.035f;
+        private const float playerMoveSpeed = 100f; // adjust speed as needed
+
+        // Key state for polling important keys.
+        private KeyState keyState = new KeyState();
 
         public InputManager(RenderWindow window, PhysicsSystem physicsSystem, View view)
         {
@@ -42,6 +47,7 @@ namespace physics.Engine.Input
             window.MouseMoved += OnMouseMoved;
             window.MouseWheelScrolled += OnMouseWheelScrolled;
             window.KeyPressed += OnKeyPressed;
+            window.KeyReleased += OnKeyReleased;
         }
 
         // Called once per frame to handle continuous actions.
@@ -86,7 +92,15 @@ namespace physics.Engine.Input
                 bool objectFound = physicsSystem.ActivateAtPoint(worldPos);
                 if (objectFound)
                 {
-                    physicsSystem.RemoveActiveObject();
+                    if (IsGrabbing)
+                    {
+                        PhysicsSystem.ActiveObject.CanRotate = false;
+                        PhysicsSystem.ActiveObject.Locked = true;
+                    }
+                    else
+                    {
+                        physicsSystem.RemoveActiveObject();
+                    }
                 }
                 else
                 {
@@ -109,7 +123,6 @@ namespace physics.Engine.Input
             {
                 if (IsGrabbing)
                 {
-                    //physicsSystem.SetVelocityOfActive(new Vector2f(0, 0));
                     physicsSystem.ReleaseActiveObject();
                     IsGrabbing = false;
                     return;
@@ -170,9 +183,8 @@ namespace physics.Engine.Input
 
         private void OnMouseWheelScrolled(object sender, MouseWheelScrollEventArgs e)
         {
-
             Console.WriteLine("Scroll delta: " + e.Delta);
-            // Scrolling up zooms in; scrolling down zooms out.
+            // Uncomment to enable zooming:
             // if (e.Delta > 0)
             // {
             //     view.Zoom(0.9f);
@@ -188,10 +200,11 @@ namespace physics.Engine.Input
             switch (e.Code)
             {
                 case Keyboard.Key.Space:
+                    keyState.Space = true;
                     physicsSystem.FreezeStaticObjects();
                     break;
                 case Keyboard.Key.P:
-                    ActionTemplates.changeShader(physicsSystem, new SFMLBallShader());
+                    ActionTemplates.changeShader(physicsSystem, new SFMLPolyShader());
                     break;
                 case Keyboard.Key.V:
                     // Optionally switch shaders.
@@ -205,7 +218,59 @@ namespace physics.Engine.Input
                 case Keyboard.Key.Escape:
                     window.Close();
                     break;
+                case Keyboard.Key.Left:
+                    keyState.Left = true;
+                    break;
+                case Keyboard.Key.Right:
+                    keyState.Right = true;
+                    break;
+                case Keyboard.Key.Up:
+                    keyState.Up = true;
+                    break;
+                case Keyboard.Key.Down:
+                    keyState.Down = true;
+                    break;
             }
+        }
+
+        private void OnKeyReleased(object sender, KeyEventArgs e)
+        {
+            switch (e.Code)
+            {
+                case Keyboard.Key.Space:
+                    keyState.Space = false;
+                    break;
+                case Keyboard.Key.Left:
+                    keyState.Left = false;
+                    break;
+                case Keyboard.Key.Right:
+                    keyState.Right = false;
+                    break;
+                case Keyboard.Key.Up:
+                    keyState.Up = false;
+                    break;
+                case Keyboard.Key.Down:
+                    keyState.Down = false;
+                    break;
+                // Add other keys if necessary.
+            }
+        }
+
+        /// <summary>
+        /// Returns a snapshot of the current key states.
+        /// The caller can poll this method each frame to determine which keys are pressed.
+        /// </summary>
+        public KeyState GetKeyState()
+        {
+            // Return a copy so external systems cannot modify internal state.
+            return new KeyState
+            {
+                Left = keyState.Left,
+                Right = keyState.Right,
+                Up = keyState.Up,
+                Down = keyState.Down,
+                Space = keyState.Space
+            };
         }
     }
 }

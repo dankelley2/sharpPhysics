@@ -1,6 +1,7 @@
 ﻿using SFML.System;
 using physics.Engine.Structs;
 using System;
+using System.Collections.Generic;
 
 namespace physics.Engine.Shapes
 {
@@ -8,11 +9,24 @@ namespace physics.Engine.Shapes
     {
         public float Width { get; }
         public float Height { get; }
+        public List<Vector2f> LocalVertices { get; set; } = new List<Vector2f>();
 
         public BoxPhysShape(float width, float height)
         {
             Width = width;
             Height = height;
+
+
+            // Build LocalVertices (centered at (0,0)).
+            // We'll assume the box is centered in local space, so half extents:
+            float hw = Width / 2f;
+            float hh = Height / 2f;
+
+            // Clockwise corners around (0,0):
+            LocalVertices.Add(new Vector2f(hw, -hh));
+            LocalVertices.Add(new Vector2f(-hw, -hh));
+            LocalVertices.Add(new Vector2f(-hw, hh));
+            LocalVertices.Add(new Vector2f(hw, hh));
         }
 
         public AABB GetAABB(Vector2f center, float angle)
