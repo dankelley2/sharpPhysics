@@ -1,10 +1,13 @@
 # sharpPhysics
 2D physics engine in C#
 
-* Arbitrary Polygon physics in experimental branch:
+* Arbitrary Polygon physics now supported:
 
 ![image](https://github.com/user-attachments/assets/748ab34d-d570-4e6d-9157-5661fad7351d)
 ![image](https://github.com/user-attachments/assets/228bfc7f-c784-4b9b-90ea-41914142d307)
+
+* Object Sleep States have been implemented (WIP)
+![IMG_6923](https://github.com/user-attachments/assets/b48e7793-762c-4768-8609-9f0ab265a45c)
 
 * Older Screenshots
 ![image](https://github.com/user-attachments/assets/5780a59d-bd7c-469f-8c92-f8b03be4f223)
