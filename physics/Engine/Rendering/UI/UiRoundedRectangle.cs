@@ -88,15 +88,20 @@ namespace physics.Engine.Rendering.UI
             VertexArray triStrip = new VertexArray(PrimitiveType.TriangleStrip);
 
             // Append all the outline (arc) points.
+            int i = 0;
             foreach (var pt in _points)
             {
-                triStrip.Append(new Vertex(pt + Position, Color.White));
+                if ( i % 2 == 0)
+                    triStrip.Append(new Vertex(pt + Position, Color.White));
+                else 
+                    triStrip.Append(new Vertex(pt + Position, this.OutlineColor));
+                i++;
             }
 
             // Close the fan by repeating the first outline point.
             if (_points.Length > 1)
             {
-                triStrip.Append(new Vertex(_points[0] + Position, this.OutlineColor));
+                triStrip.Append(new Vertex(_points[0] + Position, Color.White));
                 triStrip.Append(new Vertex(_points[1] + Position, this.OutlineColor));
             }
 

@@ -6,12 +6,12 @@ using System.Diagnostics;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Input;
 using physics.Engine.Rendering;
+using SharpPhysics.Engine.Player;
 
 namespace physics.Engine
 {
     public class GameWindow
     {
-        private RenderWindow window;
         private PhysicsSystem physicsSystem = new PhysicsSystem();
         private Clock clock = new Clock();
         private Stopwatch stopwatch = new Stopwatch();
@@ -24,115 +24,92 @@ namespace physics.Engine
         private long msDrawTime;
         private long msPhysicsTime;
 
-        private View view;
         private InputManager inputManager;
         private Renderer renderer;
+        private PlayerController playerController;
 
         public GameWindow(uint width, uint height, string title)
         {
-            // Create context settings with antialiasing
-            ContextSettings settings = new ContextSettings();
-            settings.AntialiasingLevel = 8; // You can adjust this value as needed
-
-            window = new RenderWindow(new VideoMode(width, height), title, Styles.Close, settings);
-            window.Closed += (s, e) => window.Close();
-
-            // Create and set a view covering the whole window.
-            view = new View(new FloatRect(0, 0, width, height));
-            window.SetFramerateLimit(144);
-
-            // Instantiate the input manager and renderer.
-            inputManager = new InputManager(window, physicsSystem, view);
-            renderer = new Renderer(window, view, physicsSystem);
-
-            InitializeGame();
+            // Instantiate the renderer and input manager.
+            renderer = new Renderer(width, height, title);
+            inputManager = new InputManager(renderer.Window, physicsSystem, renderer.GameView);
+            InitializeGame(width, height);
             stopwatch.Start();
         }
 
-        private void InitializeGame()
+        private void InitializeGame(uint worldWidth, uint worldHeight)
         {
             // Create walls.
-            ObjectTemplates.CreateWall(new Vector2f(0, 0), 15, (int)window.Size.Y);
-            ObjectTemplates.CreateWall(new Vector2f((int)window.Size.X - 15, 0), 15, (int)window.Size.Y);
-            ObjectTemplates.CreateWall(new Vector2f(0, 0), (int)window.Size.X, 15);
-            ObjectTemplates.CreateWall(new Vector2f(0, (int)window.Size.Y - 15), (int)window.Size.X, 15);
+            ObjectTemplates.CreateWall(new Vector2f(0, 0), 15, (int)worldHeight);
+            ObjectTemplates.CreateWall(new Vector2f((int)worldWidth - 15, 0), 15, (int)worldHeight);
+            ObjectTemplates.CreateWall(new Vector2f(0, 0), (int)worldWidth, 15);
+            ObjectTemplates.CreateWall(new Vector2f(0, (int)worldHeight - 15), (int)worldWidth, 15);
 
-            // Create a grid of medium balls.
-            for (int i = 0; i < 600; i += 20)
+            //Create a grid of medium balls.
+            for (int i = 0; i < 1000; i += 20)
             {
-                for (int j = 0; j < 200; j += 20)
+                for (int j = 0; j < 600; j += 20)
                 {
-                        ObjectTemplates.CreateMedBall(i + 400, j + 150);
+                        ObjectTemplates.CreateMedBall(i + 200, j + 40);
                 }
             }
 
+            var player = ObjectTemplates.CreatePolygonCapsule(new Vector2f(800, 20));
+
+            playerController = new PlayerController(player);
             // Create an attractor.
             //ObjectTemplates.CreateAttractor(400, 450);
 
             // Create a box with initial velocity and angle.
             // Origin vector (top left)
-            var boxAOrigin = new Vector2f(100, 100);
-            ObjectTemplates.CreateBox(boxAOrigin, 200, 50);
 
-            var boxBOrigin = new Vector2f(100, 250);
-            ObjectTemplates.CreateBox(boxBOrigin, 200, 50);
-
-            var boxCOrigin = new Vector2f(100, 400);
-            ObjectTemplates.CreateBox(boxCOrigin, 200, 50);
-
-            var boxDOrigin = new Vector2f(100, 550);
-            ObjectTemplates.CreateBox(boxDOrigin, 200, 50);
-
-
-           // // Create the chassis as a box.
-           // var chassisOrigin = new Vector2f(400, 400);
-           // var chassis = ObjectTemplates.CreateBox(chassisOrigin, 500, 100);
-           // chassis.CanRotate = true; // Allow chassis rotation
-           // chassis.Angle = 0;
-
-           // //Create two wheels as circles.
-           //var leftWheel = ObjectTemplates.CreateMedBall(400, 550);
-           // leftWheel.CanRotate = true;
-
-           // // Create constraints linking the wheels to the chassis.
-           // // For each wheel, we attach its center to a fixed point on the chassis along the vertical axis.
-           // Vector2f leftAnchorChassis = new Vector2f(-250, 100);  // local offset from chassis center
-           // Vector2f leftAnchorWheel = new Vector2f(0, 0);         // wheel's center
-            //var leftWheelConstraint = new AxisConstraint(chassis, leftWheel, leftAnchorChassis, leftAnchorWheel);
-
-            // Add the constraints to your physics system.
-            //physicsSystem.Constraints.Add(leftWheelConstraint);
-
+            // Loop to create boxes
+            // for (int i = 0; i < 10; i++)
+            // {
+            //     var boxOrigin = new Vector2f(100, 100 + i * 50);
+            //     ObjectTemplates.CreateBox(boxOrigin, 200, 50);
+            // }
         }
 
 
 
         public void Run()
         {
-            while (window.IsOpen)
+            while (renderer.Window.IsOpen)
             {
-                window.DispatchEvents();
+                // Handle window events
+                renderer.Window.DispatchEvents();
 
+                // Log
                 long frameStartTime = stopwatch.ElapsedMilliseconds;
+
+                // Log
+                long physicsStart = stopwatch.ElapsedMilliseconds;
 
                 // Get delta time and cap it.
                 float deltaTime = clock.Restart().AsSeconds();
                 deltaTime = Math.Min(deltaTime, MAX_DELTA_TIME);
 
-                // Update input-related actions (ball launching, object grabbing, etc.).
-                long physicsStart = stopwatch.ElapsedMilliseconds;
+                // Update Inputs
                 inputManager.Update(deltaTime);
-                physicsSystem.Tick(deltaTime);
-                msPhysicsTime = stopwatch.ElapsedMilliseconds - physicsStart;
 
-                // Render the current frame.
+                // Update the player
+                playerController.Update(inputManager.GetKeyState());
+
+                // Tick the physics system
+                physicsSystem.Tick(deltaTime);
+
+                // Log
+                msPhysicsTime = stopwatch.ElapsedMilliseconds - physicsStart;
                 long renderStart = stopwatch.ElapsedMilliseconds;
+
+                // Render the current Frame
                 renderer.Render(msPhysicsTime, msDrawTime, msFrameTime,
                                   inputManager.IsCreatingBox,
                                   inputManager.BoxStartPoint,
                                   inputManager.BoxEndPoint);
+                // Log
                 msDrawTime = stopwatch.ElapsedMilliseconds - renderStart;
-
                 msFrameTime = stopwatch.ElapsedMilliseconds - frameStartTime;
             }
         }

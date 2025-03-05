@@ -1,5 +1,7 @@
 ﻿using SFML.System;
 using physics.Engine.Structs;
+using System.Collections.Generic;
+using System;
 
 namespace physics.Engine.Shapes
 {
@@ -9,6 +11,8 @@ namespace physics.Engine.Shapes
         /// Computes the axis-aligned bounding box for this shape, given a center position and rotation angle (in radians).
         /// </summary>
         AABB GetAABB(Vector2f center, float angle);
+
+        public List<Vector2f> LocalVertices { get; set; }
 
         /// <summary>
         /// Returns the area of the shape.
@@ -39,6 +43,34 @@ namespace physics.Engine.Shapes
         public Vector2f GetLocalPoint(Vector2f point, Vector2f center, float angle)
         {
             return point - center;
+        }
+
+        /// <summary>
+        /// Returns a list of the shape's vertices transformed into world space,
+        /// using the provided center and angle.
+        /// </summary>
+        public virtual Vector2f[] GetTransformedVertices(Vector2f center, float angle)
+        {
+            var transformed = new Vector2f[LocalVertices.Count];
+
+            float cos = (float)System.Math.Cos(angle);
+            float sin = (float)System.Math.Sin(angle);
+
+            for(int i = 0; i < LocalVertices.Count; i++)
+            {
+                var local = LocalVertices[i];
+                // Rotate the local vertex
+                float rx = local.X * cos - local.Y * sin;
+                float ry = local.X * sin + local.Y * cos;
+
+                // Then translate by the object's center
+                float worldX = center.X + rx;
+                float worldY = center.Y + ry;
+
+                transformed[i] = new Vector2f(worldX, worldY);
+            }
+
+            return transformed;
         }
     }
 }

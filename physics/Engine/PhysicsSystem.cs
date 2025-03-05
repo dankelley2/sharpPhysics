@@ -10,6 +10,8 @@ using physics.Engine.Structs;
 using SFML.System;
 using physics.Engine.Constraints;
 using physics.Engine.Shaders;
+using System.Numerics;
+using System.Linq;
 
 namespace physics.Engine
 {
@@ -29,12 +31,12 @@ namespace physics.Engine
         #region Local Declarations
         public const float FPS = 144;
         private const float _dt = 1 / FPS;
-        private const int PHYSICS_ITERATIONS = 4;
+        private const int PHYSICS_ITERATIONS = 8;
         private double accumulator = 0;
 
         public static PhysicsObject ActiveObject;
-        public static readonly List<SFMLShader> ListShaders = new List<SFMLShader>();
-        public static readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
+        private static readonly List<SFMLShader> ListShaders = new List<SFMLShader>();
+        private static readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
         public static readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
         public static readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
         private readonly ManifoldPool _manifoldPool = new ManifoldPool();
@@ -106,7 +108,7 @@ namespace physics.Engine
 
             // Create a box shape with the computed dimensions.
             IShape shape = new BoxPhysShape(width, height);
-            var obj = new PhysicsObject(shape, center, 0.5f, locked, shader, mass);
+            var obj = new PhysicsObject(shape, center, 0.2f, locked, shader, mass);
             ListStaticObjects.Add(obj);
             return obj;
         }
@@ -125,7 +127,18 @@ namespace physics.Engine
 
             // Create the box shape.
             IShape shape = new BoxPhysShape(width, height);
-            var obj = new PhysicsObject(shape, center, 0.5f, locked, shader, mass, canRotate: true);
+            var obj = new PhysicsObject(shape, center, 0.2f, locked, shader, mass, canRotate: true);
+            obj.Friction = 0.8f;
+            ListStaticObjects.Add(obj);
+            return obj;
+        }
+
+        public static PhysicsObject CreatePolygon(Vector2f origin, Vector2f[] points, SFMLShader shader, bool locked = false, bool canRotate = true)
+        {
+            // Create the polygon shape.
+            IShape shape = new PolygonPhysShape(points);
+            var obj = new PhysicsObject(shape, origin, 0.2f, locked, shader, canRotate: canRotate);
+            obj.Friction = 0.8f;
             ListStaticObjects.Add(obj);
             return obj;
         }
@@ -200,6 +213,10 @@ namespace physics.Engine
                 return;
             }
 
+            if (ActiveObject.Sleeping)
+            {
+                ActiveObject.Wake();
+            }
             var delta = ActiveObject.Center - point;
             SetVelocityOfActive(-delta * 10);
         }
@@ -255,7 +272,7 @@ namespace physics.Engine
 
         private void ApplyConstants(PhysicsObject obj, float dt)
         {
-            if (obj.Locked)
+            if (obj.Locked || obj.Sleeping)
             {
                 return;
             }
@@ -358,6 +375,10 @@ namespace physics.Engine
                     var objA = pair.A;
                     var objB = pair.B;
 
+                    // Skip narrow phase if both objects are sleeping.
+                    if (objA.Sleeping && objB.Sleeping)
+                        continue;
+
                     // Cache shape references.
                     var shapeA = objA.Shape;
                     var shapeB = objB.Shape;
@@ -367,7 +388,7 @@ namespace physics.Engine
                     bool collision = false;
 
                     // Set ordering: if objA is a circle and objB is a box, swap them.
-                    if (shapeA is CirclePhysShape && shapeB is BoxPhysShape)
+                    if (shapeA is CirclePhysShape && (shapeB is BoxPhysShape or PolygonPhysShape))
                     {
                         m.A = objB;
                         m.B = objA;
@@ -383,19 +404,15 @@ namespace physics.Engine
                     var shapeB2 = m.B.Shape;
 
                     // Determine collision detection method based on shape types.
-                    if (shapeA2 is BoxPhysShape)
+                    if (shapeA2 is BoxPhysShape or PolygonPhysShape)
                     {
-                        if (shapeB2 is BoxPhysShape)
+                        if (shapeB2 is BoxPhysShape or PolygonPhysShape)
                         {
-                            collision = Collision.AABBvsAABB(ref m);
-                            if (collision)
-                            {
-                                CollisionHelpers.UpdateContactPoint(ref m);
-                            }
+                            collision = Collision.PolygonVsPolygon(ref m);
                         }
                         else if (shapeB2 is CirclePhysShape)
                         {
-                            collision = Collision.AABBvsCircle(ref m);
+                            collision = Collision.PolygonVsCircle(ref m);
                         }
                     }
                     else if (shapeA2 is CirclePhysShape && shapeB2 is CirclePhysShape)
@@ -406,6 +423,30 @@ namespace physics.Engine
                     // Resolve collision if detected.
                     if (collision)
                     {
+
+                        // Here, instead of immediately waking sleeping objects, we compute a rough impulse magnitude.
+                        // (For example, you might approximate impulse as the penetration depth times relative velocity along the normal.)
+                        float relativeVel = Math.Abs(PhysMath.Dot(m.B.Velocity - m.A.Velocity, m.Normal));
+                        float impulseApprox = m.Penetration * relativeVel;
+                        float wakeImpulseThreshold = 5.0f; // adjust threshold as appropriate
+
+                        // Only wake if a significant impulse is delivered.
+                        if (impulseApprox > wakeImpulseThreshold)
+                        {
+                            if (objA.Sleeping && !objA.Locked)
+                                objA.Wake();
+                            if (objB.Sleeping && !objB.Locked)
+                                objB.Wake();
+                        }
+
+                        // Add to object contact points once per physics tick
+                        if (iter == PHYSICS_ITERATIONS - 1)
+                        {
+                            m.A.AddContact(m.B, m.ContactPoint, m.Normal);
+                            m.B.AddContact(m.A, m.ContactPoint, -m.Normal);
+                        }
+
+                        // Resolve Collision
                         Collision.ResolveCollisionRotational(ref m);
                         Collision.PositionalCorrection(ref m);
                         Collision.AngularPositionalCorrection(ref m);
@@ -423,8 +464,7 @@ namespace physics.Engine
             {
                 var staticObj = ListStaticObjects[i];
                 ApplyConstants(staticObj, dt);
-                staticObj.Move(dt);
-                staticObj.UpdateRotation(dt);
+                staticObj.Update(dt);
             }
         }
 
@@ -482,6 +522,10 @@ namespace physics.Engine
                         {
                             PhysicsObject objA = cell[i];
                             PhysicsObject objB = cell[j];
+
+                            // Skip pairs where both objects are sleeping.
+                            if (objA.Sleeping && objB.Sleeping)
+                            continue;
 
                             // Add the pair if it has not already been processed.
                             if (_pairSet.Add((objA, objB)))
