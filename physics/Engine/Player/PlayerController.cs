@@ -33,9 +33,11 @@ namespace SharpPhysics.Engine.Player
         {
             // if normal is pointing down, add to ground objects
             var (_, normal) = pointNormal;
-            if (normal.Y > 0.4f)
+            if (normal.Y > 0.5f)
             {
                 _groundObjects.Add(obj);
+                _player.Velocity = new Vector2f(_player.Velocity.X, 0);
+                return;
             }
         }
 
@@ -44,9 +46,6 @@ namespace SharpPhysics.Engine.Player
             _ = _groundObjects.Remove(obj);
         }
 
-        /// <summary>
-        /// Updates the player controller. Assumes deltaTime is passed in (in seconds).
-        /// </summary>
         public void Update(KeyState keyState)
         {
             // Reset the horizontal input accumulator.
@@ -60,19 +59,13 @@ namespace SharpPhysics.Engine.Player
             {
                 MoveRight();
             }
-
-            // Apply horizontal movement.
-            // TODO: resting on platfoms
-            // if (_isGrounded)
-            //     _player.Velocity = new Vector2f(_player.Velocity.X + _horizontalInput * _speed, _player.Velocity.Y);
-            // else 
-
-            _player.Velocity = new Vector2f(_horizontalInput * _speed, _player.Velocity.Y);
-
             if (keyState.Up)
             {
                 Jump();
             }
+
+            _player.Velocity = new Vector2f(_horizontalInput * _speed, _player.Velocity.Y);
+
         }
 
         private void MoveLeft()

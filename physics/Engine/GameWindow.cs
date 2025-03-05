@@ -62,18 +62,13 @@ namespace physics.Engine
 
             // Create a box with initial velocity and angle.
             // Origin vector (top left)
-            var boxAOrigin = new Vector2f(100, 100);
-            ObjectTemplates.CreateBox(boxAOrigin, 200, 50);
 
-            var boxBOrigin = new Vector2f(100, 250);
-            ObjectTemplates.CreateBox(boxBOrigin, 200, 50);
-
-            var boxCOrigin = new Vector2f(100, 400);
-            ObjectTemplates.CreateBox(boxCOrigin, 200, 50);
-
-            var boxDOrigin = new Vector2f(100, 550);
-            ObjectTemplates.CreateBox(boxDOrigin, 200, 50);
-
+            // Loop to create boxes
+            for (int i = 0; i < 10; i++)
+            {
+                var boxOrigin = new Vector2f(100, 100 + i * 50);
+                ObjectTemplates.CreateBox(boxOrigin, 200, 50);
+            }
         }
 
 
