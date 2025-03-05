@@ -45,14 +45,14 @@ namespace physics.Engine
             ObjectTemplates.CreateWall(new Vector2f(0, 0), (int)worldWidth, 15);
             ObjectTemplates.CreateWall(new Vector2f(0, (int)worldHeight - 15), (int)worldWidth, 15);
 
-            // Create a grid of medium balls.
-            // for (int i = 0; i < 600; i += 20)
-            // {
-            //     for (int j = 0; j < 400; j += 20)
-            //     {
-            //             ObjectTemplates.CreateMedBall(i + 400, j + 150);
-            //     }
-            // }
+            //Create a grid of medium balls.
+            for (int i = 0; i < 1000; i += 20)
+            {
+                for (int j = 0; j < 600; j += 20)
+                {
+                        ObjectTemplates.CreateMedBall(i + 200, j + 40);
+                }
+            }
 
             var player = ObjectTemplates.CreatePolygonCapsule(new Vector2f(800, 20));
 
@@ -64,11 +64,11 @@ namespace physics.Engine
             // Origin vector (top left)
 
             // Loop to create boxes
-            for (int i = 0; i < 10; i++)
-            {
-                var boxOrigin = new Vector2f(100, 100 + i * 50);
-                ObjectTemplates.CreateBox(boxOrigin, 200, 50);
-            }
+            // for (int i = 0; i < 10; i++)
+            // {
+            //     var boxOrigin = new Vector2f(100, 100 + i * 50);
+            //     ObjectTemplates.CreateBox(boxOrigin, 200, 50);
+            // }
         }
 
 

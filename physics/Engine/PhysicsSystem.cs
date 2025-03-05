@@ -31,7 +31,7 @@ namespace physics.Engine
         #region Local Declarations
         public const float FPS = 144;
         private const float _dt = 1 / FPS;
-        private const int PHYSICS_ITERATIONS = 4;
+        private const int PHYSICS_ITERATIONS = 8;
         private double accumulator = 0;
 
         public static PhysicsObject ActiveObject;
