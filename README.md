@@ -28,12 +28,13 @@ A 2D physics engine implemented in C# using SFML for rendering.
 ![image](https://github.com/user-attachments/assets/b32b5011-4df3-4fcf-81ab-707044529b9f)
 
 ## Controls
-* LMB: Move existing objects or create/launch new ones
-* RMB: Delete objects on click / mouse move
-* MMB Scroll: zoom
-* MMB Hold: pan screen
-* G: Create Gravity orb
-* SPACE: Stop all object momentum (momentarily)
+- LMB: Move existing objects or create/launch new ones
+- RMB: Delete objects on click / mouse move, Lock objects that are currently being held with LMB
+- P: Switch all shaders to the polygon shader
+- MMB Scroll: zoom
+- MMB Hold: pan screen
+- G: Create Gravity orb
+- SPACE: Stop all object momentum (momentarily)
 
 ## Installation and Setup
 1. Clone the repository
@@ -212,14 +213,16 @@ public void UpdateSleepState(float dt)
 ## Credits and References
 Tutorials I worked with to create this:
 
-* This c++ engine tutorial (Up to the rotational calculations)
+- This c++ engine tutorial (Up to the rotational calculations)
 
     https://gamedevelopment.tutsplus.com/tutorials/how-to-create-a-custom-2d-physics-engine-the-basics-and-impulse-resolution--gamedev-6331
 
-* SFML .Net library for drawing
+- SFML .Net library for drawing
   
     https://www.sfml-dev.org/download/sfml.net/
   
-* Ten Minute Physics for Spatial Hashing algorithm
+- Ten Minute Physics for Spatial Hashing algorithm
 
     https://www.youtube.com/watch?v=D2M8jTtKi44
+  
+- OpenAi 03-mini-high used in newer code for fixing bugs and brainstorming features
