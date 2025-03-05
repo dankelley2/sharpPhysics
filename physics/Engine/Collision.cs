@@ -324,7 +324,7 @@ namespace physics.Engine
 
             Vector2f impulse = m.Normal * j;
 
-            if (!A.Locked)
+            if (!A.Locked && !A.Sleeping)
             {
                 A.Velocity -= impulse * A.IMass;
                 if (A.CanRotate)
@@ -332,7 +332,7 @@ namespace physics.Engine
                     A.AngularVelocity -= PhysMath.Cross(rA, impulse) * iInertiaA;
                 }
             }
-            if (!B.Locked)
+            if (!B.Locked && !B.Sleeping)
             {
                 B.Velocity += impulse * B.IMass;
                 if (B.CanRotate)
@@ -364,7 +364,7 @@ namespace physics.Engine
 
             Vector2f frictionImpulse = tangent * jt;
 
-            if (!A.Locked)
+            if (!A.Locked && !A.Sleeping)
             {
                 A.Velocity += frictionImpulse * A.IMass;
                 if (A.CanRotate)
@@ -372,7 +372,7 @@ namespace physics.Engine
                     A.AngularVelocity += PhysMath.Cross(rA, frictionImpulse) * iInertiaA;
                 }
             }
-            if (!B.Locked)
+            if (!B.Locked && !B.Sleeping)
             {
                 B.Velocity -= frictionImpulse * B.IMass;
                 if (B.CanRotate)
@@ -393,12 +393,12 @@ namespace physics.Engine
             float correctionMagnitude = penetration / (m.A.IMass + m.B.IMass) * percent;
             Vector2f correction = m.Normal * correctionMagnitude;
 
-            if (!m.A.Locked)
+            if (!m.A.Locked && !m.A.Sleeping)
             {
                 m.A.Move(-correction * m.A.IMass);
             }
 
-            if (!m.B.Locked)
+            if (!m.B.Locked && !m.B.Sleeping)
             {
                 m.B.Move(correction * m.B.IMass);
             }
@@ -414,7 +414,7 @@ namespace physics.Engine
             Vector2f rB = m.ContactPoint - m.B.Center;
 
             // For object A:
-            if (!m.A.Locked && m.A.CanRotate && rA.LengthSquared() > 0.0001f)
+            if (!m.A.Locked && !m.A.Sleeping && m.A.CanRotate && rA.LengthSquared() > 0.0001f)
             {
                 // The farther the contact point is from the center, the smaller the required angular adjustment.
                 float angularErrorA = m.Penetration / rA.Length();
@@ -425,7 +425,7 @@ namespace physics.Engine
             }
 
             // For object B:
-            if (!m.B.Locked && m.B.CanRotate && rB.LengthSquared() > 0.0001f)
+            if (!m.B.Locked && !m.B.Sleeping && m.B.CanRotate && rB.LengthSquared() > 0.0001f)
             {
                 float angularErrorB = m.Penetration / rB.Length();
                 float signB = Math.Sign(PhysMath.Cross(rB, m.Normal));

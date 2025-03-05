@@ -213,6 +213,10 @@ namespace physics.Engine
                 return;
             }
 
+            if (ActiveObject.Sleeping)
+            {
+                ActiveObject.Wake();
+            }
             var delta = ActiveObject.Center - point;
             SetVelocityOfActive(-delta * 10);
         }
@@ -268,7 +272,7 @@ namespace physics.Engine
 
         private void ApplyConstants(PhysicsObject obj, float dt)
         {
-            if (obj.Locked)
+            if (obj.Locked || obj.Sleeping)
             {
                 return;
             }
@@ -371,6 +375,10 @@ namespace physics.Engine
                     var objA = pair.A;
                     var objB = pair.B;
 
+                    // Skip narrow phase if both objects are sleeping.
+                    if (objA.Sleeping && objB.Sleeping)
+                        continue;
+
                     // Cache shape references.
                     var shapeA = objA.Shape;
                     var shapeB = objB.Shape;
@@ -415,11 +423,27 @@ namespace physics.Engine
                     // Resolve collision if detected.
                     if (collision)
                     {
+
+                        // Here, instead of immediately waking sleeping objects, we compute a rough impulse magnitude.
+                        // (For example, you might approximate impulse as the penetration depth times relative velocity along the normal.)
+                        float relativeVel = Math.Abs(PhysMath.Dot(m.B.Velocity - m.A.Velocity, m.Normal));
+                        float impulseApprox = m.Penetration * relativeVel;
+                        float wakeImpulseThreshold = 5.0f; // adjust threshold as appropriate
+
+                        // Only wake if a significant impulse is delivered.
+                        if (impulseApprox > wakeImpulseThreshold)
+                        {
+                            if (objA.Sleeping && !objA.Locked)
+                                objA.Wake();
+                            if (objB.Sleeping && !objB.Locked)
+                                objB.Wake();
+                        }
+
                         // Add to object contact points once per physics tick
                         if (iter == PHYSICS_ITERATIONS - 1)
                         {
-                            m.A.ContactPoints.Add(m.B, (m.ContactPoint, m.Normal));
-                            m.B.ContactPoints.Add(m.A, (m.ContactPoint, -m.Normal));
+                            m.A.AddContact(m.B, m.ContactPoint, m.Normal);
+                            m.B.AddContact(m.A, m.ContactPoint, -m.Normal);
                         }
 
                         // Resolve Collision
@@ -498,6 +522,10 @@ namespace physics.Engine
                         {
                             PhysicsObject objA = cell[i];
                             PhysicsObject objB = cell[j];
+
+                            // Skip pairs where both objects are sleeping.
+                            if (objA.Sleeping && objB.Sleeping)
+                            continue;
 
                             // Add the pair if it has not already been processed.
                             if (_pairSet.Add((objA, objB)))

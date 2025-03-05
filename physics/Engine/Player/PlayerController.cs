@@ -48,6 +48,10 @@ namespace SharpPhysics.Engine.Player
 
         public void Update(KeyState keyState)
         {
+            if (_player.Sleeping)
+            {
+                _player.Wake();
+            }
             // Reset the horizontal input accumulator.
             _horizontalInput = 0f;
 

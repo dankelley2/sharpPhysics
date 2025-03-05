@@ -46,13 +46,13 @@ namespace physics.Engine
             ObjectTemplates.CreateWall(new Vector2f(0, (int)worldHeight - 15), (int)worldWidth, 15);
 
             // Create a grid of medium balls.
-            for (int i = 0; i < 600; i += 50)
-            {
-                for (int j = 0; j < 200; j += 50)
-                {
-                        ObjectTemplates.CreatePolygonTriangle(new Vector2f(i + 400, j + 150));
-                }
-            }
+            // for (int i = 0; i < 600; i += 20)
+            // {
+            //     for (int j = 0; j < 400; j += 20)
+            //     {
+            //             ObjectTemplates.CreateMedBall(i + 400, j + 150);
+            //     }
+            // }
 
             var player = ObjectTemplates.CreatePolygonCapsule(new Vector2f(800, 20));
 

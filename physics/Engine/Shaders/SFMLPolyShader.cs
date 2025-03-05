@@ -15,7 +15,7 @@ namespace physics.Engine.Shaders
         // Preallocated VertexArray for drawing contact normals.
         private VertexArray contactLines = new VertexArray(PrimitiveType.Lines);
 
-        public bool DrawNormals {get; set;} = false;
+        public bool DrawNormals {get; set;} = true;
 
         public override void PreDraw(PhysicsObject obj, RenderTarget target)
         {
@@ -60,7 +60,7 @@ namespace physics.Engine.Shaders
                 Origin = new Vector2f(radius, radius),
                 Position = obj.Center,
                 OutlineThickness = 1f,
-                OutlineColor = Color.Red,
+                OutlineColor = obj.Sleeping ? Color.Blue : Color.Red,
                 FillColor = Color.Transparent
             };
             target.Draw(circle);
@@ -71,7 +71,7 @@ namespace physics.Engine.Shaders
             // 3) Draw a line from each contact point along its normal.
             contactLines.Clear();
             float lineLength = 10f; // Adjust this value to scale the drawn normals.
-            foreach (var kv in obj.PreviousContactPoints)
+            foreach (var kv in obj.GetContacts())
             {
                 // kv.Key is the other PhysicsObject (unused here), and kv.Value is (contactPoint, normal).
                 (Vector2f contactPoint, Vector2f normal) = kv.Value;
