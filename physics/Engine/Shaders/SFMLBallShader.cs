@@ -1,9 +1,10 @@
 using SFML.Graphics;
-using SFML.System;
 using physics.Engine.Objects;
 using physics.Engine.Shapes;
 using System;
 using CircleShape = SFML.Graphics.CircleShape;
+using SFML.System;
+using physics.Engine.Helpers;
 
 namespace physics.Engine.Shaders
 {
@@ -31,7 +32,7 @@ namespace physics.Engine.Shaders
             {
                 throw new ArgumentException("GetRectangleCorners requires a PhysicsObject with a BoxShape.");
             }
-            Circle.Position = obj.Aabb.Min;
+            Circle.Position = obj.Aabb.Min.ToSfml();
             Circle.FillColor = LightGrayColor;
             target.Draw(Circle);
 

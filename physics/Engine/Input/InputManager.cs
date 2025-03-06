@@ -2,10 +2,10 @@
 using SFML.System;
 using SFML.Window;
 using System;
-using physics.Engine.Classes;
+using System.Numerics;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Shaders;
-using physics.Engine.Objects;
+using physics.Engine.Helpers;
 
 namespace physics.Engine.Input
 {
@@ -22,11 +22,11 @@ namespace physics.Engine.Input
         public bool IsCreatingBox { get; private set; } = false;
         public bool IsPanning { get; private set; } = false;
 
-        public Vector2f StartPoint { get; private set; }
-        public Vector2f MousePosition { get; private set; }
-        public Vector2f BoxStartPoint { get; private set; }
-        public Vector2f BoxEndPoint { get; private set; }
-        public Vector2f PanStartPos { get; private set; }
+        public Vector2 StartPoint { get; private set; }
+        public Vector2 MousePosition { get; private set; }
+        public Vector2 BoxStartPoint { get; private set; }
+        public Vector2 BoxEndPoint { get; private set; }
+        public Vector2 PanStartPos { get; private set; }
 
         private float launchTimer = 0f;
         private const float LaunchInterval = 0.035f;
@@ -74,7 +74,7 @@ namespace physics.Engine.Input
 
         private void OnMouseButtonPressed(object sender, MouseButtonEventArgs e)
         {
-            Vector2f worldPos = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view);
+            Vector2 worldPos = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view).ToSystemNumerics();
 
             if (e.Button == Mouse.Button.Left)
             {
@@ -113,7 +113,7 @@ namespace physics.Engine.Input
             else if (e.Button == Mouse.Button.Middle)
             {
                 IsPanning = true;
-                PanStartPos = new Vector2f(e.X, e.Y);
+                PanStartPos = new Vector2(e.X, e.Y);
             }
         }
 
@@ -141,7 +141,7 @@ namespace physics.Engine.Input
                     float minY = Math.Min(BoxStartPoint.Y, BoxEndPoint.Y);
                     float maxX = Math.Max(BoxStartPoint.X, BoxEndPoint.X);
                     float maxY = Math.Max(BoxStartPoint.Y, BoxEndPoint.Y);
-                    ObjectTemplates.CreateBox(new Vector2f(minX, minY), (int)maxX - (int)minX, (int)maxY - (int)minY);
+                    ObjectTemplates.CreateBox(new Vector2(minX, minY), (int)maxX - (int)minX, (int)maxY - (int)minY);
                     IsCreatingBox = false;
                 }
                 IsMousePressedRight = false;
@@ -154,17 +154,17 @@ namespace physics.Engine.Input
 
         private void OnMouseMoved(object sender, MouseMoveEventArgs e)
         {
-            MousePosition = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view);
+            MousePosition = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view).ToSystemNumerics();
 
             if (IsPanning)
             {
                 Vector2i prevPixelPos = new Vector2i((int)PanStartPos.X, (int)PanStartPos.Y);
                 Vector2i currentPixelPos = new Vector2i(e.X, e.Y);
-                Vector2f worldPrev = window.MapPixelToCoords(prevPixelPos, view);
-                Vector2f worldCurrent = window.MapPixelToCoords(currentPixelPos, view);
-                Vector2f delta = worldPrev - worldCurrent;
-                view.Center += delta;
-                PanStartPos = new Vector2f(e.X, e.Y);
+                Vector2 worldPrev = window.MapPixelToCoords(prevPixelPos, view).ToSystemNumerics();
+                Vector2 worldCurrent = window.MapPixelToCoords(currentPixelPos, view).ToSystemNumerics();
+                Vector2 delta = worldPrev - worldCurrent;
+                view.Center += delta.ToSfml();
+                PanStartPos = new Vector2(e.X, e.Y);
             }
 
             if (IsCreatingBox)
@@ -173,7 +173,7 @@ namespace physics.Engine.Input
             }
             else if (IsMousePressedRight)
             {
-                Vector2f worldPos = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view);
+                Vector2 worldPos = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view).ToSystemNumerics();
                 if (physicsSystem.ActivateAtPoint(worldPos))
                 {
                     physicsSystem.RemoveActiveObject();

@@ -1,6 +1,5 @@
-﻿using SFML.Graphics;
+﻿using System.Numerics;
 using SFML.System;
-using SFML.Window;
 using System;
 using System.Diagnostics;
 using physics.Engine.Classes.ObjectTemplates;
@@ -40,10 +39,10 @@ namespace physics.Engine
         private void InitializeGame(uint worldWidth, uint worldHeight)
         {
             // Create walls.
-            ObjectTemplates.CreateWall(new Vector2f(0, 0), 15, (int)worldHeight);
-            ObjectTemplates.CreateWall(new Vector2f((int)worldWidth - 15, 0), 15, (int)worldHeight);
-            ObjectTemplates.CreateWall(new Vector2f(0, 0), (int)worldWidth, 15);
-            ObjectTemplates.CreateWall(new Vector2f(0, (int)worldHeight - 15), (int)worldWidth, 15);
+            ObjectTemplates.CreateWall(new Vector2(0, 0), 15, (int)worldHeight);
+            ObjectTemplates.CreateWall(new Vector2((int)worldWidth - 15, 0), 15, (int)worldHeight);
+            ObjectTemplates.CreateWall(new Vector2(0, 0), (int)worldWidth, 15);
+            ObjectTemplates.CreateWall(new Vector2(0, (int)worldHeight - 15), (int)worldWidth, 15);
 
             //Create a grid of medium balls.
             for (int i = 0; i < 1000; i += 40)
@@ -57,7 +56,7 @@ namespace physics.Engine
                 }
             }
 
-            var player = ObjectTemplates.CreatePolygonCapsule(new Vector2f(50, 20));
+            var player = ObjectTemplates.CreatePolygonCapsule(new Vector2(50, 20));
 
             playerController = new PlayerController(player);
             // Create an attractor.
@@ -69,7 +68,7 @@ namespace physics.Engine
             // Loop to create boxes
             // for (int i = 0; i < 10; i++)
             // {
-            //     var boxOrigin = new Vector2f(100, 100 + i * 50);
+            //     var boxOrigin = new Vector2(100, 100 + i * 50);
             //     ObjectTemplates.CreateBox(boxOrigin, 200, 50);
             // }
         }

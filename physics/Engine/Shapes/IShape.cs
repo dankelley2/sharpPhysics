@@ -1,7 +1,6 @@
-﻿using SFML.System;
-using physics.Engine.Structs;
+﻿using physics.Engine.Structs;
 using System.Collections.Generic;
-using System;
+using System.Numerics;
 
 namespace physics.Engine.Shapes
 {
@@ -10,9 +9,9 @@ namespace physics.Engine.Shapes
         /// <summary>
         /// Computes the axis-aligned bounding box for this shape, given a center position and rotation angle (in radians).
         /// </summary>
-        AABB GetAABB(Vector2f center, float angle);
+        AABB GetAABB(Vector2 center, float angle);
 
-        public List<Vector2f> LocalVertices { get; set; }
+        public List<Vector2> LocalVertices { get; set; }
 
         /// <summary>
         /// Returns the area of the shape.
@@ -31,7 +30,7 @@ namespace physics.Engine.Shapes
         /// <summary>
         /// Determines whether a given point (in world coordinates) lies within the shape, given the shape’s center and rotation.
         /// </summary>
-        bool Contains(Vector2f point, Vector2f center, float angle);
+        bool Contains(Vector2 point, Vector2 center, float angle);
 
         /// <summary>
         /// Gets the local point of a point in world space.
@@ -40,7 +39,7 @@ namespace physics.Engine.Shapes
         /// <param name="center"></param>
         /// <param name="angle"></param>
         /// <returns></returns>
-        public Vector2f GetLocalPoint(Vector2f point, Vector2f center, float angle)
+        public Vector2 GetLocalPoint(Vector2 point, Vector2 center, float angle)
         {
             return point - center;
         }
@@ -49,9 +48,9 @@ namespace physics.Engine.Shapes
         /// Returns a list of the shape's vertices transformed into world space,
         /// using the provided center and angle.
         /// </summary>
-        public virtual Vector2f[] GetTransformedVertices(Vector2f center, float angle)
+        public virtual Vector2[] GetTransformedVertices(Vector2 center, float angle)
         {
-            var transformed = new Vector2f[LocalVertices.Count];
+            var transformed = new Vector2[LocalVertices.Count];
 
             float cos = (float)System.Math.Cos(angle);
             float sin = (float)System.Math.Sin(angle);
@@ -67,7 +66,7 @@ namespace physics.Engine.Shapes
                 float worldX = center.X + rx;
                 float worldY = center.Y + ry;
 
-                transformed[i] = new Vector2f(worldX, worldY);
+                transformed[i] = new Vector2(worldX, worldY);
             }
 
             return transformed;

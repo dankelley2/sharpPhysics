@@ -1,13 +1,9 @@
-﻿using SFML.System;
-using physics.Engine.Structs;
+﻿using physics.Engine.Structs;
 using physics.Engine.Shapes;
 using System;
-using physics.Engine.Classes;
 using System.Collections.Generic;
 using physics.Engine.Shaders;
 using System.Numerics;
-using physics.Engine.Extensions;
-using System.Linq;
 
 namespace physics.Engine.Objects
 {
@@ -16,8 +12,8 @@ namespace physics.Engine.Objects
         public readonly Guid Id = Guid.NewGuid();
         public IShape Shape { get; protected set; }
         public AABB Aabb { get; protected set; }
-        public Vector2f Center { get; protected set; }
-        public Vector2f Velocity { get; set; }
+        public Vector2 Center { get; protected set; }
+        public Vector2 Velocity { get; set; }
         public float Restitution { get; set; }
         public float Mass { get; protected set; }
         public float IMass { get; protected set; }
@@ -39,13 +35,13 @@ namespace physics.Engine.Objects
 
         // --- New caching and events ---
         // Event fired when a new contact point is added.
-        public event Action<PhysicsObject, (Vector2f, Vector2f)> ContactPointAdded;
+        public event Action<PhysicsObject, (Vector2, Vector2)> ContactPointAdded;
         // Event fired when a contact point is removed.
-        public event Action<PhysicsObject, (Vector2f, Vector2f)> ContactPointRemoved;
+        public event Action<PhysicsObject, (Vector2, Vector2)> ContactPointRemoved;
         // Current contact points. The key is the object, and the value is a tuple of (point, normal).
-        private readonly Dictionary<PhysicsObject, (Vector2f, Vector2f)> _contactPoints = new Dictionary<PhysicsObject, (Vector2f, Vector2f)>();
+        private readonly Dictionary<PhysicsObject, (Vector2, Vector2)> _contactPoints = new Dictionary<PhysicsObject, (Vector2, Vector2)>();
         // Cached contacts from the previous update.
-        private readonly Dictionary<PhysicsObject, (Vector2f, Vector2f)> _previousContactPoints = new Dictionary<PhysicsObject, (Vector2f, Vector2f)>();
+        private readonly Dictionary<PhysicsObject, (Vector2, Vector2)> _previousContactPoints = new Dictionary<PhysicsObject, (Vector2, Vector2)>();
 
         // --- Sleep/Wake state management ---
         public bool Sleeping { get; private set; } = false;
@@ -56,15 +52,15 @@ namespace physics.Engine.Objects
         private const float SleepTimeThreshold = 0.7f; // e.g. 0.8 seconds of inactivity.
 
         // Store the previous center to compute displacement.
-        private Vector2f _prevCenter;
+        private Vector2 _prevCenter;
 
-        public PhysicsObject(IShape shape, Vector2f center, float restitution, bool locked, SFMLShader shader, float mass = 0, bool canRotate = false)
+        public PhysicsObject(IShape shape, Vector2 center, float restitution, bool locked, SFMLShader shader, float mass = 0, bool canRotate = false)
         {
             Shape = shape;
             Center = center;
             _prevCenter = center; // initialize previous center.
             Angle = 0;
-            Velocity = new Vector2f(0, 0);
+            Velocity = new Vector2(0, 0);
             Restitution = restitution;
             Locked = locked;
             Shader = shader;
@@ -134,7 +130,7 @@ namespace physics.Engine.Objects
         {
             if (Sleeping) return;
             Sleeping = true;
-            Velocity = new Vector2f(0, 0);
+            Velocity = new Vector2(0, 0);
             AngularVelocity = 0;
             // Optionally, clear contact caches if desired.
         }
@@ -156,7 +152,7 @@ namespace physics.Engine.Objects
         /// <param name="obj"></param>
         /// <param name="point"></param>
         /// <param name="normal"></param>
-        public void AddContact(PhysicsObject obj, Vector2f point, Vector2f normal)
+        public void AddContact(PhysicsObject obj, Vector2 point, Vector2 normal)
         {
             if (!_contactPoints.ContainsKey(obj))
             {
@@ -168,7 +164,7 @@ namespace physics.Engine.Objects
         /// Retrieve the most recent contact points.
         /// </summary>
         /// <returns></returns>
-        public Dictionary<PhysicsObject, (Vector2f, Vector2f)> GetContacts(){
+        public Dictionary<PhysicsObject, (Vector2, Vector2)> GetContacts(){
             return _previousContactPoints;
         }
 
@@ -187,7 +183,7 @@ namespace physics.Engine.Objects
             if (ContactPointAdded == null && ContactPointRemoved == null)
             {
                 _previousContactPoints.Clear();
-                foreach (KeyValuePair<PhysicsObject, (Vector2f, Vector2f)> kv in _contactPoints)
+                foreach (KeyValuePair<PhysicsObject, (Vector2, Vector2)> kv in _contactPoints)
                 {
                     _previousContactPoints.Add(kv.Key, kv.Value);
                 }
@@ -200,7 +196,7 @@ namespace physics.Engine.Objects
             var removedHandler = ContactPointRemoved;
 
             // Fire events for newly added contacts.
-            foreach (KeyValuePair<PhysicsObject, (Vector2f, Vector2f)> kv in _contactPoints)
+            foreach (KeyValuePair<PhysicsObject, (Vector2, Vector2)> kv in _contactPoints)
             {
                 if (!_previousContactPoints.ContainsKey(kv.Key))
                 {
@@ -209,7 +205,7 @@ namespace physics.Engine.Objects
             }
 
             // Fire events for contacts that were removed.
-            foreach (KeyValuePair<PhysicsObject, (Vector2f, Vector2f)> kv in _previousContactPoints)
+            foreach (KeyValuePair<PhysicsObject, (Vector2, Vector2)> kv in _previousContactPoints)
             {
                 if (!_contactPoints.ContainsKey(kv.Key))
                 {
@@ -219,7 +215,7 @@ namespace physics.Engine.Objects
 
             // Update the cached contacts by clearing and repopulating the dictionary.
             _previousContactPoints.Clear();
-            foreach (KeyValuePair<PhysicsObject, (Vector2f, Vector2f)> kv in _contactPoints)
+            foreach (KeyValuePair<PhysicsObject, (Vector2, Vector2)> kv in _contactPoints)
             {
                 _previousContactPoints.Add(kv.Key, kv.Value);
             }
@@ -246,14 +242,14 @@ namespace physics.Engine.Objects
         {
             if (Math.Abs(Velocity.X) + Math.Abs(Velocity.Y) < 0.01f)
             {
-                Velocity = new Vector2f(0, 0);
+                Velocity = new Vector2(0, 0);
             }
         }
 
         /// <summary>
         /// Directly translates the object by a given vector.
         /// </summary>
-        public virtual void Move(Vector2f dVector)
+        public virtual void Move(Vector2 dVector)
         {
             if (Locked)
                 return;
@@ -283,7 +279,7 @@ namespace physics.Engine.Objects
         /// Determines whether a given point (in world coordinates) lies within the object.
         /// This method delegates to the shape's own containment logic using the object's center and rotation.
         /// </summary>
-        public bool Contains(Vector2f point)
+        public bool Contains(Vector2 point)
         {
             return Shape.Contains(point, Center, Angle);
         }

@@ -1,6 +1,5 @@
 ﻿using physics.Engine.Objects;
-using physics.Engine.Structs;
-using SFML.System;
+using System.Numerics;
 
 namespace physics.Engine.Classes
 {
@@ -9,16 +8,16 @@ namespace physics.Engine.Classes
         public PhysicsObject A;
         public PhysicsObject B;
         public float Penetration;
-        public Vector2f Normal;
-        public Vector2f ContactPoint;
+        public Vector2 Normal;
+        public Vector2 ContactPoint;
 
         public void Reset()
         {
             A = null;
             B = null;
             Penetration = 0;
-            Normal = new Vector2f(0, 0);
-            ContactPoint = new Vector2f(0, 0);
+            Normal = new Vector2(0, 0);
+            ContactPoint = new Vector2(0, 0);
         }
     }
 }

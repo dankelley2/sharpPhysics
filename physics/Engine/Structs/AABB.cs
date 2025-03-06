@@ -1,6 +1,4 @@
-﻿using SFML.System;
-using physics.Engine.Classes;
-using physics.Engine.Helpers;
+﻿using System.Numerics;
 
 namespace physics.Engine.Structs
 {
@@ -9,8 +7,8 @@ namespace physics.Engine.Structs
     /// </summary>
     public record AABB
     {
-        public Vector2f Min;
-        public Vector2f Max;
+        public Vector2 Min;
+        public Vector2 Max;
         public float Area => (Max.X - Min.X) * (Max.Y - Min.Y);
     }
 }

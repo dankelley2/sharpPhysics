@@ -1,10 +1,9 @@
-﻿using SFML.Graphics;
-using SFML.System;
+﻿using physics.Engine.Helpers;
+using SFML.Graphics;
 using System;
-using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
+using System.Numerics;
 
 namespace physics.Engine.Rendering.UI
 {
@@ -12,19 +11,19 @@ namespace physics.Engine.Rendering.UI
     {
         public Color OutlineColor { get; set; } = Color.White;
 
-        private Vector2f[] _points;
+        private Vector2[] _points;
 
-        public UiRoundedRectangle(Vector2f size, float radius, int quality)
+        public UiRoundedRectangle(Vector2 size, float radius, int quality)
         {
             _points = GeneratedRoundedRectangleBorderPoints(size, 2f, radius, quality).ToArray();
         }
 
-        private IEnumerable<Vector2f> GeneratedRoundedRectangleBorderPoints(Vector2f size, float thickness, float radius, int quality)
+        private IEnumerable<Vector2> GeneratedRoundedRectangleBorderPoints(Vector2 size, float thickness, float radius, int quality)
         {
             return MergeEveryOther(GeneratedRoundedRectanglePoints(size, radius, quality, thickness), GeneratedRoundedRectanglePoints(size, radius, quality, 0));
         }
 
-        private IEnumerable<Vector2f> GeneratedRoundedRectanglePoints(Vector2f size, float radius, int quality, float thickness = 0)
+        private IEnumerable<Vector2> GeneratedRoundedRectanglePoints(Vector2 size, float radius, int quality, float thickness = 0)
         {
             // Determine arc quality per corner.
             // (Assumes that "quality" is the total number of points, so each quadrant gets quality/4 points.)
@@ -34,24 +33,24 @@ namespace physics.Engine.Rendering.UI
             radius += thickness;
 
             // Compute the centers for the four corner circles:
-            Vector2f bottomRightCenter = new Vector2f(size.X - radius + thickness , size.Y - radius + thickness);
-            Vector2f bottomLeftCenter = new Vector2f(radius - thickness , size.Y - radius + thickness);
-            Vector2f topLeftCenter = new Vector2f(radius - thickness, radius - thickness);
-            Vector2f topRightCenter = new Vector2f(size.X - radius + thickness, radius - thickness);
+            Vector2 bottomRightCenter = new Vector2(size.X - radius + thickness , size.Y - radius + thickness);
+            Vector2 bottomLeftCenter = new Vector2(radius - thickness , size.Y - radius + thickness);
+            Vector2 topLeftCenter = new Vector2(radius - thickness, radius - thickness);
+            Vector2 topRightCenter = new Vector2(size.X - radius + thickness, radius - thickness);
 
             // Generate arc points for each corner:
-            List<Vector2f> bottomRightArc = GetArcPoints(bottomRightCenter, radius, 0f, 90f, arcQuality);
-            List<Vector2f> bottomLeftArc = GetArcPoints(bottomLeftCenter, radius, 90f, 180f, arcQuality);
-            List<Vector2f> topLeftArc = GetArcPoints(topLeftCenter, radius, 180f, 270f, arcQuality);
-            List<Vector2f> topRightArc = GetArcPoints(topRightCenter, radius, 270f, 360f, arcQuality);
+            List<Vector2> bottomRightArc = GetArcPoints(new Vector2(bottomRightCenter.X, bottomRightCenter.Y), radius, 0f, 90f, arcQuality);
+            List<Vector2> bottomLeftArc = GetArcPoints(new Vector2(bottomLeftCenter.X, bottomLeftCenter.Y), radius, 90f, 180f, arcQuality);
+            List<Vector2> topLeftArc = GetArcPoints(new Vector2(topLeftCenter.X, topLeftCenter.Y), radius, 180f, 270f, arcQuality);
+            List<Vector2> topRightArc = GetArcPoints(new Vector2(topRightCenter.X, topRightCenter.Y), radius, 270f, 360f, arcQuality);
 
             // Combine the arcs in clockwise order.
-            List<Vector2f> finalPoints =
+            List<Vector2> finalPoints =
             [
-                .. bottomRightArc,
-                .. bottomLeftArc,
-                .. topLeftArc,
-                .. topRightArc,
+                .. bottomRightArc.Select(p => new Vector2(p.X, p.Y)),
+                .. bottomLeftArc.Select(p => new Vector2(p.X, p.Y)),
+                .. topLeftArc.Select(p => new Vector2(p.X, p.Y)),
+                .. topRightArc.Select(p => new Vector2(p.X, p.Y)),
             ];
 
             return finalPoints;
@@ -66,9 +65,9 @@ namespace physics.Engine.Rendering.UI
         /// <param name="endAngleDeg">Ending angle in degrees.</param>
         /// <param name="numPoints">Number of points to generate along the arc.</param>
         /// <returns>A list of points along the arc.</returns>
-        private List<Vector2f> GetArcPoints(Vector2f center, float radius, float startAngleDeg, float endAngleDeg, int numPoints)
+        private List<Vector2> GetArcPoints(Vector2 center, float radius, float startAngleDeg, float endAngleDeg, int numPoints)
         {
-            List<Vector2f> arcPoints = new List<Vector2f>();
+            List<Vector2> arcPoints = new List<Vector2>();
             // Using numPoints-1 so that both endpoints are included.
             for (int i = 0; i < numPoints; i++)
             {
@@ -77,7 +76,7 @@ namespace physics.Engine.Rendering.UI
                 float angleRad = angleDeg * (float)Math.PI / 180f;
                 float x = center.X + radius * (float)Math.Cos(angleRad);
                 float y = center.Y + radius * (float)Math.Sin(angleRad);
-                arcPoints.Add(new Vector2f(x, y));
+                arcPoints.Add(new Vector2(x, y));
             }
             return arcPoints;
         }
@@ -92,23 +91,23 @@ namespace physics.Engine.Rendering.UI
             foreach (var pt in _points)
             {
                 if ( i % 2 == 0)
-                    triStrip.Append(new Vertex(pt + Position, Color.White));
+                    triStrip.Append(new Vertex((pt + Position).ToSfml(), Color.White));
                 else 
-                    triStrip.Append(new Vertex(pt + Position, this.OutlineColor));
+                    triStrip.Append(new Vertex((pt + Position).ToSfml(), this.OutlineColor));
                 i++;
             }
 
             // Close the fan by repeating the first outline point.
             if (_points.Length > 1)
             {
-                triStrip.Append(new Vertex(_points[0] + Position, Color.White));
-                triStrip.Append(new Vertex(_points[1] + Position, this.OutlineColor));
+                triStrip.Append(new Vertex((_points[0] + Position).ToSfml(), Color.White));
+                triStrip.Append(new Vertex((_points[1] + Position).ToSfml(), this.OutlineColor));
             }
 
                 target.Draw(triStrip);
         }
 
-        public static IEnumerable<Vector2f> MergeEveryOther(IEnumerable<Vector2f> first, IEnumerable<Vector2f> second)
+        public static IEnumerable<Vector2> MergeEveryOther(IEnumerable<Vector2> first, IEnumerable<Vector2> second)
         {
             using (var enum1 = first.GetEnumerator())
             using (var enum2 = second.GetEnumerator())

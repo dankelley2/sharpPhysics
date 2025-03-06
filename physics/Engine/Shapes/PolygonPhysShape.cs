@@ -1,8 +1,8 @@
 using SFML.System;
 using physics.Engine.Structs;
-using physics.Engine.Helpers;
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace physics.Engine.Shapes
 {
@@ -11,7 +11,7 @@ namespace physics.Engine.Shapes
         /// <summary>
         /// Local-space vertices of the polygon, in clockwise or counterclockwise order.
         /// </summary>
-        public List<Vector2f> LocalVertices { get; set; }
+        public List<Vector2> LocalVertices { get; set; }
 
         // Precomputed bounding box in local space, just for convenience (or you can compute on the fly).
         private float _localMinX;
@@ -23,11 +23,11 @@ namespace physics.Engine.Shapes
         /// Constructs a new polygon shape from a list of local vertices.
         /// The vertices should define a closed, convex polygon in either clockwise or CCW order.
         /// </summary>
-        public PolygonPhysShape(IEnumerable<Vector2f> vertices)
+        public PolygonPhysShape(IEnumerable<Vector2> vertices)
         {
             LocalVertices = new(vertices);
 
-            Vector2f centroid = CollisionHelpers.ComputeCentroid(LocalVertices);
+            Vector2 centroid = CollisionHelpers.ComputeCentroid(LocalVertices);
 
             // Then shift each vertex so the centroid is at (0,0)
             for (int i = 0; i < LocalVertices.Count; i++)
@@ -56,7 +56,7 @@ namespace physics.Engine.Shapes
         /// <summary>
         /// The Axis-Aligned Bounding Box for this polygon when placed at 'center' and rotated by 'angle'.
         /// </summary>
-        public AABB GetAABB(Vector2f center, float angle)
+        public AABB GetAABB(Vector2 center, float angle)
         {
             // We'll rotate each local vertex by 'angle', offset by center, and track min & max.
             float cos = (float)Math.Cos(angle);
@@ -83,8 +83,8 @@ namespace physics.Engine.Shapes
 
             return new AABB
             {
-                Min = new Vector2f(minX, minY),
-                Max = new Vector2f(maxX, maxY)
+                Min = new Vector2(minX, minY),
+                Max = new Vector2(maxX, maxY)
             };
         }
 
@@ -123,8 +123,8 @@ namespace physics.Engine.Shapes
             for (int i = 0; i < LocalVertices.Count; i++)
             {
                 int j = (i + 1) % LocalVertices.Count;
-                Vector2f v0 = LocalVertices[i];
-                Vector2f v1 = LocalVertices[j];
+                Vector2 v0 = LocalVertices[i];
+                Vector2 v1 = LocalVertices[j];
 
                 float cross = (v0.X * v1.Y - v1.X * v0.Y);
                 float termX = (v0.X * v0.X) + (v0.X * v1.X) + (v1.X * v1.X);
@@ -149,10 +149,10 @@ namespace physics.Engine.Shapes
         /// Returns true if the given world-space point is inside this polygon, assuming the polygon is 
         /// positioned at 'center' with rotation 'angle'.
         /// </summary>
-        public bool Contains(Vector2f point, Vector2f center, float angle)
+        public bool Contains(Vector2 point, Vector2 center, float angle)
         {
             // Transform 'point' into local space of the polygon
-            Vector2f local = WorldToLocalPoint(point, center, angle);
+            Vector2 local = WorldToLocalPoint(point, center, angle);
 
             // Ray-casting or winding number approach. Here's a simple ray-cast:
             // (For brevity, a naive winding or crossing approach is shown.)
@@ -161,8 +161,8 @@ namespace physics.Engine.Shapes
             for (int i = 0; i < count; i++)
             {
                 int j = (i + 1) % count;
-                Vector2f v0 = LocalVertices[i];
-                Vector2f v1 = LocalVertices[j];
+                Vector2 v0 = LocalVertices[i];
+                Vector2 v1 = LocalVertices[j];
 
                 bool intersect = ((v0.Y > local.Y) != (v1.Y > local.Y))
                                  && (local.X < (v1.X - v0.X) * (local.Y - v0.Y) / (v1.Y - v0.Y) + v0.X);
@@ -190,10 +190,10 @@ namespace physics.Engine.Shapes
             return _localMaxY - _localMinY;
         }
 
-        public Vector2f WorldToLocalPoint(Vector2f worldPoint, Vector2f center, float angle)
+        public Vector2 WorldToLocalPoint(Vector2 worldPoint, Vector2 center, float angle)
         {
             // Translate
-            Vector2f translated = worldPoint - center;
+            Vector2 translated = worldPoint - center;
 
             // Rotate by -angle
             float cos = (float)Math.Cos(-angle);
@@ -201,7 +201,8 @@ namespace physics.Engine.Shapes
             float rx = translated.X * cos - translated.Y * sin;
             float ry = translated.X * sin + translated.Y * cos;
 
-            return new Vector2f(rx, ry);
+            return new Vector2(rx, ry);
         }
     }
 }
+

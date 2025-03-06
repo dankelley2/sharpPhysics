@@ -1,8 +1,7 @@
 using SFML.Graphics;
-using SFML.System;
-using physics.Engine.Classes;
 using System;
 using physics.Engine.Objects;
+using SFML.System;
 
 namespace physics.Engine.Shaders
 {

@@ -1,23 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
-using SFML.System;
 using physics.Engine.Classes;
-using physics.Engine.Shaders;
 using physics.Engine.Objects;
 using physics.Engine.Shapes;
 using System.Linq;
+using System.Numerics;
 
 public static class CollisionHelpers
 {
     // Computes the four corners of a rectangle (OBB) in world space.
-    public static List<Vector2f> GetRectangleCorners(PhysicsObject obj)
+    public static List<Vector2> GetRectangleCorners(PhysicsObject obj)
     {
         if (!(obj.Shape is BoxPhysShape box))
         {
             throw new ArgumentException("GetRectangleCorners requires a PhysicsObject with a BoxPhysShape.");
         }
 
-        List<Vector2f> corners = new List<Vector2f>(4);
+        List<Vector2> corners = new List<Vector2>(4);
         float halfW = box.Width / 2f;
         float halfH = box.Height / 2f;
 
@@ -26,12 +25,12 @@ public static class CollisionHelpers
         // a coordinate system where the y-axis points down, so we define the corners in clockwise order.
         // For example, starting at the bottom-right:
         // bottom-right, bottom-left, top-left, top-right.
-        Vector2f[] localCorners = new Vector2f[]
+        Vector2[] localCorners = new Vector2[]
         {
-        new Vector2f( halfW, -halfH),   // bottom-right
-        new Vector2f(-halfW, -halfH),   // bottom-left
-        new Vector2f(-halfW,  halfH),   // top-left
-        new Vector2f( halfW,  halfH)    // top-right
+        new Vector2( halfW, -halfH),   // bottom-right
+        new Vector2(-halfW, -halfH),   // bottom-left
+        new Vector2(-halfW,  halfH),   // top-left
+        new Vector2( halfW,  halfH)    // top-right
         };
 
         float cos = (float)Math.Cos(obj.Angle);
@@ -41,24 +40,24 @@ public static class CollisionHelpers
             // Rotate the local corner and translate to world space.
             float worldX = obj.Center.X + lc.X * cos - lc.Y * sin;
             float worldY = obj.Center.Y + lc.X * sin + lc.Y * cos;
-            corners.Add(new Vector2f(worldX, worldY));
+            corners.Add(new Vector2(worldX, worldY));
         }
         return corners;
     }
 
 
 
-    public static List<Vector2f> SutherlandHodgmanClip(Vector2f[] subjectPolygon, Vector2f[] clipPolygon)
+    public static List<Vector2> SutherlandHodgmanClip(Vector2[] subjectPolygon, Vector2[] clipPolygon)
     {
         // Start with the subject polygon.
-        List<Vector2f> poly = new (subjectPolygon);
+        List<Vector2> poly = new (subjectPolygon);
         // For each edge of the clip polygon:
         int clipCount = clipPolygon.Length;
         for (int i = 0; i < clipCount; i++)
         {
             int next = (i + 1) % clipCount;
-            Vector2f clipEdgeStart = clipPolygon[i];
-            Vector2f clipEdgeEnd = clipPolygon[next];
+            Vector2 clipEdgeStart = clipPolygon[i];
+            Vector2 clipEdgeEnd = clipPolygon[next];
             poly = ClipEdge(poly, clipEdgeStart, clipEdgeEnd);
             if (poly.Count == 0)
                 return subjectPolygon.ToList();
@@ -71,9 +70,9 @@ public static class CollisionHelpers
     /// Clips a polygon (poly) against a single clip edge defined by clipEdgeStart and clipEdgeEnd.
     /// This function implements the logic from the provided C++ code, using floats.
     /// </summary>
-    private static List<Vector2f> ClipEdge(List<Vector2f> poly, Vector2f clipEdgeStart, Vector2f clipEdgeEnd)
+    private static List<Vector2> ClipEdge(List<Vector2> poly, Vector2 clipEdgeStart, Vector2 clipEdgeEnd)
     {
-        List<Vector2f> newPoly = new List<Vector2f>();
+        List<Vector2> newPoly = new List<Vector2>();
         int polySize = poly.Count;
         if (polySize == 0)
             return newPoly;
@@ -82,8 +81,8 @@ public static class CollisionHelpers
         for (int i = 0; i < polySize; i++)
         {
             int k = (i + 1) % polySize;
-            Vector2f current = poly[i];
-            Vector2f next = poly[k];
+            Vector2 current = poly[i];
+            Vector2 next = poly[k];
 
             // Compute the "position" of the points relative to the clip edge.
             // A point is considered "inside" if this value is < 0.
@@ -102,7 +101,7 @@ public static class CollisionHelpers
             else if (currentPos >= 0 && nextPos < 0)
             {
                 // Add the intersection point and the next point.
-                Vector2f intersect = ComputeIntersection(current, next, clipEdgeStart, clipEdgeEnd);
+                Vector2 intersect = ComputeIntersection(current, next, clipEdgeStart, clipEdgeEnd);
                 newPoly.Add(intersect);
                 newPoly.Add(next);
             }
@@ -110,7 +109,7 @@ public static class CollisionHelpers
             else if (currentPos < 0 && nextPos >= 0)
             {
                 // Add the intersection point only.
-                Vector2f intersect = ComputeIntersection(current, next, clipEdgeStart, clipEdgeEnd);
+                Vector2 intersect = ComputeIntersection(current, next, clipEdgeStart, clipEdgeEnd);
                 newPoly.Add(intersect);
             }
             // Case 4: Both are outside – add nothing.
@@ -122,10 +121,10 @@ public static class CollisionHelpers
     /// Computes the intersection point of the infinite lines through points s->e and cp1->cp2.
     /// This is the same as our existing ComputeIntersection, but included here for clarity.
     /// </summary>
-    public static Vector2f ComputeIntersection(Vector2f s, Vector2f e, Vector2f cp1, Vector2f cp2)
+    public static Vector2 ComputeIntersection(Vector2 s, Vector2 e, Vector2 cp1, Vector2 cp2)
     {
-        Vector2f dc = cp1 - cp2;
-        Vector2f dp = s - e;
+        Vector2 dc = cp1 - cp2;
+        Vector2 dp = s - e;
         float n1 = cp1.X * cp2.Y - cp1.Y * cp2.X;
         float n2 = s.X * e.Y - s.Y * e.X;
         float denom = dc.X * dp.Y - dc.Y * dp.X;
@@ -133,13 +132,13 @@ public static class CollisionHelpers
             return s; // Lines are parallel; return s as fallback.
         float x = (n1 * dp.X - n2 * dc.X) / denom;
         float y = (n1 * dp.Y - n2 * dc.Y) / denom;
-        return new Vector2f(x, y);
+        return new Vector2(x, y);
     }
 
 
     // Helper: Computes the signed area of a polygon.
     // Positive area means vertices are in counter-clockwise order.
-    public static float ComputeSignedArea(List<Vector2f> poly)
+    public static float ComputeSignedArea(List<Vector2> poly)
     {
         float area = 0f;
         for (int i = 0; i < poly.Count; i++)
@@ -153,14 +152,14 @@ public static class CollisionHelpers
 
     // Returns true if point p is inside the half-space defined by edge from a to b.
     // Assumes clip polygon is defined in counterclockwise order.
-    public static bool IsInside(Vector2f a, Vector2f b, Vector2f p)
+    public static bool IsInside(Vector2 a, Vector2 b, Vector2 p)
     {
         // Compute the cross product: if p is to the left of ab, it is inside.
         return Cross(b - a, p - a) >= 0;
     }
 
         // Computes the centroid (center of mass) of a polygon.
-    public static Vector2f ComputeCentroid(List<Vector2f> polygon)
+    public static Vector2 ComputeCentroid(List<Vector2> polygon)
     {
         float accumulatedArea = 0f;
         float centerX = 0f;
@@ -179,17 +178,17 @@ public static class CollisionHelpers
 
         // Multiply accumulatedArea by 3 to get the proper divisor (6 * area).
         accumulatedArea *= 3f;
-        return new Vector2f(centerX / accumulatedArea, centerY / accumulatedArea);
+        return new Vector2(centerX / accumulatedArea, centerY / accumulatedArea);
     }
 
     // This function computes the actual contact point between two rotated rectangles.
     // It clips rectangle A's corners against rectangle B and computes the centroid of the intersection polygon.
     public static void UpdateContactPoint(ref Manifold m)
     {
-        Vector2f[] polyA = m.A.Shape.GetTransformedVertices(m.A.Center, m.A.Angle);
-        Vector2f[] polyB = m.B.Shape.GetTransformedVertices(m.B.Center, m.B.Angle);
+        Vector2[] polyA = m.A.Shape.GetTransformedVertices(m.A.Center, m.A.Angle);
+        Vector2[] polyB = m.B.Shape.GetTransformedVertices(m.B.Center, m.B.Angle);
 
-        List<Vector2f> intersection = SutherlandHodgmanClip(polyA, polyB);
+        List<Vector2> intersection = SutherlandHodgmanClip(polyA, polyB);
         if (intersection.Count == 0)
         {
             // Fallback: use midpoint between centers.
@@ -202,7 +201,7 @@ public static class CollisionHelpers
     }
 
     // Helper: 2D cross product returning a scalar.
-    public static float Cross(Vector2f a, Vector2f b)
+    public static float Cross(Vector2 a, Vector2 b)
     {
         return a.X * b.Y - a.Y * b.X;
     }

@@ -1,17 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using physics.Engine.Classes;
 using physics.Engine.Objects;
-using physics.Engine.Extensions;
 using physics.Engine.Helpers;
 using physics.Engine.Shapes;
-using physics.Engine.Structs;
-using SFML.System;
 using physics.Engine.Constraints;
 using physics.Engine.Shaders;
 using System.Numerics;
-using System.Linq;
 
 namespace physics.Engine
 {
@@ -20,7 +15,7 @@ namespace physics.Engine
         #region Public Properties
 
         public float GravityScale = 30F;
-        public Vector2f Gravity { get; set; }
+        public Vector2 Gravity { get; set; }
         public float Friction { get; set; }
 
         // Set this to roughly your average AABB size – adjust as needed.
@@ -54,7 +49,7 @@ namespace physics.Engine
             }
         }
 
-        internal void SetVelocity(PhysicsObject physicsObject, Vector2f velocity)
+        internal void SetVelocity(PhysicsObject physicsObject, Vector2 velocity)
         {
             physicsObject.Velocity = velocity;
         }
@@ -76,7 +71,7 @@ namespace physics.Engine
 
         public PhysicsSystem()
         {
-            Gravity = new Vector2f { X = 0, Y = 10F * GravityScale };
+            Gravity = new Vector2 { X = 0, Y = 10F * GravityScale };
             Friction = 1F;
         }
 
@@ -84,7 +79,7 @@ namespace physics.Engine
 
         #region Public Methods
 
-        public static PhysicsObject CreateStaticCircle(Vector2f loc, int radius, float restitution, bool locked, SFMLShader shader)
+        public static PhysicsObject CreateStaticCircle(Vector2 loc, int radius, float restitution, bool locked, SFMLShader shader)
         {
             // Create the circle shape using the given radius.
             IShape shape = new CirclePhysShape(radius);
@@ -94,17 +89,17 @@ namespace physics.Engine
             return obj;
         }
 
-        public static PhysicsObject CreateStaticBox(Vector2f start, Vector2f end, bool locked, SFMLShader shader, float mass)
+        public static PhysicsObject CreateStaticBox(Vector2 start, Vector2 end, bool locked, SFMLShader shader, float mass)
         {
             // Ensure start and end define the correct bounds.
-            var min = new Vector2f(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y));
-            var max = new Vector2f(Math.Max(start.X, end.X), Math.Max(start.Y, end.Y));
+            var min = new Vector2(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y));
+            var max = new Vector2(Math.Max(start.X, end.X), Math.Max(start.Y, end.Y));
 
             // Compute width and height.
             float width = max.X - min.X;
             float height = max.Y - min.Y;
             // Calculate the center from the corrected bounds.
-            var center = new Vector2f((min.X + max.X) / 2f, (min.Y + max.Y) / 2f);
+            var center = new Vector2((min.X + max.X) / 2f, (min.Y + max.Y) / 2f);
 
             // Create a box shape with the computed dimensions.
             IShape shape = new BoxPhysShape(width, height);
@@ -113,17 +108,17 @@ namespace physics.Engine
             return obj;
         }
 
-        public static PhysicsObject CreateStaticBox2(Vector2f start, Vector2f end, bool locked, SFMLShader shader, float mass)
+        public static PhysicsObject CreateStaticBox2(Vector2 start, Vector2 end, bool locked, SFMLShader shader, float mass)
         {
             // Compute the corrected bounding box.
-            var min = new Vector2f(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y));
-            var max = new Vector2f(Math.Max(start.X, end.X), Math.Max(start.Y, end.Y));
+            var min = new Vector2(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y));
+            var max = new Vector2(Math.Max(start.X, end.X), Math.Max(start.Y, end.Y));
 
             // Compute width and height.
             float width = max.X - min.X;
             float height = max.Y - min.Y;
             // Compute the center.
-            var center = new Vector2f((min.X + max.X) / 2f, (min.Y + max.Y) / 2f);
+            var center = new Vector2((min.X + max.X) / 2f, (min.Y + max.Y) / 2f);
 
             // Create the box shape.
             IShape shape = new BoxPhysShape(width, height);
@@ -133,7 +128,7 @@ namespace physics.Engine
             return obj;
         }
 
-        public static PhysicsObject CreatePolygon(Vector2f origin, Vector2f[] points, SFMLShader shader, bool locked = false, bool canRotate = true)
+        public static PhysicsObject CreatePolygon(Vector2 origin, Vector2[] points, SFMLShader shader, bool locked = false, bool canRotate = true)
         {
             // Create the polygon shape.
             IShape shape = new PolygonPhysShape(points);
@@ -144,7 +139,7 @@ namespace physics.Engine
         }
 
 
-        public bool ActivateAtPoint(Vector2f p)
+        public bool ActivateAtPoint(Vector2 p)
         {
             ActiveObject = CheckObjectAtPoint(p);
 
@@ -157,7 +152,7 @@ namespace physics.Engine
             return true;
         }
 
-        public void AddVelocityToActive(Vector2f velocityDelta)
+        public void AddVelocityToActive(Vector2 velocityDelta)
         {
             if (ActiveObject == null || ActiveObject.Mass >= 1000000)
             {
@@ -167,7 +162,7 @@ namespace physics.Engine
             ActiveObject.Velocity += velocityDelta;
         }
 
-        public void SetVelocityOfActive(Vector2f velocityDelta)
+        public void SetVelocityOfActive(Vector2 velocityDelta)
         {
             if (ActiveObject == null || ActiveObject.Mass >= 1000000)
             {
@@ -181,21 +176,21 @@ namespace physics.Engine
         {
             foreach (var physicsObject in ListStaticObjects)
             {
-                physicsObject.Velocity = new Vector2f { X = 0, Y = 0 };
+                physicsObject.Velocity = new Vector2 { X = 0, Y = 0 };
             }
         }
 
-        public Vector2f GetActiveObjectCenter()
+        public Vector2 GetActiveObjectCenter()
         {
             if (ActiveObject == null)
             {
-                return new Vector2f();
+                return new Vector2();
             }
 
-            return new Vector2f(ActiveObject.Center.X, ActiveObject.Center.Y);
+            return ActiveObject.Center;
         }
 
-        public void MoveActiveTowardsPoint(Vector2f point)
+        public void MoveActiveTowardsPoint(Vector2 point)
         {
             if (ActiveObject == null)
             {
@@ -206,7 +201,7 @@ namespace physics.Engine
             AddVelocityToActive(-delta / 10000);
         }
 
-        public void HoldActiveAtPoint(Vector2f point)
+        public void HoldActiveAtPoint(Vector2 point)
         {
             if (ActiveObject == null)
             {
@@ -295,9 +290,9 @@ namespace physics.Engine
         }
 
 
-        private Vector2f CalculatePointGravity(PhysicsObject obj)
+        private Vector2 CalculatePointGravity(PhysicsObject obj)
         {
-            var forces = new Vector2f(0, 0);
+            var forces = new Vector2(0, 0);
 
             if (obj.Locked)
             {
@@ -324,7 +319,7 @@ namespace physics.Engine
             return forces;
         }
 
-        private PhysicsObject CheckObjectAtPoint(Vector2f p)
+        private PhysicsObject CheckObjectAtPoint(Vector2 p)
         {
             foreach (var physicsObject in ListStaticObjects)
             {
@@ -337,7 +332,7 @@ namespace physics.Engine
             return null;
         }
 
-        private Vector2f GetGravityVector(PhysicsObject obj)
+        private Vector2 GetGravityVector(PhysicsObject obj)
         {
             return CalculatePointGravity(obj) + Gravity;
         }
@@ -426,7 +421,7 @@ namespace physics.Engine
 
                         // Here, instead of immediately waking sleeping objects, we compute a rough impulse magnitude.
                         // (For example, you might approximate impulse as the penetration depth times relative velocity along the normal.)
-                        float relativeVel = Math.Abs(PhysMath.Dot(m.B.Velocity - m.A.Velocity, m.Normal));
+                        float relativeVel = Math.Abs(Vector2.Dot(m.B.Velocity - m.A.Velocity, m.Normal));
                         float impulseApprox = m.Penetration * relativeVel;
                         float wakeImpulseThreshold = 3.0f; // adjust threshold as appropriate
 

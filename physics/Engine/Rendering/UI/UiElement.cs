@@ -1,11 +1,8 @@
 ﻿using physics.Engine.Rendering.UI;
 using SFML.Graphics;
-using SFML.System;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Numerics;
 
 namespace physics.Engine.Rendering.UI
 {
@@ -13,7 +10,7 @@ namespace physics.Engine.Rendering.UI
     {
         protected List<UiElement> Children { get; } = new List<UiElement>();
         protected UiElement Parent { get; private set; } = null;
-        public Vector2f Position { get; set; } = new Vector2f(0, 0);
+        public Vector2 Position { get; set; } = new Vector2(0, 0);
 
         public void Draw(RenderTarget target)
         {
@@ -21,8 +18,8 @@ namespace physics.Engine.Rendering.UI
             foreach (var child in Children)
             {
                 // Calculate absolute position based on parent
-                Vector2f originalPosition = child.Position;
-                child.Position = new Vector2f(Position.X + originalPosition.X, Position.Y + originalPosition.Y);
+                Vector2 originalPosition = child.Position;
+                child.Position = new Vector2(Position.X + originalPosition.X, Position.Y + originalPosition.Y);
                 child.Draw(target);
                 // Restore original relative position
                 child.Position = originalPosition;

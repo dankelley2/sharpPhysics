@@ -1,4 +1,4 @@
-﻿using SFML.System;
+﻿using System.Numerics;
 using physics.Engine.Structs;
 using System;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ namespace physics.Engine.Shapes
         const int SEGMENTS = 8;
         public float Radius { get; }
         
-        public List<Vector2f> LocalVertices { get; set; } = new List<Vector2f>();
+        public List<Vector2> LocalVertices { get; set; } = new List<Vector2>();
 
         public CirclePhysShape(float radius)
         {
@@ -23,17 +23,17 @@ namespace physics.Engine.Shapes
                 float theta = (2f * (float)Math.PI * i) / SEGMENTS;
                 float x = Radius * (float)Math.Cos(theta);
                 float y = Radius * (float)Math.Sin(theta);
-                LocalVertices.Add(new Vector2f(x, y));
+                LocalVertices.Add(new Vector2(x, y));
             }
         }
 
-        public AABB GetAABB(Vector2f center, float angle)
+        public AABB GetAABB(Vector2 center, float angle)
         {
             // A circle's AABB is independent of rotation.
             return new AABB
             {
-                Min = new Vector2f(center.X - Radius, center.Y - Radius),
-                Max = new Vector2f(center.X + Radius, center.Y + Radius)
+                Min = new Vector2(center.X - Radius, center.Y - Radius),
+                Max = new Vector2(center.X + Radius, center.Y + Radius)
             };
         }
 
@@ -44,7 +44,7 @@ namespace physics.Engine.Shapes
             return 0.5f * mass * Radius * Radius;
         }
 
-        public bool Contains(Vector2f point, Vector2f center, float angle)
+        public bool Contains(Vector2 point, Vector2 center, float angle)
         {
             float dx = point.X - center.X;
             float dy = point.Y - center.Y;

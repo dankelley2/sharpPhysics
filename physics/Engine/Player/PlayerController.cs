@@ -1,8 +1,6 @@
-using SFML.System;
-using System;
 using physics.Engine.Input;
 using physics.Engine.Objects;
-using System.Runtime.InteropServices.Marshalling;
+using System.Numerics;
 using System.Collections.Generic;
 
 namespace SharpPhysics.Engine.Player
@@ -29,19 +27,19 @@ namespace SharpPhysics.Engine.Player
             _player.ContactPointRemoved += OnContactPointRemoved;
         }
 
-        private void OnContactPointAdded(PhysicsObject obj, (Vector2f, Vector2f) pointNormal)
+        private void OnContactPointAdded(PhysicsObject obj, (Vector2, Vector2) pointNormal)
         {
             // if normal is pointing down, add to ground objects
             var (_, normal) = pointNormal;
             if (normal.Y > 0.5f)
             {
                 _groundObjects.Add(obj);
-                _player.Velocity = new Vector2f(_player.Velocity.X, 0);
+                _player.Velocity = new Vector2(_player.Velocity.X, 0);
                 return;
             }
         }
 
-        private void OnContactPointRemoved(PhysicsObject obj, (Vector2f, Vector2f) pointNormal)
+        private void OnContactPointRemoved(PhysicsObject obj, (Vector2, Vector2) pointNormal)
         {
             _ = _groundObjects.Remove(obj);
         }
@@ -68,7 +66,7 @@ namespace SharpPhysics.Engine.Player
                 Jump();
             }
 
-            _player.Velocity = new Vector2f(_horizontalInput * _speed, _player.Velocity.Y);
+            _player.Velocity = new Vector2(_horizontalInput * _speed, _player.Velocity.Y);
 
         }
 
@@ -86,7 +84,7 @@ namespace SharpPhysics.Engine.Player
         {
             if (_isGrounded)
             {
-                _player.Velocity = new Vector2f(_player.Velocity.X, -_jumpForce);
+                _player.Velocity = new Vector2(_player.Velocity.X, -_jumpForce);
             }
         }
 

@@ -1,10 +1,8 @@
 using SFML.Graphics;
-using SFML.System;
-using physics.Engine.Classes;
+using System.Numerics;
 using physics.Engine.Objects;
-using physics.Engine.Shapes;
-using System;
-using System.Collections.Generic;
+using physics.Engine.Helpers;
+using SFML.System;
 
 namespace physics.Engine.Shaders
 {
@@ -28,23 +26,23 @@ namespace physics.Engine.Shaders
             vertexes.Clear();
 
             // Get transformed vertices.
-            Vector2f[] points = obj.Shape.GetTransformedVertices(obj.Center, obj.Angle);
+            Vector2[] points = obj.Shape.GetTransformedVertices(obj.Center, obj.Angle);
 
             // Add vertices with some color coding.
             for (int i = 0; i < points.Length; i++)
             {
                 if (i == 0)
-                    vertexes.Append(new Vertex(points[i], Color.Red));
+                    vertexes.Append(new Vertex(points[i].ToSfml(), Color.Red));
                 else if (i == 1)
-                    vertexes.Append(new Vertex(points[i], Color.Green));
+                    vertexes.Append(new Vertex(points[i].ToSfml(), Color.Green));
                 else 
-                    vertexes.Append(new Vertex(points[i], Color.White));
+                    vertexes.Append(new Vertex(points[i].ToSfml(), Color.White));
             }
 
             // Close the loop.
             if (points.Length > 0)
             {
-                vertexes.Append(new Vertex(points[0], Color.White));
+                vertexes.Append(new Vertex(points[0].ToSfml(), Color.White));
             }
         }
 
@@ -58,7 +56,7 @@ namespace physics.Engine.Shaders
             CircleShape circle = new CircleShape(radius)
             {
                 Origin = new Vector2f(radius, radius),
-                Position = obj.Center,
+                Position = obj.Center.ToSfml(),
                 OutlineThickness = 1f,
                 OutlineColor = obj.Sleeping ? Color.Blue : Color.Red,
                 FillColor = Color.Transparent
@@ -74,9 +72,9 @@ namespace physics.Engine.Shaders
             foreach (var kv in obj.GetContacts())
             {
                 // kv.Key is the other PhysicsObject (unused here), and kv.Value is (contactPoint, normal).
-                (Vector2f contactPoint, Vector2f normal) = kv.Value;
-                contactLines.Append(new Vertex(contactPoint, normal.Y > 0 ? Color.Yellow : Color.Cyan));
-                contactLines.Append(new Vertex(contactPoint + normal * lineLength, normal.Y > 0 ? Color.Yellow : Color.Cyan));
+                (Vector2 contactPoint, Vector2 normal) = kv.Value;
+                contactLines.Append(new Vertex(contactPoint.ToSfml(), normal.Y > 0 ? Color.Yellow : Color.Cyan));
+                contactLines.Append(new Vertex((contactPoint + normal).ToSfml() * lineLength, normal.Y > 0 ? Color.Yellow : Color.Cyan));
             }
             target.Draw(contactLines);
         }

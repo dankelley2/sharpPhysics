@@ -1,4 +1,4 @@
-﻿using SFML.System;
+﻿using System.Numerics;
 using physics.Engine.Structs;
 using System;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ namespace physics.Engine.Shapes
     {
         public float Width { get; }
         public float Height { get; }
-        public List<Vector2f> LocalVertices { get; set; } = new List<Vector2f>();
+        public List<Vector2> LocalVertices { get; set; } = new List<Vector2>();
 
         public BoxPhysShape(float width, float height)
         {
@@ -23,20 +23,20 @@ namespace physics.Engine.Shapes
             float hh = Height / 2f;
 
             // Clockwise corners around (0,0):
-            LocalVertices.Add(new Vector2f(hw, -hh));
-            LocalVertices.Add(new Vector2f(-hw, -hh));
-            LocalVertices.Add(new Vector2f(-hw, hh));
-            LocalVertices.Add(new Vector2f(hw, hh));
+            LocalVertices.Add(new Vector2(hw, -hh));
+            LocalVertices.Add(new Vector2(-hw, -hh));
+            LocalVertices.Add(new Vector2(-hw, hh));
+            LocalVertices.Add(new Vector2(hw, hh));
         }
 
-        public AABB GetAABB(Vector2f center, float angle)
+        public AABB GetAABB(Vector2 center, float angle)
         {
             if (angle == 0)
             {
                 return new AABB
                 {
-                    Min = new Vector2f(center.X - Width / 2, center.Y - Height / 2),
-                    Max = new Vector2f(center.X + Width / 2, center.Y + Height / 2)
+                    Min = new Vector2(center.X - Width / 2, center.Y - Height / 2),
+                    Max = new Vector2(center.X + Width / 2, center.Y + Height / 2)
                 };
             }
 
@@ -46,8 +46,8 @@ namespace physics.Engine.Shapes
             float newHeight = Width * sin + Height * cos;
             return new AABB
             {
-                Min = new Vector2f(center.X - newWidth / 2, center.Y - newHeight / 2),
-                Max = new Vector2f(center.X + newWidth / 2, center.Y + newHeight / 2)
+                Min = new Vector2(center.X - newWidth / 2, center.Y - newHeight / 2),
+                Max = new Vector2(center.X + newWidth / 2, center.Y + newHeight / 2)
             };
         }
 
@@ -58,10 +58,10 @@ namespace physics.Engine.Shapes
             return (mass / 12f) * (Width * Width + Height * Height);
         }
 
-        public bool Contains(Vector2f point, Vector2f center, float angle)
+        public bool Contains(Vector2 point, Vector2 center, float angle)
         {
             // Translate point to local space relative to center.
-            Vector2f localPoint = point - center;
+            Vector2 localPoint = point - center;
 
             // Rotate the point by -angle to remove the rotation of the box.
             float cos = (float)Math.Cos(-angle);
@@ -80,16 +80,16 @@ namespace physics.Engine.Shapes
         /// <param name="center"></param>
         /// <param name="angle"></param>
         /// <returns></returns>
-        public Vector2f GetLocalPoint(Vector2f point, Vector2f center, float angle)
+        public Vector2 GetLocalPoint(Vector2 point, Vector2 center, float angle)
         {
             // Translate point to local space relative to center.
-            Vector2f localPoint = point - center;
+            Vector2 localPoint = point - center;
             // Rotate the point by -angle to remove the rotation of the box.
             float cos = (float)Math.Cos(-angle);
             float sin = (float)Math.Sin(-angle);
             float localX = localPoint.X * cos - localPoint.Y * sin;
             float localY = localPoint.X * sin + localPoint.Y * cos;
-            return new Vector2f(localX, localY);
+            return new Vector2(localX, localY);
         }
 
         public float GetWidth()

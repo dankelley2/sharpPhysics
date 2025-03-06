@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using SFML.System;
-using physics.Engine.Shapes; // For IShape if needed
-using physics.Engine.Structs;
-using physics.Engine.Extensions;
+using System.Numerics;
 using physics.Engine.Objects;
 using physics.Engine.Helpers;
 
@@ -43,17 +39,17 @@ namespace physics.Engine.Constraints
         /// <summary>
         /// Local anchor on object A (relative to its center).
         /// </summary>
-        public Vector2f AnchorA { get; private set; }
+        public Vector2 AnchorA { get; private set; }
         /// <summary>
         /// Local anchor on object B (relative to its center).
         /// </summary>
-        public Vector2f AnchorB { get; private set; }
+        public Vector2 AnchorB { get; private set; }
         /// <summary>
         /// The initial relative angle between the objects.
         /// </summary>
         public float InitialRelativeAngle { get; private set; }
 
-        public WeldConstraint(PhysicsObject a, PhysicsObject b, Vector2f anchorA, Vector2f anchorB)
+        public WeldConstraint(PhysicsObject a, PhysicsObject b, Vector2 anchorA, Vector2 anchorB)
             : base(a, b)
         {
             AnchorA = anchorA;
@@ -64,16 +60,16 @@ namespace physics.Engine.Constraints
         public override void ApplyConstraint(float dt)
         {
             // Compute world-space positions of the anchor points.
-            Vector2f worldAnchorA = A.Center + PhysMath.RotateVector(AnchorA, A.Angle);
-            Vector2f worldAnchorB = B.Center + PhysMath.RotateVector(AnchorB, B.Angle);
+            Vector2 worldAnchorA = A.Center + PhysMath.RotateVector(AnchorA, A.Angle);
+            Vector2 worldAnchorB = B.Center + PhysMath.RotateVector(AnchorB, B.Angle);
 
             // Compute the error vector between the two anchors.
-            Vector2f error = worldAnchorB - worldAnchorA;
+            Vector2 error = worldAnchorB - worldAnchorA;
 
             // Use a simple spring-damper model to compute a corrective impulse.
             float stiffness = 0.8f; // tune as needed
             float damping = 0.2f;   // tune as needed
-            Vector2f correctiveImpulse = error * stiffness - (B.Velocity - A.Velocity) * damping;
+            Vector2 correctiveImpulse = error * stiffness - (B.Velocity - A.Velocity) * damping;
 
             if (!A.Locked)
                 A.Velocity += correctiveImpulse * A.IMass;
@@ -100,11 +96,11 @@ namespace physics.Engine.Constraints
         /// <summary>
         /// The local anchor point on object A (relative to its center).
         /// </summary>
-        public Vector2f AnchorA { get; private set; }
+        public Vector2 AnchorA { get; private set; }
         /// <summary>
         /// The local anchor point on object B (relative to its center).
         /// </summary>
-        public Vector2f AnchorB { get; private set; }
+        public Vector2 AnchorB { get; private set; }
 
         /// <summary>
         /// Creates an axis constraint (a revolute joint) that ensures the two objects’ anchor points remain coincident.
@@ -114,7 +110,7 @@ namespace physics.Engine.Constraints
         /// <param name="b">Object B (e.g., a wheel)</param>
         /// <param name="anchorA">The local anchor on object A.</param>
         /// <param name="anchorB">The local anchor on object B.</param>
-        public AxisConstraint(PhysicsObject a, PhysicsObject b, Vector2f anchorA, Vector2f anchorB)
+        public AxisConstraint(PhysicsObject a, PhysicsObject b, Vector2 anchorA, Vector2 anchorB)
             : base(a, b)
         {
             AnchorA = anchorA;
@@ -124,11 +120,11 @@ namespace physics.Engine.Constraints
         public override void ApplyConstraint(float dt)
         {
             // Compute world-space positions of the anchors.
-            Vector2f worldAnchorA = A.Center + PhysMath.RotateVector(AnchorA, A.Angle);
-            Vector2f worldAnchorB = B.Center + PhysMath.RotateVector(AnchorB, B.Angle);
+            Vector2 worldAnchorA = A.Center + PhysMath.RotateVector(AnchorA, A.Angle);
+            Vector2 worldAnchorB = B.Center + PhysMath.RotateVector(AnchorB, B.Angle);
 
             // Compute the error (the difference between the anchor positions).
-            Vector2f error = worldAnchorB - worldAnchorA;
+            Vector2 error = worldAnchorB - worldAnchorA;
 
             // If the error is negligible, nothing to do.
             if (error.LengthSquared() < 0.001f)
@@ -153,10 +149,10 @@ namespace physics.Engine.Constraints
 
             // Now remove any relative velocity along the constraint direction.
             // Compute the unit error vector.
-            Vector2f unitError = error.Normalize();
-            Vector2f relativeVelocity = B.Velocity - A.Velocity;
-            float relVelAlongError = Extensions.Extensions.DotProduct(relativeVelocity, unitError);
-            Vector2f velCorrection = unitError * relVelAlongError;
+            Vector2 unitError = Vector2.Normalize(error);
+            Vector2 relativeVelocity = B.Velocity - A.Velocity;
+            float relVelAlongError = Vector2.Dot(relativeVelocity, unitError);
+            Vector2 velCorrection = unitError * relVelAlongError;
             // Subtract the velocity component that would move the anchors apart.
             if (!B.Locked)
                 B.Velocity -= velCorrection;

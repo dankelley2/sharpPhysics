@@ -1,14 +1,14 @@
+using System.Numerics;
 using SFML.System;
-using System.Drawing;
 
 namespace physics.Engine.Helpers
 {
     public static class SFMLExtensions
     {
-        public static Vector2f ToVector2f(this PointF point)
-            => new Vector2f(point.X, point.Y);
+        public static Vector2f ToSfml(this Vector2 vector)
+            => new Vector2f(vector.X, vector.Y);
 
-        public static PointF ToPointF(this Vector2f vector)
-            => new PointF(vector.X, vector.Y);
+        public static Vector2 ToSystemNumerics(this Vector2f vector)
+            => new Vector2(vector.X, vector.Y);
     }
 }

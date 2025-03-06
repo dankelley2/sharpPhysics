@@ -1,10 +1,10 @@
 ﻿using SFML.Graphics;
 using SFML.System;
 using System;
-using physics.Engine.Classes;
 using System.Collections.Generic;
 using physics.Engine.Rendering.UI;
 using SFML.Window;
+using System.Numerics;
 
 namespace physics.Engine.Rendering
 {
@@ -49,11 +49,11 @@ namespace physics.Engine.Rendering
                 Position = new Vector2f(40, 40)
             };
 
-            UiElement roundedRect = new UiRoundedRectangle(new Vector2f(140, 80), 5, 32)
+            UiElement roundedRect = new UiRoundedRectangle(new Vector2(140, 80), 5, 32)
             {
                 OutlineColor = Color.Red
             };
-            roundedRect.Position = new Vector2f(30, 30);
+            roundedRect.Position = new Vector2(30, 30);
             _uiElements.Add(roundedRect);
         }
 
@@ -67,7 +67,7 @@ namespace physics.Engine.Rendering
         /// <param name="boxStartPoint"></param>
         /// <param name="boxEndPoint"></param>
         public void Render(long msPhysicsTime, long msDrawTime, long msFrameTime,
-                           bool isCreatingBox, Vector2f boxStartPoint, Vector2f boxEndPoint)
+                           bool isCreatingBox, Vector2 boxStartPoint, Vector2 boxEndPoint)
         {
 
             // Draw Game View
@@ -78,7 +78,7 @@ namespace physics.Engine.Rendering
             Window.Display();
         }
 
-        private void DrawGameView(bool isCreatingBox, Vector2f boxStartPoint, Vector2f boxEndPoint)
+        private void DrawGameView(bool isCreatingBox, Vector2 boxStartPoint, Vector2 boxEndPoint)
         {
             // Switch to Game window view
             Window.SetView(GameView);

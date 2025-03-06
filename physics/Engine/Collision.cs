@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Numerics;
 using physics.Engine.Classes;
-using physics.Engine.Extensions;
 using physics.Engine.Helpers;
 using physics.Engine.Objects;
 using physics.Engine.Shapes;
 using physics.Engine.Structs;
-using SFML.System;
 
 namespace physics.Engine
 {
@@ -40,15 +38,15 @@ namespace physics.Engine
 
             // Collect polygon vertices in *world space*.
             // For example, if your shapes are BoxPhysShape, you can do:
-            //   List<Vector2f> polyA = CollisionHelpers.GetRectangleCorners(A);
-            //   List<Vector2f> polyB = CollisionHelpers.GetRectangleCorners(B);
+            //   List<Vector2> polyA = CollisionHelpers.GetRectangleCorners(A);
+            //   List<Vector2> polyB = CollisionHelpers.GetRectangleCorners(B);
             // For a general PolygonPhysShape, you might do polygonShape.GetTransformedVertices(A.Center, A.Angle), etc.
-            Vector2f[] polyA = GetWorldVertices(A);
-            Vector2f[] polyB = GetWorldVertices(B);
+            Vector2[] polyA = GetWorldVertices(A);
+            Vector2[] polyB = GetWorldVertices(B);
 
             // The overall penetration and normal (to fill into the manifold).
             float minPenetration = float.MaxValue;
-            Vector2f bestAxis = new Vector2f();
+            Vector2 bestAxis = new Vector2();
 
             /*
             * 2) For SAT, we must:
@@ -65,9 +63,9 @@ namespace physics.Engine
             {
                 int next = (i + 1) % polyA.Length;
                 // Edge = current -> next
-                Vector2f edge = polyA[next] - polyA[i];
+                Vector2 edge = polyA[next] - polyA[i];
                 // Normal = perpendicular; you can do (-edge.Y, edge.X)
-                Vector2f axis = new Vector2f(-edge.Y, edge.X).Normalize();
+                Vector2 axis = Vector2.Normalize(new Vector2(-edge.Y, edge.X));
 
                 // Project both polygons onto 'axis'
                 if (!ProjectAndCheckOverlap(polyA, polyB, axis, ref minPenetration, ref bestAxis))
@@ -79,9 +77,9 @@ namespace physics.Engine
             {
                 int next = (i + 1) % polyB.Length;
                 // Edge = current -> next
-                Vector2f edge = polyB[next] - polyB[i];
+                Vector2 edge = polyB[next] - polyB[i];
                 // Normal = perpendicular
-                Vector2f axis = new Vector2f(-edge.Y, edge.X).Normalize();
+                Vector2 axis = Vector2.Normalize(new Vector2(-edge.Y, edge.X));
 
                 // Project both polygons onto 'axis'
                 if (!ProjectAndCheckOverlap(polyA, polyB, axis, ref minPenetration, ref bestAxis))
@@ -89,8 +87,8 @@ namespace physics.Engine
             }
 
             // After you finalize bestAxis and minPenetration, ensure the normal points from A to B.
-            Vector2f centerDiff = B.Center - A.Center;
-            if (PhysMath.Dot(centerDiff, bestAxis) < 0)
+            Vector2 centerDiff = B.Center - A.Center;
+            if (Vector2.Dot(centerDiff, bestAxis) < 0)
             {
                 bestAxis = -bestAxis;
             }
@@ -114,11 +112,11 @@ namespace physics.Engine
         * penetration depth and best-axis if the new overlap is smaller.
         */
         private static bool ProjectAndCheckOverlap(
-            Vector2f[] polyA,
-            Vector2f[] polyB,
-            Vector2f axis,
+            Vector2[] polyA,
+            Vector2[] polyB,
+            Vector2 axis,
             ref float minPenetration,
-            ref Vector2f bestAxis)
+            ref Vector2 bestAxis)
         {
             // 1) Project polygon A
             (float minA, float maxA) = ProjectPolygon(polyA, axis);
@@ -147,7 +145,7 @@ namespace physics.Engine
         /*
         * Projects all vertices of a polygon onto 'axis' and returns (min, max) scalar values.
         */
-        private static (float min, float max) ProjectPolygon(Vector2f[] poly, Vector2f axis)
+        private static (float min, float max) ProjectPolygon(Vector2[] poly, Vector2 axis)
         {
             float min = float.MaxValue;
             float max = float.MinValue;
@@ -164,9 +162,9 @@ namespace physics.Engine
         /*
         * Example helper to retrieve a shape's vertices in world space. 
         * For a BoxPhysShape, you can reuse CollisionHelpers.GetRectangleCorners.
-        * For a PolygonPhysShape, you might store a local List<Vector2f> and transform each by center + rotation.
+        * For a PolygonPhysShape, you might store a local List<Vector2> and transform each by center + rotation.
         */
-        private static Vector2f[] GetWorldVertices(PhysicsObject obj)
+        private static Vector2[] GetWorldVertices(PhysicsObject obj)
         {
             return obj.Shape.GetTransformedVertices(obj.Center, obj.Angle);
         }
@@ -185,7 +183,7 @@ namespace physics.Engine
             }
 
             // Vector from A to B.
-            Vector2f n = B.Center - A.Center;
+            Vector2 n = B.Center - A.Center;
 
             // Radii of the circles.
             float rA = circleA.Radius;
@@ -209,8 +207,8 @@ namespace physics.Engine
                 m.Normal = n / d;
 
                 // Compute contact points on each circle's perimeter along the collision normal.
-                Vector2f contactA = A.Center + m.Normal * rA;
-                Vector2f contactB = B.Center - m.Normal * rB;
+                Vector2 contactA = A.Center + m.Normal * rA;
+                Vector2 contactB = B.Center - m.Normal * rB;
                 m.ContactPoint = (contactA + contactB) * 0.5f;
 
                 return true;
@@ -219,7 +217,7 @@ namespace physics.Engine
             {
                 // If the circles are at the same position, choose an arbitrary normal and contact point.
                 m.Penetration = rA;
-                m.Normal = new Vector2f(1, 0);
+                m.Normal = new Vector2(1, 0);
                 m.ContactPoint = A.Center;
                 return true;
             }
@@ -235,20 +233,20 @@ namespace physics.Engine
             throw new ArgumentException("PolygonVsCircle requires m.B to have a CirclePhysShape.");
 
         // Get polygon vertices in world space.
-        Vector2f[] poly = GetWorldVertices(polyObj);
-        Vector2f circleCenter = circleObj.Center;
+        Vector2[] poly = GetWorldVertices(polyObj);
+        Vector2 circleCenter = circleObj.Center;
         float radius = circleShape.Radius;
 
         // Find the closest point on the polygon's perimeter to the circle's center.
         float minDistSq = float.MaxValue;
-        Vector2f closestPoint = new Vector2f();
+        Vector2 closestPoint = new Vector2();
 
         for (int i = 0; i < poly.Length; i++)
         {
             int j = (i + 1) % poly.Length;
-            Vector2f a = poly[i];
-            Vector2f b = poly[j];
-            Vector2f pt = ClosestPointOnSegment(a, b, circleCenter);
+            Vector2 a = poly[i];
+            Vector2 b = poly[j];
+            Vector2 pt = ClosestPointOnSegment(a, b, circleCenter);
             float distSq = (circleCenter - pt).LengthSquared();
             if (distSq < minDistSq)
             {
@@ -263,7 +261,7 @@ namespace physics.Engine
 
         // Compute collision details.
         float d = (float)Math.Sqrt(minDistSq);
-        Vector2f normal = (d > 0) ? (circleCenter - closestPoint) / d : new Vector2f(1, 0); // Arbitrary if centers coincide.
+        Vector2 normal = (d > 0) ? (circleCenter - closestPoint) / d : new Vector2(1, 0); // Arbitrary if centers coincide.
         m.Normal = normal;
         m.Penetration = radius - d;
         // Approximate contact point: on the circle's perimeter along the collision normal.
@@ -275,10 +273,10 @@ namespace physics.Engine
     /// <summary>
     /// Helper: Returns the point on the segment [a, b] that is closest to point p.
     /// </summary>
-    private static Vector2f ClosestPointOnSegment(Vector2f a, Vector2f b, Vector2f p)
+    private static Vector2 ClosestPointOnSegment(Vector2 a, Vector2 b, Vector2 p)
     {
-        Vector2f ab = b - a;
-        float t = PhysMath.Dot(p - a, ab) / ab.LengthSquared();
+        Vector2 ab = b - a;
+        float t = Vector2.Dot(p - a, ab) / ab.LengthSquared();
         t = Math.Max(0, Math.Min(1, t));
         return a + ab * t;
     }
@@ -296,15 +294,15 @@ namespace physics.Engine
             float iInertiaB =   B.CanRotate ? B.IInertia        : 0F;
 
             // Compute vectors from centers to contact point.
-            Vector2f rA = m.ContactPoint - A.Center;
-            Vector2f rB = m.ContactPoint - B.Center;
+            Vector2 rA = m.ContactPoint - A.Center;
+            Vector2 rB = m.ContactPoint - B.Center;
 
             // Compute the relative velocity at the contact point (including any rotational contribution).
-            Vector2f vA_contact = A.Velocity + PhysMath.Perpendicular(rA) * angularVelA;
-            Vector2f vB_contact = B.Velocity + PhysMath.Perpendicular(rB) * angularVelB;
-            Vector2f relativeVelocity = vB_contact - vA_contact;
+            Vector2 vA_contact = A.Velocity + PhysMath.Perpendicular(rA) * angularVelA;
+            Vector2 vB_contact = B.Velocity + PhysMath.Perpendicular(rB) * angularVelB;
+            Vector2 relativeVelocity = vB_contact - vA_contact;
 
-            float velAlongNormal = Extensions.Extensions.DotProduct(relativeVelocity, m.Normal);
+            float velAlongNormal = Vector2.Dot(relativeVelocity, m.Normal);
             if (velAlongNormal > 0)
                 return;
 
@@ -322,7 +320,7 @@ namespace physics.Engine
             float j = -(1 + e) * velAlongNormal;
             j /= invMassSum;
 
-            Vector2f impulse = m.Normal * j;
+            Vector2 impulse = m.Normal * j;
 
             if (!A.Locked && !A.Sleeping)
             {
@@ -342,13 +340,13 @@ namespace physics.Engine
             }
 
             // --- Friction impulse ---
-            Vector2f tangent = relativeVelocity - m.Normal * Extensions.Extensions.DotProduct(relativeVelocity, m.Normal);
+            Vector2 tangent = relativeVelocity - m.Normal * Vector2.Dot(relativeVelocity, m.Normal);
             if (tangent.LengthSquared() > 0.0001f)
-                tangent = tangent.Normalize();
+                tangent = Vector2.Normalize(tangent);
             else
-                tangent = new Vector2f(0, 0);
+                tangent = new Vector2(0, 0);
 
-            float jt = -Extensions.Extensions.DotProduct(relativeVelocity, tangent);
+            float jt = -Vector2.Dot(relativeVelocity, tangent);
 
             float rA_cross_t = PhysMath.Cross(rA, tangent);
             float rB_cross_t = PhysMath.Cross(rB, tangent);
@@ -362,7 +360,7 @@ namespace physics.Engine
             jt = Math.Min(Math.Abs(jt), mu * Math.Abs(j));
             jt = jt * (jt < 0 ? -1 : 1); // restore sign
 
-            Vector2f frictionImpulse = tangent * jt;
+            Vector2 frictionImpulse = tangent * jt;
 
             if (!A.Locked && !A.Sleeping)
             {
@@ -391,7 +389,7 @@ namespace physics.Engine
             // Only correct penetration beyond the slop.
             float penetration = Math.Max(m.Penetration - slop, 0.0f);
             float correctionMagnitude = penetration / (m.A.IMass + m.B.IMass) * percent;
-            Vector2f correction = m.Normal * correctionMagnitude;
+            Vector2 correction = m.Normal * correctionMagnitude;
 
             if (!m.A.Locked && !m.A.Sleeping)
             {
@@ -410,8 +408,8 @@ namespace physics.Engine
             const float angularCorrectionPercent = 0.01f;
 
             // Compute lever arms (r vectors) from each object's center to the contact point.
-            Vector2f rA = m.ContactPoint - m.A.Center;
-            Vector2f rB = m.ContactPoint - m.B.Center;
+            Vector2 rA = m.ContactPoint - m.A.Center;
+            Vector2 rB = m.ContactPoint - m.B.Center;
 
             // For object A:
             if (!m.A.Locked && !m.A.Sleeping && m.A.CanRotate && rA.LengthSquared() > 0.0001f)
