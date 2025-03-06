@@ -22,7 +22,7 @@ namespace physics.Engine.Helpers
 
         public static void RoundToZero(ref Vector2 vector, float cutoff)
         {
-            if (vector.Length() < cutoff)
+            if (vector.LengthSquared() < cutoff * cutoff)
             {
                 vector = Vector2.Zero;
             }

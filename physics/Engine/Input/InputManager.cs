@@ -74,7 +74,7 @@ namespace physics.Engine.Input
 
         private void OnMouseButtonPressed(object sender, MouseButtonEventArgs e)
         {
-            Vector2 worldPos = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view).ToSn();
+            Vector2 worldPos = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view).ToSystemNumerics();
 
             if (e.Button == Mouse.Button.Left)
             {
@@ -154,14 +154,14 @@ namespace physics.Engine.Input
 
         private void OnMouseMoved(object sender, MouseMoveEventArgs e)
         {
-            MousePosition = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view).ToSn();
+            MousePosition = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view).ToSystemNumerics();
 
             if (IsPanning)
             {
                 Vector2i prevPixelPos = new Vector2i((int)PanStartPos.X, (int)PanStartPos.Y);
                 Vector2i currentPixelPos = new Vector2i(e.X, e.Y);
-                Vector2 worldPrev = window.MapPixelToCoords(prevPixelPos, view).ToSn();
-                Vector2 worldCurrent = window.MapPixelToCoords(currentPixelPos, view).ToSn();
+                Vector2 worldPrev = window.MapPixelToCoords(prevPixelPos, view).ToSystemNumerics();
+                Vector2 worldCurrent = window.MapPixelToCoords(currentPixelPos, view).ToSystemNumerics();
                 Vector2 delta = worldPrev - worldCurrent;
                 view.Center += delta.ToSfml();
                 PanStartPos = new Vector2(e.X, e.Y);
@@ -173,7 +173,7 @@ namespace physics.Engine.Input
             }
             else if (IsMousePressedRight)
             {
-                Vector2 worldPos = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view).ToSn();
+                Vector2 worldPos = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view).ToSystemNumerics();
                 if (physicsSystem.ActivateAtPoint(worldPos))
                 {
                     physicsSystem.RemoveActiveObject();
