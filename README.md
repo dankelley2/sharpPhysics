@@ -211,18 +211,15 @@ public void UpdateSleepState(float dt)
 - [SFML.Net](https://www.sfml-dev.org/download/sfml.net/) - Simple and Fast Multimedia Library for .NET
 
 ## Credits and References
-Tutorials I worked with to create this:
+Tutorials That helped me get started:
 
-- This c++ engine tutorial (Up to the rotational calculations)
-
-    https://gamedevelopment.tutsplus.com/tutorials/how-to-create-a-custom-2d-physics-engine-the-basics-and-impulse-resolution--gamedev-6331
+- This barebones c++ engine tutorial (Up to the rotational calculations)
+  - https://gamedevelopment.tutsplus.com/tutorials/how-to-create-a-custom-2d-physics-engine-the-basics-and-impulse-resolution--gamedev-6331
 
 - SFML .Net library for drawing
-  
-    https://www.sfml-dev.org/download/sfml.net/
-  
+  - https://www.sfml-dev.org/download/sfml.net/
+- SFML UI Implementation is similar to:
+  - https://youtu.be/3CWsy4kP6wU?si=Qf0wqzH-_7erObrL
 - Ten Minute Physics for Spatial Hashing algorithm
-
-    https://www.youtube.com/watch?v=D2M8jTtKi44
-  
+  - https://www.youtube.com/watch?v=D2M8jTtKi44
 - OpenAi 03-mini-high used in newer code for fixing bugs and brainstorming features
