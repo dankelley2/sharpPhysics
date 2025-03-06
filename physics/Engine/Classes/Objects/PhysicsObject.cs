@@ -51,9 +51,9 @@ namespace physics.Engine.Objects
         public bool Sleeping { get; private set; } = false;
         private float sleepTimer = 0f;
         // The threshold is now based on the actual movement (displacement) during the update.
-        private const float LinearSleepThreshold = 0.25f; // Units: adjust based on your world scale.
+        private const float LinearSleepThreshold = 0.05f; // Units: adjust based on your world scale.
         private const float AngularSleepThreshold = 0.1f;
-        private const float SleepTimeThreshold = 0.5f; // e.g. 0.8 seconds of inactivity.
+        private const float SleepTimeThreshold = 0.7f; // e.g. 0.8 seconds of inactivity.
 
         // Store the previous center to compute displacement.
         private Vector2f _prevCenter;

@@ -7,6 +7,7 @@ namespace physics.Engine.Shapes
 {
     public class CirclePhysShape : IShape
     {
+        const int SEGMENTS = 8;
         public float Radius { get; }
         
         public List<Vector2f> LocalVertices { get; set; } = new List<Vector2f>();
@@ -17,9 +18,9 @@ namespace physics.Engine.Shapes
 
             // Build local vertices approximating a circle with 'resolution' points
             // around local (0,0).
-            for (int i = 0; i < 36; i++)
+            for (int i = 0; i < SEGMENTS; i++)
             {
-                float theta = (2f * (float)Math.PI * i) / 36f;
+                float theta = (2f * (float)Math.PI * i) / SEGMENTS;
                 float x = Radius * (float)Math.Cos(theta);
                 float y = Radius * (float)Math.Sin(theta);
                 LocalVertices.Add(new Vector2f(x, y));

@@ -428,7 +428,7 @@ namespace physics.Engine
                         // (For example, you might approximate impulse as the penetration depth times relative velocity along the normal.)
                         float relativeVel = Math.Abs(PhysMath.Dot(m.B.Velocity - m.A.Velocity, m.Normal));
                         float impulseApprox = m.Penetration * relativeVel;
-                        float wakeImpulseThreshold = 5.0f; // adjust threshold as appropriate
+                        float wakeImpulseThreshold = 3.0f; // adjust threshold as appropriate
 
                         // Only wake if a significant impulse is delivered.
                         if (impulseApprox > wakeImpulseThreshold)

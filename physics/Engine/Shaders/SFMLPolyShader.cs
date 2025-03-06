@@ -15,7 +15,7 @@ namespace physics.Engine.Shaders
         // Preallocated VertexArray for drawing contact normals.
         private VertexArray contactLines = new VertexArray(PrimitiveType.Lines);
 
-        public bool DrawNormals {get; set;} = true;
+        public bool DrawNormals {get; set;} = false;
 
         public override void PreDraw(PhysicsObject obj, RenderTarget target)
         {

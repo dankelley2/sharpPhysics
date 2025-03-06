@@ -34,8 +34,15 @@ namespace physics.Engine.Shaders
             // Color based on velocity.
             double particleSpeed = 220 - Math.Min((int)obj.Velocity.Length(), 220);
             double hue = particleSpeed % 360;
-            HsvToRgb(hue, 1, 1, out int red, out int green, out int blue);
-            _circle.FillColor = new Color((byte)red, (byte)green, (byte)blue);
+            if (obj.Sleeping)
+            {
+                _circle.FillColor = new Color(50,50,50);
+            }
+            else
+            {
+                HsvToRgb(hue, 1, 1, out int red, out int green, out int blue);
+                _circle.FillColor = new Color((byte)red, (byte)green, (byte)blue);
+            }
             target.Draw(_circle);
 
             // Draw the velocity line.

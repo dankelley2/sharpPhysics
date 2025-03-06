@@ -184,15 +184,15 @@ namespace physics.Engine.Input
         private void OnMouseWheelScrolled(object sender, MouseWheelScrollEventArgs e)
         {
             Console.WriteLine("Scroll delta: " + e.Delta);
-            // Uncomment to enable zooming:
-            // if (e.Delta > 0)
-            // {
-            //     view.Zoom(0.9f);
-            // }
-            // else
-            // {
-            //     view.Zoom(1.1f);
-            // }
+            //Uncomment to enable zooming:
+             if (e.Delta > 0)
+            {
+                view.Zoom(0.9f);
+            }
+            else
+            {
+                view.Zoom(1.1f);
+            }
         }
 
         private void OnKeyPressed(object sender, KeyEventArgs e)

@@ -46,15 +46,18 @@ namespace physics.Engine
             ObjectTemplates.CreateWall(new Vector2f(0, (int)worldHeight - 15), (int)worldWidth, 15);
 
             //Create a grid of medium balls.
-            for (int i = 0; i < 1000; i += 20)
+            for (int i = 0; i < 1000; i += 40)
             {
-                for (int j = 0; j < 600; j += 20)
+                for (int j = 0; j < 600; j += 40)
                 {
+                    if (j % 80 == 0)
+                        ObjectTemplates.CreateMedBall(i + 210, j + 40);
+                    else
                         ObjectTemplates.CreateMedBall(i + 200, j + 40);
                 }
             }
 
-            var player = ObjectTemplates.CreatePolygonCapsule(new Vector2f(800, 20));
+            var player = ObjectTemplates.CreatePolygonCapsule(new Vector2f(50, 20));
 
             playerController = new PlayerController(player);
             // Create an attractor.
