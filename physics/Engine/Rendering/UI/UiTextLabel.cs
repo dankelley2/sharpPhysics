@@ -1,5 +1,5 @@
+using physics.Engine.Helpers;
 using SFML.Graphics;
-using SFML.System;
 using System;
 
 namespace physics.Engine.Rendering.UI
@@ -53,7 +53,7 @@ namespace physics.Engine.Rendering.UI
             _textDrawable.Font = Font;
             _textDrawable.CharacterSize = CharacterSize;
             _textDrawable.FillColor = TextColor;
-            _textDrawable.Position = Position;
+            _textDrawable.Position = Position.ToSfml();
 
             target.Draw(_textDrawable);
         }

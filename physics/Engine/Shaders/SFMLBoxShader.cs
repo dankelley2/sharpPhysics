@@ -1,10 +1,9 @@
 using SFML.Graphics;
-using SFML.System;
-using physics.Engine.Classes;
 using System;
-using System.Collections.Generic;
 using physics.Engine.Objects;
 using physics.Engine.Shapes;
+using SFML.System;
+using physics.Engine.Helpers;
 
 namespace physics.Engine.Shaders
 {
@@ -36,7 +35,7 @@ namespace physics.Engine.Shaders
             // Set the origin to the center so that rotations are around the center.
             Rectangle.Origin = new Vector2f(size.X / 2, size.Y / 2);
             // Set the position to the object's center (its center of mass).
-            Rectangle.Position = obj.Center;
+            Rectangle.Position = obj.Center.ToSfml();
             Rectangle.Rotation = obj.Angle * 180 / (float)Math.PI;
             Rectangle.FillColor = GrayColor;
             Rectangle.OutlineColor = RedColor;
@@ -46,7 +45,7 @@ namespace physics.Engine.Shaders
 
             //// DEBUG FOR OG Bounding box
             //// Calculate the size of the rectangle from the AABB.
-            //Rectangle2.Size = new Vector2f(obj.Aabb.Max.X - obj.Aabb.Min.X, obj.Aabb.Max.Y - obj.Aabb.Min.Y);
+            //Rectangle2.Size = new Vector2(obj.Aabb.Max.X - obj.Aabb.Min.X, obj.Aabb.Max.Y - obj.Aabb.Min.Y);
             //Rectangle2.Position = obj.Aabb.Min;
             //Rectangle2.FillColor = Color.Transparent;
             //Rectangle2.OutlineColor = Color.Magenta;

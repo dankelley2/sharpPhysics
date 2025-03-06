@@ -101,11 +101,11 @@ The Separating Axis Theorem (SAT) is used for polygon collision detection. It pr
 ```csharp
 // From Collision.cs
 private static bool ProjectAndCheckOverlap(
-    Vector2f[] polyA,
-    Vector2f[] polyB,
-    Vector2f axis,
+    Vector2[] polyA,
+    Vector2[] polyB,
+    Vector2 axis,
     ref float minPenetration,
-    ref Vector2f bestAxis)
+    ref Vector2 bestAxis)
 {
     // 1) Project polygon A
     (float minA, float maxA) = ProjectPolygon(polyA, axis);
@@ -148,13 +148,13 @@ public static void ResolveCollisionRotational(ref Manifold m)
     float iInertiaB =   B.CanRotate ? B.IInertia        : 0F;
 
     // Compute vectors from centers to contact point.
-    Vector2f rA = m.ContactPoint - A.Center;
-    Vector2f rB = m.ContactPoint - B.Center;
+    Vector2 rA = m.ContactPoint - A.Center;
+    Vector2 rB = m.ContactPoint - B.Center;
 
     // Compute the relative velocity at the contact point (including any rotational contribution).
-    Vector2f vA_contact = A.Velocity + PhysMath.Perpendicular(rA) * angularVelA;
-    Vector2f vB_contact = B.Velocity + PhysMath.Perpendicular(rB) * angularVelB;
-    Vector2f relativeVelocity = vB_contact - vA_contact;
+    Vector2 vA_contact = A.Velocity + PhysMath.Perpendicular(rA) * angularVelA;
+    Vector2 vB_contact = B.Velocity + PhysMath.Perpendicular(rB) * angularVelB;
+    Vector2 relativeVelocity = vB_contact - vA_contact;
 
     // Calculate impulse and apply to objects
     // ...

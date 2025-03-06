@@ -1,4 +1,4 @@
-using SFML.System;
+using System.Numerics;
 using System;
 using System.Collections.Generic;
 
@@ -10,9 +10,9 @@ namespace physics.Engine.Helpers
         /// Creates vertices for a circle (convex polygon approximation) of a given radius and resolution in CCW order.
         /// Then reverses the list before returning.
         /// </summary>
-        public static List<Vector2f> CreateCircleVertices(int resolution, float radius)
+        public static List<Vector2> CreateCircleVertices(int resolution, float radius)
         {
-            List<Vector2f> vertices = new List<Vector2f>();
+            List<Vector2> vertices = new List<Vector2>();
             float twoPi = (float)(Math.PI * 2);
             // CCW order: iterate from 0 to 2π.
             for (int i = 0; i < resolution; i++)
@@ -20,7 +20,7 @@ namespace physics.Engine.Helpers
                 float angle = twoPi * i / resolution;
                 float x = radius * (float)Math.Cos(angle);
                 float y = radius * (float)Math.Sin(angle);
-                vertices.Add(new Vector2f(x, y));
+                vertices.Add(new Vector2(x, y));
             }
             vertices.Reverse();
             return vertices;
@@ -32,14 +32,14 @@ namespace physics.Engine.Helpers
         /// bottom-left, top-left, top-right, bottom-right.
         /// Then reverses the list before returning.
         /// </summary>
-        public static List<Vector2f> CreateBoxVertices(float width, float height)
+        public static List<Vector2> CreateBoxVertices(float width, float height)
         {
-            List<Vector2f> vertices = new List<Vector2f>
+            List<Vector2> vertices = new List<Vector2>
             {
-                new Vector2f(-width / 2f, -height / 2f), // bottom-left
-                new Vector2f(-width / 2f,  height / 2f), // top-left
-                new Vector2f( width / 2f,  height / 2f), // top-right
-                new Vector2f( width / 2f, -height / 2f)  // bottom-right
+                new Vector2(-width / 2f, -height / 2f), // bottom-left
+                new Vector2(-width / 2f,  height / 2f), // top-left
+                new Vector2( width / 2f,  height / 2f), // top-right
+                new Vector2( width / 2f, -height / 2f)  // bottom-right
             };
             vertices.Reverse();
             return vertices;
@@ -63,24 +63,24 @@ namespace physics.Engine.Helpers
         ///   5. Bottom cap (arc from left to right).
         /// Then the list is reversed.
         /// </summary>
-        public static List<Vector2f> CreateCapsuleVertices(int resolution, float radius, float bodyLength)
+        public static List<Vector2> CreateCapsuleVertices(int resolution, float radius, float bodyLength)
         {
             if (resolution < 2)
                 throw new ArgumentException("Resolution must be at least 2.", nameof(resolution));
 
-            List<Vector2f> vertices = new List<Vector2f>();
+            List<Vector2> vertices = new List<Vector2>();
             float halfBody = bodyLength / 2f;
             
             // Define centers for the caps.
-            Vector2f topCenter = new Vector2f(0, halfBody);
-            Vector2f bottomCenter = new Vector2f(0, -halfBody);
+            Vector2 topCenter = new Vector2(0, halfBody);
+            Vector2 bottomCenter = new Vector2(0, -halfBody);
 
             // --- Right Vertical Edge ---
             // Start at the bottom-right vertex.
-            Vector2f start = new Vector2f(radius, -halfBody);
+            Vector2 start = new Vector2(radius, -halfBody);
             vertices.Add(start);
             // Next vertex: top-right.
-            Vector2f rightEdge = new Vector2f(radius, halfBody);
+            Vector2 rightEdge = new Vector2(radius, halfBody);
             vertices.Add(rightEdge);
 
             // --- Top Cap ---
@@ -91,12 +91,12 @@ namespace physics.Engine.Helpers
                 float angle = (float)Math.PI * i / resolution; // from 0 to π.
                 float x = topCenter.X + radius * (float)Math.Cos(angle);
                 float y = topCenter.Y + radius * (float)Math.Sin(angle);
-                vertices.Add(new Vector2f(x, y));
+                vertices.Add(new Vector2(x, y));
             }
 
             // --- Left Vertical Edge ---
             // Add the left vertical edge from top to bottom.
-            Vector2f leftEdge = new Vector2f(-radius, -halfBody);
+            Vector2 leftEdge = new Vector2(-radius, -halfBody);
             vertices.Add(leftEdge);
 
             // --- Bottom Cap ---
@@ -107,7 +107,7 @@ namespace physics.Engine.Helpers
                 float angle = (float)Math.PI + (float)Math.PI * i / resolution; // from π to 2π.
                 float x = bottomCenter.X + radius * (float)Math.Cos(angle);
                 float y = bottomCenter.Y + radius * (float)Math.Sin(angle);
-                vertices.Add(new Vector2f(x, y));
+                vertices.Add(new Vector2(x, y));
             }
 
             vertices.Reverse();

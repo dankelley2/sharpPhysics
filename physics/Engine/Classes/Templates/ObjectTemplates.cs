@@ -4,7 +4,7 @@ using physics.Engine.Helpers;
 using physics.Engine.Objects;
 using physics.Engine.Shaders;
 using physics.Engine.Structs;
-using SFML.System;
+using System.Numerics;
 
 namespace physics.Engine.Classes.ObjectTemplates
 {
@@ -46,14 +46,14 @@ namespace physics.Engine.Classes.ObjectTemplates
             // Using a diameter of 5.
             int diameter = 5;
             SFMLShader shader = GetShader<SFMLBallVelocityShader>(diameter);
-            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.6F, false, shader);
+            return PhysicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.6F, false, shader);
         }
 
         public static PhysicsObject CreateMedBall(float originX, float originY)
         {
             int diameter = 10;
             SFMLShader shader = GetShader<SFMLBallVelocityShader>(diameter);
-            return PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.8F, false, shader);
+            return PhysicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.8F, false, shader);
         }
 
         public static PhysicsObject CreateAttractor(float originX, float originY)
@@ -61,40 +61,40 @@ namespace physics.Engine.Classes.ObjectTemplates
             int diameter = 50;
             // Use a different shader type for attractors.
             SFMLShader shader = GetShader<SFMLBallShader>(diameter);
-            var oPhysicsObject = PhysicsSystem.CreateStaticCircle(new Vector2f(originX, originY), diameter, 0.95F, true, shader);
+            var oPhysicsObject = PhysicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.95F, true, shader);
             PhysicsSystem.ListGravityObjects.Add(oPhysicsObject);
             return oPhysicsObject;
         }
 
-        public static PhysicsObject CreateWall(Vector2f origin, int width, int height)
+        public static PhysicsObject CreateWall(Vector2 origin, int width, int height)
         {
             SFMLShader shader = GetShader<SFMLWallShader>(width);
-            Vector2f max = origin + new Vector2f(width, height);
+            Vector2 max = origin + new Vector2(width, height);
             return PhysicsSystem.CreateStaticBox(origin, max, true, shader, 1000000);
         }
 
-        public static PhysicsObject CreateBox(Vector2f origin, int width, int height)
+        public static PhysicsObject CreateBox(Vector2 origin, int width, int height)
         {
             SFMLShader shader = GetShader<SFMLPolyShader>(width);
             // Compute mass from dimensions.
             float mass = width * height;
-            Vector2f max = origin + new Vector2f(width, height);
+            Vector2 max = origin + new Vector2(width, height);
             return PhysicsSystem.CreateStaticBox2(origin, max, false, shader, mass);
         }
 
-        public static PhysicsObject CreatePolygonTriangle(Vector2f origin)
+        public static PhysicsObject CreatePolygonTriangle(Vector2 origin)
         {
             SFMLShader shader = GetShader<SFMLPolyShader>(0);
-            var points = new Vector2f[]
+            var points = new Vector2[]
             {
-                new Vector2f(25, -25),
-                new Vector2f(-25, -25),
-                new Vector2f(0, 12.5f)
+                new Vector2(25, -25),
+                new Vector2(-25, -25),
+                new Vector2(0, 12.5f)
             };
             return PhysicsSystem.CreatePolygon(origin, points, shader);
         }
 
-        public static PhysicsObject CreatePolygonCapsule(Vector2f origin)
+        public static PhysicsObject CreatePolygonCapsule(Vector2 origin)
         {
             SFMLShader shader = GetShader<SFMLPolyShader>(0);
             return PhysicsSystem.CreatePolygon(origin, PolygonShapeHelper.CreateCapsuleVertices(32, 20, 50).ToArray(), shader, canRotate: false);

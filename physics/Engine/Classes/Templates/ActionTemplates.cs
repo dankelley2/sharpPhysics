@@ -1,17 +1,17 @@
 ﻿
 using physics.Engine.Objects;
 using physics.Engine.Shaders;
-using SFML.System;
+using System.Numerics;
 
 namespace physics.Engine.Classes.ObjectTemplates
 {
     public static class ActionTemplates
     {
-        public static void launch(PhysicsSystem physSystem, PhysicsObject physObj, Vector2f StartPointF, Vector2f EndPointF)
+        public static void launch(PhysicsSystem physSystem, PhysicsObject physObj, Vector2 StartPointF, Vector2 EndPointF)
         {
             physSystem.ActivateAtPoint(StartPointF);
-            Vector2f delta = (new Vector2f { X = EndPointF.X, Y = EndPointF.Y } -
-                          new Vector2f { X = StartPointF.X, Y = StartPointF.Y });
+            Vector2 delta = (new Vector2 { X = EndPointF.X, Y = EndPointF.Y } -
+                          new Vector2 { X = StartPointF.X, Y = StartPointF.Y });
             physSystem.AddVelocityToActive(delta * 2);
         }
 
@@ -27,7 +27,7 @@ namespace physics.Engine.Classes.ObjectTemplates
         {
             foreach(PhysicsObject obj in PhysicsSystem.ListStaticObjects)
             {
-                physSystem.ActivateAtPoint(new Vector2f(obj.Center.X, obj.Center.Y));
+                physSystem.ActivateAtPoint(new Vector2(obj.Center.X, obj.Center.Y));
                 var velocity = obj.Velocity;
                 var origin = obj.Center;
                 physSystem.RemoveActiveObject();
