@@ -7,7 +7,6 @@ namespace physics.Engine.Helpers
     public static class PhysMath
     {
 
-
         // Helper: Returns a vector perpendicular to v (i.e., rotated 90 degrees)
         public static Vector2 Perpendicular(Vector2 v)
         {
@@ -21,29 +20,6 @@ namespace physics.Engine.Helpers
             return a.X * b.Y - a.Y * b.X;
         }
 
-
-        public static float Clamp(float low, float high, float val)
-        {
-            return Math.Max(low, Math.Min(val, high));
-        }
-
-        public static void CorrectBoundingBox(ref AABB aabb)
-        {
-            Vector2 p1 = new Vector2(Math.Min(aabb.Min.X, aabb.Max.X), Math.Min(aabb.Min.Y, aabb.Max.Y));
-            Vector2 p2 = new Vector2(Math.Max(aabb.Min.X, aabb.Max.X), Math.Max(aabb.Min.Y, aabb.Max.Y));
-            aabb.Min = new Vector2 { X = p1.X, Y = p1.Y };
-            aabb.Max = new Vector2 { X = p2.X, Y = p2.Y };
-        }
-
-        public static void CorrectBoundingPoints(ref Vector2 p1, ref Vector2 p2)
-        {
-            Vector2 new_p1 = new Vector2(Math.Min(p1.X, p2.X), Math.Min(p1.Y, p2.Y));
-            Vector2 new_p2 = new Vector2(Math.Max(p1.X, p2.X), Math.Max(p1.Y, p2.Y));
-
-            p1 = new_p1;
-            p2 = new_p2;
-        }
-
         public static void RoundToZero(ref Vector2 vector, float cutoff)
         {
             if (vector.Length() < cutoff)
@@ -51,12 +27,6 @@ namespace physics.Engine.Helpers
                 vector = Vector2.Zero;
             }
         }
-
-        public static float RadiansToDegrees(this float rads)
-        {
-            return (float)(180 / Math.PI) * rads;
-        }
-
         /// <summary>
         /// Rotates a vector by a given angle (in radians).
         /// </summary>
