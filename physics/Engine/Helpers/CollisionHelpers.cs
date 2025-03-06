@@ -11,10 +11,7 @@ public static class CollisionHelpers
     // Computes the four corners of a rectangle (OBB) in world space.
     public static List<Vector2> GetRectangleCorners(PhysicsObject obj)
     {
-        if (!(obj.Shape is BoxPhysShape box))
-        {
-            throw new ArgumentException("GetRectangleCorners requires a PhysicsObject with a BoxPhysShape.");
-        }
+        var box = (BoxPhysShape)obj.Shape;
 
         List<Vector2> corners = new List<Vector2>(4);
         float halfW = box.Width / 2f;

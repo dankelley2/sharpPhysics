@@ -8,6 +8,9 @@ namespace physics.Engine.Shapes
     public class CirclePhysShape : IShape
     {
         const int SEGMENTS = 8;
+
+        public ShapeTypeEnum ShapeType => ShapeTypeEnum.Circle;
+
         public float Radius { get; }
         
         public List<Vector2> LocalVertices { get; set; } = new List<Vector2>();

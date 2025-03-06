@@ -11,6 +11,9 @@ namespace physics.Engine.Shapes
         /// </summary>
         AABB GetAABB(Vector2 center, float angle);
 
+        // Shape Enum so we don't have to run IsInstanceOfClass 100 million times every minute
+        public ShapeTypeEnum ShapeType { get; }
+
         public List<Vector2> LocalVertices { get; set; }
 
         /// <summary>

@@ -383,7 +383,7 @@ namespace physics.Engine
                     bool collision = false;
 
                     // Set ordering: if objA is a circle and objB is a box, swap them.
-                    if (shapeA is CirclePhysShape && (shapeB is BoxPhysShape or PolygonPhysShape))
+                    if (shapeA.ShapeType == ShapeTypeEnum.Circle && (shapeB.ShapeType == ShapeTypeEnum.Box || shapeB.ShapeType == ShapeTypeEnum.Polygon))
                     {
                         m.A = objB;
                         m.B = objA;
@@ -399,18 +399,18 @@ namespace physics.Engine
                     var shapeB2 = m.B.Shape;
 
                     // Determine collision detection method based on shape types.
-                    if (shapeA2 is BoxPhysShape or PolygonPhysShape)
+                    if (shapeA2.ShapeType == ShapeTypeEnum.Box || shapeA2.ShapeType == ShapeTypeEnum.Polygon)
                     {
-                        if (shapeB2 is BoxPhysShape or PolygonPhysShape)
+                        if (shapeB2.ShapeType == ShapeTypeEnum.Box || shapeB2.ShapeType == ShapeTypeEnum.Polygon)
                         {
                             collision = Collision.PolygonVsPolygon(ref m);
                         }
-                        else if (shapeB2 is CirclePhysShape)
+                        else if (shapeB2.ShapeType == ShapeTypeEnum.Circle)
                         {
                             collision = Collision.PolygonVsCircle(ref m);
                         }
                     }
-                    else if (shapeA2 is CirclePhysShape && shapeB2 is CirclePhysShape)
+                    else if (shapeA2.ShapeType == ShapeTypeEnum.Circle && shapeB2.ShapeType == ShapeTypeEnum.Circle)
                     {
                         collision = Collision.CirclevsCircle(ref m);
                     }

@@ -8,6 +8,7 @@ namespace physics.Engine.Shapes
 {
     public class PolygonPhysShape : IShape
     {
+        public ShapeTypeEnum ShapeType => ShapeTypeEnum.Polygon;
         /// <summary>
         /// Local-space vertices of the polygon, in clockwise or counterclockwise order.
         /// </summary>

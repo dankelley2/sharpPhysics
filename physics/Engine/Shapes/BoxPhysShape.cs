@@ -7,6 +7,7 @@ namespace physics.Engine.Shapes
 {
     public class BoxPhysShape : IShape
     {
+        public ShapeTypeEnum ShapeType => ShapeTypeEnum.Box;
         public float Width { get; }
         public float Height { get; }
         public List<Vector2> LocalVertices { get; set; } = new List<Vector2>();

@@ -175,8 +175,9 @@ namespace physics.Engine
             PhysicsObject B = m.B;
 
             // Ensure both objects are circles.
-            CirclePhysShape circleA = A.Shape as CirclePhysShape;
-            CirclePhysShape circleB = B.Shape as CirclePhysShape;
+            CirclePhysShape circleA = (CirclePhysShape)A.Shape;
+            CirclePhysShape circleB = (CirclePhysShape)B.Shape;
+
             if (circleA == null || circleB == null)
             {
                 throw new ArgumentException("CirclevsCircle requires both objects to have a CircleShape.");
@@ -229,8 +230,8 @@ namespace physics.Engine
         PhysicsObject polyObj = m.A;
         PhysicsObject circleObj = m.B;
 
-        if (!(circleObj.Shape is CirclePhysShape circleShape))
-            throw new ArgumentException("PolygonVsCircle requires m.B to have a CirclePhysShape.");
+        // Cast to the correct shape types.
+        var circleShape = (CirclePhysShape)circleObj.Shape;
 
         // Get polygon vertices in world space.
         Vector2[] poly = GetWorldVertices(polyObj);
