@@ -9,6 +9,7 @@ namespace physics.Engine.Objects
 {
     public class PhysicsObject
     {
+        public static float SupportObjectNormalThreshold = 0.2f;
         public IShape Shape { get; protected set; }
         public AABB Aabb { get; protected set; }
         public Vector2 Center { get; protected set; }
@@ -45,10 +46,6 @@ namespace physics.Engine.Objects
         // --- Sleep/Wake state management ---
         public bool Sleeping { get; private set; } = false;
         private float sleepTimer = 0f;
-        // The threshold is now based on the actual movement (displacement) during the update.
-        private const float LinearSleepThreshold = 0.05f; // Units: adjust based on your world scale.
-        private const float AngularSleepThreshold = 0.1f;
-        private const float SleepTimeThreshold = 0.7f; // e.g. 0.8 seconds of inactivity.
 
         // Store the previous center to compute displacement.
         private Vector2 _prevCenter;
@@ -133,10 +130,11 @@ namespace physics.Engine.Objects
             float displacement = (Center - _prevCenter).Length();
 
             // Compare displacement against the threshold and also check angular movement.
-            if (displacement < LinearSleepThreshold && Math.Abs(AngularVelocity) < AngularSleepThreshold)
+            if (displacement < PhysicsSystem.LinearSleepThreshold &&
+                Math.Abs(AngularVelocity) < PhysicsSystem.AngularSleepThreshold)
             {
                 sleepTimer += dt;
-                if (sleepTimer >= SleepTimeThreshold)
+                if (sleepTimer >= PhysicsSystem.SleepTimeThreshold)
                 {
                     Sleep();
                 }
@@ -253,7 +251,7 @@ namespace physics.Engine.Objects
                 _contactPoints[obj] = (point, normal);
                 
                 // If normal points upward, this object might be supporting us
-                if (normal.Y > 0.4f) // Y is negative when pointing up in many engines
+                if (normal.Y > SupportObjectNormalThreshold) // Y is negative when pointing up in many engines
                 {
                     _supportingObjects.Add(obj);
                     obj._supportedObjects.Add(this);

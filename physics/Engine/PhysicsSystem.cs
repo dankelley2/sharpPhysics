@@ -21,6 +21,12 @@ namespace physics.Engine
         // Set this to roughly your average AABB size – adjust as needed.
         public float SpatialHashCellSize { get; set; } = 10F;
 
+        // Sleep / Wake thresholds
+        public static float WakeImpulseThreshold { get; private set; } = 4.0f;
+        public static float LinearSleepThreshold { get; set; } = 0.05f;
+        public static float AngularSleepThreshold { get; set; } = 0.1f;
+        public static float SleepTimeThreshold { get; set; } = 0.9f;
+
         #endregion
 
         #region Local Declarations
@@ -149,6 +155,11 @@ namespace physics.Engine
                 return false;
             }
 
+            if (ActiveObject.Sleeping)
+            {
+                ActiveObject.Wake();
+            }
+
             return true;
         }
 
@@ -207,11 +218,6 @@ namespace physics.Engine
             {
                 return;
             }
-
-            if (ActiveObject.Sleeping)
-            {
-                ActiveObject.Wake();
-            }
             var delta = ActiveObject.Center - point;
             SetVelocityOfActive(-delta * 10);
         }
@@ -227,7 +233,9 @@ namespace physics.Engine
             {
                 ListGravityObjects.Remove(ActiveObject);
             }
-            ListStaticObjects.Remove(ActiveObject);
+
+            // Add to removal queue for proper removal
+            RemovalQueue.Enqueue(ActiveObject);
             ActiveObject = null;
         }
 
@@ -423,10 +431,9 @@ namespace physics.Engine
                         // (For example, you might approximate impulse as the penetration depth times relative velocity along the normal.)
                         float relativeVel = Math.Abs(Vector2.Dot(m.B.Velocity - m.A.Velocity, m.Normal));
                         float impulseApprox = m.Penetration * relativeVel;
-                        float wakeImpulseThreshold = 3.0f; // adjust threshold as appropriate
 
                         // Only wake if a significant impulse is delivered.
-                        if (impulseApprox > wakeImpulseThreshold)
+                        if (impulseApprox > WakeImpulseThreshold)
                         {
                             if (objA.Sleeping && !objA.Locked)
                                 objA.Wake();
