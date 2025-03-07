@@ -45,7 +45,7 @@ namespace physics.Engine.Input
             window.MouseButtonPressed += OnMouseButtonPressed;
             window.MouseButtonReleased += OnMouseButtonReleased;
             window.MouseMoved += OnMouseMoved;
-            window.MouseWheelScrolled += OnMouseWheelScrolled;
+            //window.MouseWheelScrolled += OnMouseWheelScrolled;
             window.KeyPressed += OnKeyPressed;
             window.KeyReleased += OnKeyReleased;
         }
@@ -229,6 +229,19 @@ namespace physics.Engine.Input
                     break;
                 case Keyboard.Key.Down:
                     keyState.Down = true;
+                    break;
+                // New zoom key cases using Shift + '+' and Shift + '-'
+                case Keyboard.Key.Equal:
+                    if (Keyboard.IsKeyPressed(Keyboard.Key.LShift) || Keyboard.IsKeyPressed(Keyboard.Key.RShift))
+                    {
+                        view.Zoom(0.9f);
+                    }
+                    break;
+                case Keyboard.Key.Hyphen:
+                    if (Keyboard.IsKeyPressed(Keyboard.Key.LShift) || Keyboard.IsKeyPressed(Keyboard.Key.RShift))
+                    {
+                        view.Zoom(1.1f);
+                    }
                     break;
             }
         }

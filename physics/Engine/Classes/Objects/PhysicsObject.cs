@@ -9,7 +9,6 @@ namespace physics.Engine.Objects
 {
     public class PhysicsObject
     {
-        public readonly Guid Id = Guid.NewGuid();
         public IShape Shape { get; protected set; }
         public AABB Aabb { get; protected set; }
         public Vector2 Center { get; protected set; }
@@ -54,6 +53,17 @@ namespace physics.Engine.Objects
         // Store the previous center to compute displacement.
         private Vector2 _prevCenter;
 
+        // Support network tracking - objects that this object is resting on
+        private readonly HashSet<PhysicsObject> _supportingObjects = new HashSet<PhysicsObject>();
+        // Objects that are being supported by this object
+        private readonly HashSet<PhysicsObject> _supportedObjects = new HashSet<PhysicsObject>();
+        // Persistent contact points for sleeping objects
+        private readonly Dictionary<PhysicsObject, (Vector2, Vector2)> _sleepingContactPoints = new Dictionary<PhysicsObject, (Vector2, Vector2)>();
+        // Position when going to sleep, to detect if supporting objects have moved
+        private Vector2 _sleepPosition;
+        // Whether to validate supports next frame
+        private bool _validateSupportsNextFrame = false;
+
         public PhysicsObject(IShape shape, Vector2 center, float restitution, bool locked, SFMLShader shader, float mass = 0, bool canRotate = false)
         {
             Shape = shape;
@@ -82,7 +92,23 @@ namespace physics.Engine.Objects
             {
                 Move(dt);
                 UpdateRotation(dt);
+                
+                // Notify any objects we're supporting if we moved significantly
+                if (_supportedObjects.Count > 0 && (Center - _prevCenter).Length() > 0.01f)
+                {
+                    foreach (var supported in _supportedObjects)
+                    {
+                        supported._validateSupportsNextFrame = true;
+                    }
+                }
             }
+            else if (_validateSupportsNextFrame)
+            {
+                // Check if supports are still valid
+                ValidateSupports();
+                _validateSupportsNextFrame = false;
+            }
+            
             // Update sleep state based on actual displacement (movement) rather than instantaneous velocity.
             UpdateSleepState(dt);
             UpdateContactPoints();
@@ -124,6 +150,54 @@ namespace physics.Engine.Objects
         }
 
         /// <summary>
+        /// Validates if supports are still in place. If not, wakes the object.
+        /// </summary>
+        private void ValidateSupports()
+        {
+            if (!Sleeping)
+                return;
+
+            bool shouldWake = false;
+            
+            // If we have no supports, we should wake up
+            if (_supportingObjects.Count == 0)
+            {
+                shouldWake = true;
+            }
+            else
+            {
+                // Check if any supporting object has moved away
+                foreach (var supportingObj in _supportingObjects)
+                {
+                    if (_sleepingContactPoints.TryGetValue(supportingObj, out var contactData))
+                    {
+                        Vector2 contactPoint = contactData.Item1;
+                        Vector2 normal = contactData.Item2;
+                        
+                        // Simple check: is the point still contained within the supporting object?
+                        // A more robust check would recompute the actual contact point
+                        if (!supportingObj.Contains(contactPoint))
+                        {
+                            shouldWake = true;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        // No contact data for a supporting object is suspicious, wake up
+                        shouldWake = true;
+                        break;
+                    }
+                }
+            }
+
+            if (shouldWake)
+            {
+                Wake();
+            }
+        }
+
+        /// <summary>
         /// Puts the object to sleep: sets Sleeping to true, and zeroes out velocity and angular velocity.
         /// </summary>
         public void Sleep()
@@ -132,7 +206,16 @@ namespace physics.Engine.Objects
             Sleeping = true;
             Velocity = new Vector2(0, 0);
             AngularVelocity = 0;
-            // Optionally, clear contact caches if desired.
+            
+            // Store the sleep position
+            _sleepPosition = Center;
+            
+            // Preserve current contacts for sleeping state
+            _sleepingContactPoints.Clear();
+            foreach (var contact in _previousContactPoints)
+            {
+                _sleepingContactPoints[contact.Key] = contact.Value;
+            }
         }
 
         /// <summary>
@@ -143,7 +226,18 @@ namespace physics.Engine.Objects
             if (!Sleeping) return;
             Sleeping = false;
             sleepTimer = 0f;
-            // Optionally, propagate wake to contacting objects.
+            
+            // Clear the sleeping contacts
+            _sleepingContactPoints.Clear();
+            
+            // Recursively wake objects resting on us
+            foreach (var supported in _supportedObjects)
+            {
+                if (supported.Sleeping)
+                {
+                    supported.Wake();
+                }
+            }
         }
 
         /// <summary>
@@ -157,6 +251,13 @@ namespace physics.Engine.Objects
             if (!_contactPoints.ContainsKey(obj))
             {
                 _contactPoints[obj] = (point, normal);
+                
+                // If normal points upward, this object might be supporting us
+                if (normal.Y > 0.4f) // Y is negative when pointing up in many engines
+                {
+                    _supportingObjects.Add(obj);
+                    obj._supportedObjects.Add(this);
+                }
             }
         }
 
@@ -179,18 +280,6 @@ namespace physics.Engine.Objects
             if (_contactPoints.Count == 0 && _previousContactPoints.Count == 0)
                 return;
 
-            // If there are no subscribers to either event, update the cache and clear the current contacts.
-            if (ContactPointAdded == null && ContactPointRemoved == null)
-            {
-                _previousContactPoints.Clear();
-                foreach (KeyValuePair<PhysicsObject, (Vector2, Vector2)> kv in _contactPoints)
-                {
-                    _previousContactPoints.Add(kv.Key, kv.Value);
-                }
-                _contactPoints.Clear();
-                return;
-            }
-
             // Cache the event delegates locally to avoid repeated null checks.
             var addedHandler = ContactPointAdded;
             var removedHandler = ContactPointRemoved;
@@ -210,10 +299,17 @@ namespace physics.Engine.Objects
                 if (!_contactPoints.ContainsKey(kv.Key))
                 {
                     removedHandler?.Invoke(kv.Key, kv.Value);
+                    
+                    // Update support networks when contacts are lost
+                    if (_supportingObjects.Contains(kv.Key))
+                    {
+                        _supportingObjects.Remove(kv.Key);
+                        kv.Key._supportedObjects.Remove(this);
+                    }
                 }
             }
 
-            // Update the cached contacts by clearing and repopulating the dictionary.
+            // Update the cached contacts
             _previousContactPoints.Clear();
             foreach (KeyValuePair<PhysicsObject, (Vector2, Vector2)> kv in _contactPoints)
             {
