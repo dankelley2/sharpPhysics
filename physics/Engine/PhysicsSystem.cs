@@ -15,8 +15,10 @@ namespace physics.Engine
         #region Public Properties
 
         public float GravityScale = 30F;
-        public Vector2 Gravity { get; set; }
+        public Vector2 Gravity { get; set; } = new Vector2(0, 9.8f);
         public float Friction { get; set; }
+        public float TimeScale { get; set; } = 1.0f;
+        public bool IsPaused { get; set; } = false;
 
         // Set this to roughly your average AABB size – adjust as needed.
         public float SpatialHashCellSize { get; set; } = 10F;
@@ -76,7 +78,6 @@ namespace physics.Engine
 
         public PhysicsSystem()
         {
-            Gravity = new Vector2 { X = 0, Y = 10F * GravityScale };
             Friction = 1F;
         }
 
@@ -246,6 +247,10 @@ namespace physics.Engine
 
         public void Tick(double elapsedTime)
         {
+            // If the system is paused, don't advance the physics simulation
+            if (IsPaused)
+                return;
+            
             accumulator += elapsedTime;
 
             // Avoid accumulator spiral of death by clamping
@@ -255,7 +260,7 @@ namespace physics.Engine
             while (accumulator > _dt)
             {
                 BroadPhase_GeneratePairs();
-                UpdatePhysics(_dt);
+                UpdatePhysics(_dt * TimeScale);
                 ProcessRemovalQueue();
                 accumulator -= _dt;
             }
@@ -316,9 +321,8 @@ namespace physics.Engine
                 diff.Y = (int)diff.Y == 0 ? 0 : diff.Y * falloffMultiplier;
 
                 if (diff.Length() > .005F)
-                {
                     forces += diff;
-                }
+                
             }
 
             return forces;
@@ -339,7 +343,7 @@ namespace physics.Engine
 
         private Vector2 GetGravityVector(PhysicsObject obj)
         {
-            return CalculatePointGravity(obj) + Gravity;
+            return CalculatePointGravity(obj) + Gravity * GravityScale;
         }
 
         private void ProcessRemovalQueue()

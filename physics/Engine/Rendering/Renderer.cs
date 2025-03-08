@@ -21,7 +21,7 @@ namespace physics.Engine.Rendering
         private List<UiElement> _uiElements = new List<UiElement>();
         private PhysicsSystem _physicsSystem;
 
-        public Renderer(uint windowWidth, uint windowHeight, string windowTitle)
+        public Renderer(uint windowWidth, uint windowHeight, string windowTitle, PhysicsSystem physicsSystem)
         {
             ContextSettings settings = new ContextSettings();
             settings.AntialiasingLevel = 8; 
@@ -33,7 +33,7 @@ namespace physics.Engine.Rendering
             UiView = new View(new FloatRect(0, 0, windowWidth, windowHeight));
             Window.SetFramerateLimit(144);
 
-            _physicsSystem = new PhysicsSystem();
+            _physicsSystem = physicsSystem;
             InitializeUi(windowWidth, windowHeight);
         }
 
@@ -94,6 +94,97 @@ namespace physics.Engine.Rendering
                 PhysicsObject.Friction = value;
             };
             _uiElements.Add(frictionSlider);
+            
+            // Add Gravity X control
+            var gravityXLabelPosition = new Vector2(200, 60);
+            var gravityXSliderPosition = new Vector2(200, 80);
+            
+            var gravityXLabel = new UiTextLabel("Gravity X", debugFont)
+            {
+                Position = gravityXLabelPosition,
+                CharacterSize = 14
+            };
+            _uiElements.Add(gravityXLabel);
+            
+            var gravityXSlider = new UiSlider(gravityXSliderPosition, new Vector2(150, 20), -20f, 20f, _physicsSystem.Gravity.X);
+            gravityXSlider.OnValueChanged += (value) =>
+            {
+                var currentGravity = _physicsSystem.Gravity;
+                _physicsSystem.Gravity = new Vector2(value, currentGravity.Y);
+            };
+            _uiElements.Add(gravityXSlider);
+            
+            // Add Gravity Y control
+            var gravityYLabelPosition = new Vector2(400, 60);
+            var gravityYSliderPosition = new Vector2(400, 80);
+            
+            var gravityYLabel = new UiTextLabel("Gravity Y", debugFont)
+            {
+                Position = gravityYLabelPosition,
+                CharacterSize = 14
+            };
+            _uiElements.Add(gravityYLabel);
+            
+            var gravityYSlider = new UiSlider(gravityYSliderPosition, new Vector2(150, 20), -20f, 20f, _physicsSystem.Gravity.Y);
+            gravityYSlider.OnValueChanged += (value) =>
+            {
+                var currentGravity = _physicsSystem.Gravity;
+                _physicsSystem.Gravity = new Vector2(currentGravity.X, value);
+            };
+            _uiElements.Add(gravityYSlider);
+            
+            // //Add Restitution (bounciness) control
+            // var restitutionLabelPosition = new Vector2(600, 60);
+            // var restitutionSliderPosition = new Vector2(600, 80);
+            
+            // var restitutionLabel = new UiTextLabel("Restitution", debugFont)
+            // {
+            //     Position = restitutionLabelPosition,
+            //     CharacterSize = 14
+            // };
+            // _uiElements.Add(restitutionLabel);
+            
+            // var restitutionSlider = new UiSlider(restitutionSliderPosition, new Vector2(150, 20), 0f, 1f, PhysicsObject.Restitution);
+            // restitutionSlider.OnValueChanged += (value) =>
+            // {
+            //     PhysicsObject.Restitution = value;
+            // };
+            // _uiElements.Add(restitutionSlider);
+            
+            // Add Simulation Speed control
+            var simSpeedLabelPosition = new Vector2(200, 110);
+            var simSpeedSliderPosition = new Vector2(200, 130);
+            
+            var simSpeedLabel = new UiTextLabel("Simulation Speed", debugFont)
+            {
+                Position = simSpeedLabelPosition,
+                CharacterSize = 14
+            };
+            _uiElements.Add(simSpeedLabel);
+            
+            var simSpeedSlider = new UiSlider(simSpeedSliderPosition, new Vector2(150, 20), 0.1f, 2f, _physicsSystem.TimeScale);
+            simSpeedSlider.OnValueChanged += (value) =>
+            {
+                _physicsSystem.TimeScale = value;
+            };
+            _uiElements.Add(simSpeedSlider);
+            
+            // Add Show Velocities Toggle
+            var showVelocitiesLabel = new UiTextLabel("Show Velocities", debugFont)
+            {
+                Position = new Vector2(400, 110),
+                CharacterSize = 14
+            };
+            
+            // Add Pause/Resume button
+            var pauseButtonPosition = new Vector2(600, 130);
+            var pauseButton = new UiButton("Pause", debugFont, pauseButtonPosition, new Vector2(80, 30));
+            pauseButton.OnClick += (state) => 
+            {
+                _physicsSystem.IsPaused = !_physicsSystem.IsPaused;
+                pauseButton.Text = _physicsSystem.IsPaused ? "Resume" : "Pause";
+            };
+            _uiElements.Add(pauseButton);
         }
 
         /// <summary>

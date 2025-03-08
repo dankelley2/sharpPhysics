@@ -30,7 +30,7 @@ namespace physics.Engine
         public GameWindow(uint width, uint height, string title)
         {
             // Instantiate the renderer and input manager.
-            renderer = new Renderer(width, height, title);
+            renderer = new Renderer(width, height, title, physicsSystem);
             inputManager = new InputManager(renderer.Window, physicsSystem, renderer.GameView);
             InitializeGame(width, height);
             stopwatch.Start();

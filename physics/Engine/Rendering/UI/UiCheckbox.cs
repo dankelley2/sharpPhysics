@@ -31,11 +31,6 @@ namespace physics.Engine.Rendering.UI
             return false;
         }
 
-        public override bool HandleClick(Vector2 clickPos)
-        {
-            return base.HandleClick(clickPos);
-        }
-
         protected override void DrawSelf(RenderTarget target)
         {
             var rect = new RectangleShape(new SFML.System.Vector2f(Size.X, Size.Y))
