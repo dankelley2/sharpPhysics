@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using physics.Engine.Rendering.UI;
 using SFML.Window;
 using System.Numerics;
+using physics.Engine.Shaders;
 
 namespace physics.Engine.Rendering
 {
@@ -55,6 +56,21 @@ namespace physics.Engine.Rendering
             };
             roundedRect.Position = new Vector2(30, 30);
             _uiElements.Add(roundedRect);
+
+            // UI Elements for "Enable viewing normals"
+            var viewingNormalsLabel = new UiTextLabel("Enable viewing normals", debugFont)
+            {
+                Position = new Vector2(200, 30),
+                CharacterSize = 14 // optional customization
+            };
+            var viewingNormalsCheckbox = new UiCheckbox(new Vector2(400, 30), new Vector2(20, 20));
+            viewingNormalsCheckbox.IsChecked = SFMLPolyShader.DrawNormals;
+            viewingNormalsCheckbox.OnClick += (isChecked) =>
+            {
+                SFMLPolyShader.DrawNormals = isChecked;
+            };
+            _uiElements.Add(viewingNormalsLabel);
+            _uiElements.Add(viewingNormalsCheckbox);
         }
 
         /// <summary>

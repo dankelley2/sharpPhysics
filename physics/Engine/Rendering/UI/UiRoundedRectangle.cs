@@ -10,11 +10,12 @@ namespace physics.Engine.Rendering.UI
     public class UiRoundedRectangle : UiElement
     {
         public Color OutlineColor { get; set; } = Color.White;
-
+        public Vector2 Size { get; private set; }
         private Vector2[] _points;
 
         public UiRoundedRectangle(Vector2 size, float radius, int quality)
         {
+            this.Size = size;
             _points = GeneratedRoundedRectangleBorderPoints(size, 2f, radius, quality).ToArray();
         }
 
@@ -132,5 +133,10 @@ namespace physics.Engine.Rendering.UI
             }
         }
 
+        // New clickable behavior.
+        public override bool HandleClick(Vector2 clickPos)
+        {
+            return false;
+        }
     }
 }

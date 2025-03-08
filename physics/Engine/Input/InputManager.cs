@@ -6,6 +6,7 @@ using System.Numerics;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Shaders;
 using physics.Engine.Helpers;
+using physics.Engine.Rendering.UI; // Added to access UI elements
 
 namespace physics.Engine.Input
 {
@@ -75,7 +76,12 @@ namespace physics.Engine.Input
         private void OnMouseButtonPressed(object sender, MouseButtonEventArgs e)
         {
             Vector2 worldPos = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view).ToSystemNumerics();
-
+            // New UI click handling priority:
+            foreach (var ui in UiElement.GlobalUiElements)
+            {
+                if (ui.HandleClick(worldPos))
+                    return; // UI handled the click; do not proceed further.
+            }
             if (e.Button == Mouse.Button.Left)
             {
                 if (physicsSystem.ActivateAtPoint(worldPos))

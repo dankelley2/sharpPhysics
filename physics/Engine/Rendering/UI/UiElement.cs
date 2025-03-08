@@ -8,6 +8,16 @@ namespace physics.Engine.Rendering.UI
 {
     public abstract class UiElement
     {
+        public static List<UiElement> GlobalUiElements { get; } = new List<UiElement>();
+
+        // New click event for clickable elements.
+        public event Action<bool> OnClick;
+
+        public UiElement()
+        {
+            GlobalUiElements.Add(this);
+        }
+
         protected List<UiElement> Children { get; } = new List<UiElement>();
         protected UiElement Parent { get; private set; } = null;
         public Vector2 Position { get; set; } = new Vector2(0, 0);
@@ -64,6 +74,23 @@ namespace physics.Engine.Rendering.UI
                 child.Parent = null;
                 Children.Remove(child);
             }
+        }
+
+        // Clickable interface support.
+        public virtual bool HandleClick(Vector2 clickPos)
+        {
+            foreach (var child in Children)
+            {
+                if(child.HandleClick(clickPos))
+                    return true;
+            }
+            return false;
+        }
+
+        // New helper to raise the click event.
+        protected void RaiseClick(bool state)
+        {
+            OnClick?.Invoke(state);
         }
 
         protected abstract void DrawSelf(RenderTarget target);

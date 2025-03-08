@@ -133,28 +133,6 @@ public static class CollisionHelpers
     }
 
 
-    // Helper: Computes the signed area of a polygon.
-    // Positive area means vertices are in counter-clockwise order.
-    public static float ComputeSignedArea(List<Vector2> poly)
-    {
-        float area = 0f;
-        for (int i = 0; i < poly.Count; i++)
-        {
-            int j = (i + 1) % poly.Count;
-            area += (poly[i].X * poly[j].Y) - (poly[j].X * poly[i].Y);
-        }
-        return area / 2f;
-    }
-
-
-    // Returns true if point p is inside the half-space defined by edge from a to b.
-    // Assumes clip polygon is defined in counterclockwise order.
-    public static bool IsInside(Vector2 a, Vector2 b, Vector2 p)
-    {
-        // Compute the cross product: if p is to the left of ab, it is inside.
-        return Cross(b - a, p - a) >= 0;
-    }
-
         // Computes the centroid (center of mass) of a polygon.
     public static Vector2 ComputeCentroid(List<Vector2> polygon)
     {

@@ -36,7 +36,6 @@ namespace physics.Engine
         private double accumulator = 0;
 
         public static PhysicsObject ActiveObject;
-        private static readonly List<SFMLShader> ListShaders = new List<SFMLShader>();
         private static readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
         public static readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
         public static readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();

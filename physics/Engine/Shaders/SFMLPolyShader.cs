@@ -13,7 +13,8 @@ namespace physics.Engine.Shaders
         // Preallocated VertexArray for drawing contact normals.
         private VertexArray contactLines = new VertexArray(PrimitiveType.Lines);
 
-        public bool DrawNormals {get; set;} = false;
+        public static bool DrawNormals {get; set;} = false;
+        public static bool DrawSleepSupports {get; set;} = false;
 
         public override void PreDraw(PhysicsObject obj, RenderTarget target)
         {
@@ -74,7 +75,7 @@ namespace physics.Engine.Shaders
                 // kv.Key is the other PhysicsObject (unused here), and kv.Value is (contactPoint, normal).
                 (Vector2 contactPoint, Vector2 normal) = kv.Value;
                 contactLines.Append(new Vertex(contactPoint.ToSfml(), normal.Y > 0 ? Color.Yellow : Color.Cyan));
-                contactLines.Append(new Vertex((contactPoint + normal).ToSfml() * lineLength, normal.Y > 0 ? Color.Yellow : Color.Cyan));
+                contactLines.Append(new Vertex((contactPoint + normal * lineLength).ToSfml(), normal.Y > 0 ? Color.Yellow : Color.Cyan));
             }
             target.Draw(contactLines);
         }
