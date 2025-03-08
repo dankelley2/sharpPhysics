@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Numerics;
 using physics.Engine.Classes;
 using physics.Engine.Helpers;
@@ -357,7 +357,7 @@ namespace physics.Engine
             jt /= invMassSumFriction;
 
             // Clamp friction impulse (Coulomb friction).
-            float mu = Math.Max(A.Friction, B.Friction);
+            float mu = PhysicsObject.Friction; //Math.Max(A.Friction, B.Friction);
             jt = Math.Min(Math.Abs(jt), mu * Math.Abs(j));
             jt = jt * (jt < 0 ? -1 : 1); // restore sign
 

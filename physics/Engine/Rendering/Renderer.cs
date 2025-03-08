@@ -6,6 +6,7 @@ using physics.Engine.Rendering.UI;
 using SFML.Window;
 using System.Numerics;
 using physics.Engine.Shaders;
+using physics.Engine.Objects;
 
 namespace physics.Engine.Rendering
 {
@@ -18,6 +19,7 @@ namespace physics.Engine.Rendering
         private Text debugText;
         private Font debugFont;
         private List<UiElement> _uiElements = new List<UiElement>();
+        private PhysicsSystem _physicsSystem;
 
         public Renderer(uint windowWidth, uint windowHeight, string windowTitle)
         {
@@ -31,6 +33,7 @@ namespace physics.Engine.Rendering
             UiView = new View(new FloatRect(0, 0, windowWidth, windowHeight));
             Window.SetFramerateLimit(144);
 
+            _physicsSystem = new PhysicsSystem();
             InitializeUi(windowWidth, windowHeight);
         }
 
@@ -71,6 +74,26 @@ namespace physics.Engine.Rendering
             };
             _uiElements.Add(viewingNormalsLabel);
             _uiElements.Add(viewingNormalsCheckbox);
+            
+            // Add Friction slider and label (200px to the right of the checkbox)
+            var frictionLabelPosition = new Vector2(600, 10); // Position above the slider
+            var frictionSliderPosition = new Vector2(600, 30); // Same Y as checkbox
+            
+            // Create and add friction label
+            var frictionLabel = new UiTextLabel("Friction", debugFont)
+            {
+                Position = frictionLabelPosition,
+                CharacterSize = 14
+            };
+            _uiElements.Add(frictionLabel);
+            
+            // Create and add friction slider
+            var frictionSlider = new UiSlider(frictionSliderPosition, new Vector2(150, 20), 0f, 1f, PhysicsObject.Friction);
+            frictionSlider.OnValueChanged += (value) =>
+            {
+                PhysicsObject.Friction = value;
+            };
+            _uiElements.Add(frictionSlider);
         }
 
         /// <summary>

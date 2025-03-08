@@ -52,7 +52,7 @@ namespace physics.Engine.Classes.ObjectTemplates
         public static PhysicsObject CreateMedBall(float originX, float originY)
         {
             int diameter = 10;
-            SFMLShader shader = GetShader<SFMLBallVelocityShader>(diameter);
+            SFMLShader shader = GetShader<SFMLPolyRainbowShader>(diameter);
             return PhysicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.8F, false, shader);
         }
 

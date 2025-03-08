@@ -128,7 +128,6 @@ namespace physics.Engine
             // Create the box shape.
             IShape shape = new BoxPhysShape(width, height);
             var obj = new PhysicsObject(shape, center, 0.2f, locked, shader, mass, canRotate: true);
-            obj.Friction = 0.8f;
             ListStaticObjects.Add(obj);
             return obj;
         }
@@ -138,7 +137,6 @@ namespace physics.Engine
             // Create the polygon shape.
             IShape shape = new PolygonPhysShape(points);
             var obj = new PhysicsObject(shape, origin, 0.2f, locked, shader, canRotate: canRotate);
-            obj.Friction = 0.8f;
             ListStaticObjects.Add(obj);
             return obj;
         }

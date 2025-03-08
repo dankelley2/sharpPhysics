@@ -13,8 +13,7 @@ namespace physics.Engine.Rendering.UI
         // Track the current element being dragged
         public static UiElement DraggedElement { get; private set; } = null;
 
-        // New click event for clickable elements.
-        public event Action<bool> OnClick;
+        // Remove the OnClick event since it's now in IUiClickable
 
         public UiElement()
         {
@@ -79,21 +78,29 @@ namespace physics.Engine.Rendering.UI
             }
         }
 
-        // Clickable interface support.
+        // Clickable interface support - simplified
         public virtual bool HandleClick(Vector2 clickPos)
         {
+            // Check children first - this gives them priority
             foreach (var child in Children)
             {
                 if(child.HandleClick(clickPos))
                 {
-                    // Set this as the dragged element if it handles drag
-                    if (child is IUiDraggable)
-                    {
-                        DraggedElement = child;
-                    }
                     return true;
                 }
             }
+            
+            // Then check if this element implements IUiClickable
+            if (this is IUiClickable clickable && clickable.HandleClick(clickPos))
+            {
+                // Set as dragged element if it's also draggable
+                if (this is IUiDraggable draggable)
+                {
+                    DraggedElement = this;
+                }
+                return true;
+            }
+            
             return false;
         }
         
@@ -115,12 +122,6 @@ namespace physics.Engine.Rendering.UI
                 draggable.StopDrag();
             }
             DraggedElement = null;
-        }
-
-        // New helper to raise the click event.
-        protected void RaiseClick(bool state)
-        {
-            OnClick?.Invoke(state);
         }
 
         protected abstract void DrawSelf(RenderTarget target);

@@ -223,7 +223,7 @@ namespace physics.Engine.Input
                     ActionTemplates.changeShader(physicsSystem, new SFMLPolyShader());
                     break;
                 case Keyboard.Key.V:
-                    // Optionally switch shaders.
+                    ActionTemplates.changeShader(physicsSystem, new SFMLPolyRainbowShader());
                     break;
                 case Keyboard.Key.G:
                     ObjectTemplates.CreateAttractor(MousePosition.X, MousePosition.Y);

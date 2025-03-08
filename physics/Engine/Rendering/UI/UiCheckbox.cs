@@ -5,31 +5,39 @@ using System.Numerics;
 
 namespace physics.Engine.Rendering.UI
 {
-    public class UiCheckbox : UiElement
+    public class UiCheckbox : UiElement, IUiClickable
     {
         public bool IsChecked { get; set; }
         public Vector2 Size { get; set; }
+        
+        // Implement the event from IUiClickable
+        public event Action<bool> OnClick;
+        
         public UiCheckbox(Vector2 position, Vector2 size)
         {
             this.Position = position;
             this.Size = size;
         }
 
-        public override bool HandleClick(Vector2 clickPos)
+        bool IUiClickable.HandleClick(Vector2 clickPos)
         {
             if (clickPos.X >= Position.X && clickPos.X <= Position.X + Size.X &&
                 clickPos.Y >= Position.Y && clickPos.Y <= Position.Y + Size.Y)
             {
                 IsChecked = !IsChecked; // toggle state
-                RaiseClick(IsChecked); // trigger click event with current state
+                OnClick?.Invoke(IsChecked); // Fire the event directly
                 return true;
             }
             return false;
         }
 
+        public override bool HandleClick(Vector2 clickPos)
+        {
+            return base.HandleClick(clickPos);
+        }
+
         protected override void DrawSelf(RenderTarget target)
         {
-            // ...existing drawing code...
             var rect = new RectangleShape(new SFML.System.Vector2f(Size.X, Size.Y))
             {
                 Position = Position.ToSfml(),

@@ -5,7 +5,7 @@ using System.Numerics;
 
 namespace physics.Engine.Rendering.UI
 {
-    public class UiSlider : UiElement, IUiDraggable
+    public class UiSlider : UiElement, IUiClickable, IUiDraggable
     {
         public float MinValue { get; set; }
         public float MaxValue { get; set; }
@@ -16,6 +16,14 @@ namespace physics.Engine.Rendering.UI
         
         // Event for when the slider value changes
         public event Action<float> OnValueChanged;
+        
+        // Implement IUiClickable event
+        public event Action<bool> OnClick;
+        
+        // Implement IUiDraggable events
+        public event Action<Vector2> OnDragStart;
+        public event Action<Vector2> OnDrag;
+        public event Action OnDragEnd;
         
         public UiSlider(Vector2 position, Vector2 size, float minValue = 0f, float maxValue = 1f, float initialValue = 0f)
         {
@@ -49,7 +57,7 @@ namespace physics.Engine.Rendering.UI
             SetValue(MinValue + position * (MaxValue - MinValue));
         }
         
-        public override bool HandleClick(Vector2 clickPos)
+        bool IUiClickable.HandleClick(Vector2 clickPos)
         {
             if (clickPos.X >= Position.X && clickPos.X <= Position.X + Size.X &&
                 clickPos.Y >= Position.Y && clickPos.Y <= Position.Y + Size.Y)
@@ -60,27 +68,42 @@ namespace physics.Engine.Rendering.UI
                 
                 // Start dragging
                 isDragging = true;
+                OnDragStart?.Invoke(clickPos);
+                OnClick?.Invoke(true); // Firing click event
                 
                 return true;
             }
             return false;
         }
         
+        // This override now becomes unnecessary as we use the interface implementation
+        public override bool HandleClick(Vector2 clickPos)
+        {
+            // Simply delegate to the base implementation which will call our interface method
+            return base.HandleClick(clickPos);
+        }
+        
         // Implement IUiDraggable interface
-        public bool HandleDrag(Vector2 dragPos)
+        public new bool HandleDrag(Vector2 dragPos)
         {
             if (isDragging)
             {
                 float normalizedPosition = Math.Clamp((dragPos.X - Position.X) / Size.X, 0f, 1f);
                 SetNormalizedPosition(normalizedPosition);
+                OnDrag?.Invoke(dragPos);
                 return true;
             }
             return false;
         }
         
-        public void StopDrag()
+        public new void StopDrag()
         {
-            isDragging = false;
+            if (isDragging)
+            {
+                isDragging = false;
+                OnDragEnd?.Invoke();
+                OnClick?.Invoke(false); // Release event
+            }
         }
         
         protected override void DrawSelf(RenderTarget target)
