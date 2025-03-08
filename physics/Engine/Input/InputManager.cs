@@ -125,6 +125,9 @@ namespace physics.Engine.Input
 
         private void OnMouseButtonReleased(object sender, MouseButtonEventArgs e)
         {
+            // Stop any ongoing UI drag operations
+            UiElement.StopDrag();
+            
             if (e.Button == Mouse.Button.Left)
             {
                 if (IsGrabbing)
@@ -161,6 +164,13 @@ namespace physics.Engine.Input
         private void OnMouseMoved(object sender, MouseMoveEventArgs e)
         {
             MousePosition = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view).ToSystemNumerics();
+
+            // Handle UI drag events
+            if (UiElement.DraggedElement != null)
+            {
+                UiElement.HandleDrag(MousePosition);
+                return;
+            }
 
             if (IsPanning)
             {

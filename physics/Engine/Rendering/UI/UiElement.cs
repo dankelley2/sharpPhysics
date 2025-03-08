@@ -9,6 +9,9 @@ namespace physics.Engine.Rendering.UI
     public abstract class UiElement
     {
         public static List<UiElement> GlobalUiElements { get; } = new List<UiElement>();
+        
+        // Track the current element being dragged
+        public static UiElement DraggedElement { get; private set; } = null;
 
         // New click event for clickable elements.
         public event Action<bool> OnClick;
@@ -82,9 +85,36 @@ namespace physics.Engine.Rendering.UI
             foreach (var child in Children)
             {
                 if(child.HandleClick(clickPos))
+                {
+                    // Set this as the dragged element if it handles drag
+                    if (child is IUiDraggable)
+                    {
+                        DraggedElement = child;
+                    }
                     return true;
+                }
             }
             return false;
+        }
+        
+        // New static method to handle drag events
+        public static bool HandleDrag(Vector2 dragPos)
+        {
+            if (DraggedElement is IUiDraggable draggable)
+            {
+                return draggable.HandleDrag(dragPos);
+            }
+            return false;
+        }
+        
+        // New static method to stop drag
+        public static void StopDrag()
+        {
+            if (DraggedElement is IUiDraggable draggable)
+            {
+                draggable.StopDrag();
+            }
+            DraggedElement = null;
         }
 
         // New helper to raise the click event.
