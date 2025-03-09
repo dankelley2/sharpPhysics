@@ -366,6 +366,10 @@ namespace physics.Engine
 
         private void UpdatePhysics(float dt)
         {
+
+            // divide dt into substeps
+            float dt_substep = dt / PHYSICS_ITERATIONS;
+
             // Loop over physics iterations.
             for (int iter = 0; iter < PHYSICS_ITERATIONS; iter++)
             {
@@ -460,14 +464,15 @@ namespace physics.Engine
                         _manifoldPool.Return(m);
                     }
                 }
-            }
 
-            // Process static objects.
-            for (int i = 0; i < ListStaticObjects.Count; i++)
-            {
-                var staticObj = ListStaticObjects[i];
-                ApplyConstants(staticObj, dt);
-                staticObj.Update(dt);
+                // Process static objects.
+                // Apply a portion of DT to static objects.
+                for (int i = 0; i < ListStaticObjects.Count; i++)
+                {
+                    var staticObj = ListStaticObjects[i];
+                    ApplyConstants(staticObj, dt_substep);
+                    staticObj.Update(dt_substep);
+                }
             }
         }
 
