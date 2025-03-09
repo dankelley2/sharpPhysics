@@ -10,7 +10,6 @@ namespace physics.Engine.Rendering.UI
     {
         private RectangleShape _background;
         private Text _buttonText;
-        private bool _isPressed = false;
         public event Action<bool> OnClick;
         public string Text 
         { 
@@ -32,7 +31,7 @@ namespace physics.Engine.Rendering.UI
             _buttonText = new Text(text, font)
             {
                 FillColor = Color.White,
-                CharacterSize = 16
+                CharacterSize = 14
             };
             
             // Center text on button
@@ -45,8 +44,8 @@ namespace physics.Engine.Rendering.UI
             var bgBounds = _background.GetGlobalBounds();
             
             _buttonText.Position = new Vector2f(
-                _background.Position.X + (bgBounds.Width - textBounds.Width) / 2,
-                _background.Position.Y + (bgBounds.Height - textBounds.Height) / 2 - 5 // Small adjustment for visual alignment
+                _background.Position.X + (bgBounds.Width - textBounds.Width) / 2 - 4, // Small adjustment for visual alignment
+                _background.Position.Y + (bgBounds.Height - textBounds.Height) / 2 - 6 // Small adjustment for visual alignment
             );
         }
         
@@ -65,7 +64,6 @@ namespace physics.Engine.Rendering.UI
             if (clickPos.X >= bounds.Left && clickPos.X <= bounds.Left + bounds.Width &&
                 clickPos.Y >= bounds.Top && clickPos.Y <= bounds.Top + bounds.Height)
             {
-                _isPressed = true;
                 _background.FillColor = new Color(100, 100, 100);
                 OnClick?.Invoke(true);
                 return true;

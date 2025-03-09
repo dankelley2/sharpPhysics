@@ -61,12 +61,12 @@ namespace physics.Engine.Rendering
             _uiElements.Add(roundedRect);
 
             // UI Elements for "Enable viewing normals"
-            var viewingNormalsLabel = new UiTextLabel("Enable viewing normals", debugFont)
+            var viewingNormalsLabel = new UiTextLabel("Contact Normals", debugFont)
             {
                 Position = new Vector2(200, 30),
                 CharacterSize = 14 // optional customization
             };
-            var viewingNormalsCheckbox = new UiCheckbox(new Vector2(400, 30), new Vector2(20, 20));
+            var viewingNormalsCheckbox = new UiCheckbox(new Vector2(350, 30), new Vector2(20, 20));
             viewingNormalsCheckbox.IsChecked = SFMLPolyShader.DrawNormals;
             viewingNormalsCheckbox.OnClick += (isChecked) =>
             {
@@ -74,26 +74,6 @@ namespace physics.Engine.Rendering
             };
             _uiElements.Add(viewingNormalsLabel);
             _uiElements.Add(viewingNormalsCheckbox);
-            
-            // Add Friction slider and label (200px to the right of the checkbox)
-            var frictionLabelPosition = new Vector2(600, 10); // Position above the slider
-            var frictionSliderPosition = new Vector2(600, 30); // Same Y as checkbox
-            
-            // Create and add friction label
-            var frictionLabel = new UiTextLabel("Friction", debugFont)
-            {
-                Position = frictionLabelPosition,
-                CharacterSize = 14
-            };
-            _uiElements.Add(frictionLabel);
-            
-            // Create and add friction slider
-            var frictionSlider = new UiSlider(frictionSliderPosition, new Vector2(150, 20), 0f, 1f, PhysicsObject.Friction);
-            frictionSlider.OnValueChanged += (value) =>
-            {
-                PhysicsObject.Friction = value;
-            };
-            _uiElements.Add(frictionSlider);
             
             // Add Gravity X control
             var gravityXLabelPosition = new Vector2(200, 60);
@@ -132,6 +112,26 @@ namespace physics.Engine.Rendering
                 _physicsSystem.Gravity = new Vector2(currentGravity.X, value);
             };
             _uiElements.Add(gravityYSlider);
+            
+            // Add Friction slider and label (200px to the right of the checkbox)
+            var frictionLabelPosition = new Vector2(400, 110); // Position above the slider
+            var frictionSliderPosition = new Vector2(400, 130); // Same Y as checkbox
+            
+            // Create and add friction label
+            var frictionLabel = new UiTextLabel("Friction", debugFont)
+            {
+                Position = frictionLabelPosition,
+                CharacterSize = 14
+            };
+            _uiElements.Add(frictionLabel);
+            
+            // Create and add friction slider
+            var frictionSlider = new UiSlider(frictionSliderPosition, new Vector2(150, 20), 0f, 1f, PhysicsObject.Friction);
+            frictionSlider.OnValueChanged += (value) =>
+            {
+                PhysicsObject.Friction = value;
+            };
+            _uiElements.Add(frictionSlider);
             
             // //Add Restitution (bounciness) control
             // var restitutionLabelPosition = new Vector2(600, 60);
@@ -177,8 +177,8 @@ namespace physics.Engine.Rendering
             };
             
             // Add Pause/Resume button
-            var pauseButtonPosition = new Vector2(600, 130);
-            var pauseButton = new UiButton("Pause", debugFont, pauseButtonPosition, new Vector2(80, 30));
+            var pauseButtonPosition = new Vector2(450, 30);
+            var pauseButton = new UiButton("Pause", debugFont, pauseButtonPosition, new Vector2(70, 20));
             pauseButton.OnClick += (state) => 
             {
                 _physicsSystem.IsPaused = !_physicsSystem.IsPaused;
