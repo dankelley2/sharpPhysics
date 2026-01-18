@@ -96,6 +96,7 @@ namespace physics.Engine
                     worldWidth: worldWidth,
                     worldHeight: worldHeight,
                     modelPath: MODEL_PATH,
+                    flipX: true,  // Flip horizontally for webcam input
                     flipY: false  // SharpPhysics uses Y-down coordinate system (same as camera)
                 );
 
@@ -111,7 +112,7 @@ namespace physics.Engine
                 };
 
                 // Start detection using webcam 0
-                personColliderBridge.Start(cameraIndex: 0, width: 640, height: 480);
+                personColliderBridge.Start(cameraIndex: 1, width: 640, height: 480);
                 
                 Console.WriteLine("Person detection initialized successfully.");
                 Console.WriteLine($"Model expected at: {System.IO.Path.GetFullPath(MODEL_PATH)}");

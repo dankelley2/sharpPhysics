@@ -22,11 +22,13 @@ namespace physics.Engine.Integration
         private readonly string _modelPath;
         private readonly bool _flipY;
         private readonly bool _flipX;
+        private readonly float _smoothingFactor;
+        private readonly int _fixedVertexCount;
 
         private PersonDetector? _detector;
         private List<PhysicsObject> _personBodies = new();
         private readonly object _syncLock = new();
-        
+
         // Queue for thread-safe polygon updates (detection runs on background thread)
         // Now holds lists of polygons to support multiple convex hulls per detection
         private readonly ConcurrentQueue<List<Vector2[]>> _pendingPolygonSets = new();
@@ -38,18 +40,24 @@ namespace physics.Engine.Integration
         /// <param name="worldHeight">Physics world height (for coordinate scaling).</param>
         /// <param name="modelPath">Path to the ONNX segmentation model.</param>
         /// <param name="flipY">Set true if SharpPhysics uses Y-up coordinates.</param>
+        /// <param name="smoothingFactor">Temporal smoothing (0.0 = no smoothing, 0.7 = moderate, 0.9 = very smooth).</param>
+        /// <param name="fixedVertexCount">Fixed vertex count for resampling (default 64).</param>
         public PersonColliderBridge(
             float worldWidth,
             float worldHeight,
             string modelPath,
-            bool flipX = true,
-            bool flipY = false)
+            bool flipX = false,
+            bool flipY = false,
+            float smoothingFactor = 0.8f,
+            int fixedVertexCount = 64)
         {
             _worldWidth = worldWidth;
             _worldHeight = worldHeight;
             _modelPath = modelPath;
             _flipX = flipX;
             _flipY = flipY;
+            _smoothingFactor = smoothingFactor;
+            _fixedVertexCount = fixedVertexCount;
         }
 
         /// <summary>
@@ -78,27 +86,31 @@ namespace physics.Engine.Integration
         {
             try
             {
-                // Configure ONNX options for MediaPipe Selfie Segmentation model
-                var options = new OnnxSegmentationOptions
-                {
-                    ModelPath = _modelPath,
-                    ModelType = ModelType.MediaPipeSelfie,
-                    InputTensorName = "input_1:0",
-                    OutputTensorName = "activation_10",
-                    InputWidth = 256,
-                    InputHeight = 256,
-                    Threshold = 0.7f,
-                    ExecutionProvider = ExecutionProvider.DirectML,  // GPU acceleration
-                    GpuDeviceId = 0
-                };
-                
-                _detector = new PersonDetector(_modelPath, options);
-                _detector.OnPersonDetected += HandlePersonDetected;
-                _detector.OnError += (_, ex) => OnError?.Invoke(this, ex);
-                _detector.Start(cameraIndex, width, height, fps);
-                
-                Console.WriteLine($"PersonColliderBridge started with camera {cameraIndex} at {width}x{height} @ {fps}fps");
-            }
+                    // Configure ONNX options for MediaPipe Selfie Segmentation model
+                    var options = new OnnxSegmentationOptions
+                    {
+                        ModelPath = _modelPath,
+                        ModelType = ModelType.MediaPipeSelfie,
+                        InputTensorName = "input_1:0",
+                        OutputTensorName = "activation_10",
+                        InputWidth = 256,
+                        InputHeight = 256,
+                        Threshold = 0.7f,
+                        ExecutionProvider = ExecutionProvider.DirectML,  // GPU acceleration
+                        GpuDeviceId = 0
+                    };
+
+                    _detector = new PersonDetector(
+                        _modelPath, 
+                        options,
+                        smoothingFactor: _smoothingFactor,
+                        fixedVertexCount: _fixedVertexCount);
+                    _detector.OnPersonDetected += HandlePersonDetected;
+                    _detector.OnError += (_, ex) => OnError?.Invoke(this, ex);
+                    _detector.Start(cameraIndex, width, height, fps);
+
+                    Console.WriteLine($"PersonColliderBridge started with camera {cameraIndex} at {width}x{height} @ {fps}fps (smoothing: {_smoothingFactor})");
+                }
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to start PersonDetector: {ex.Message}");
@@ -171,30 +183,77 @@ namespace physics.Engine.Integration
         {
             lock (_syncLock)
             {
-                // Remove all existing bodies
-                foreach (var body in _personBodies)
+                // If we have exactly one polygon and exactly one existing body, update it instead of recreating
+                if (polygonSet.Count == 1 && _personBodies.Count == 1 && polygonSet[0].Length >= 3)
                 {
-                    PhysicsSystem.RemovalQueue.Enqueue(body);
-                }
-                _personBodies.Clear();
+                    var physicsVerts = polygonSet[0];
+                    var existingBody = _personBodies[0];
 
-                // Create new bodies for each convex hull
-                foreach (var physicsVerts in polygonSet)
-                {
-                    if (physicsVerts.Length < 3) continue;
-                    
-                    // Calculate centroid for body position
-                    var centroid = CalculateCentroid(physicsVerts);
+                    // Calculate new centroid
+                    var newCentroid = CalculateCentroid(physicsVerts);
+                    var currentCenter = existingBody.Center;
 
                     // Convert to local coordinates (relative to centroid)
                     var localVerts = physicsVerts
-                        .Select(v => new Vector2(v.X - centroid.X, v.Y - centroid.Y))
+                        .Select(v => new Vector2(v.X - newCentroid.X, v.Y - newCentroid.Y))
                         .ToArray();
 
-                    // Create new static body using the existing physics system
-                    var shader = new SFMLPolyShader();
-                    var body = PhysicsSystem.CreatePolygon(centroid, localVerts, shader, locked: true, canRotate: false);
-                    _personBodies.Add(body);
+                    // Update existing body's shape vertices and position
+                    if (existingBody.Shape is Shapes.PolygonPhysShape polyShape)
+                    {
+                        // Update the vertices in place
+                        polyShape.LocalVertices.Clear();
+                        polyShape.LocalVertices.AddRange(localVerts);
+
+                        // Temporarily unlock to allow position update
+                        bool wasLocked = existingBody.Locked;
+                        existingBody.Locked = false;
+
+                        // Move to new position
+                        var delta = newCentroid - currentCenter;
+                        existingBody.Move(delta);
+
+                        // Restore locked state
+                        existingBody.Locked = wasLocked;
+                    }
+                    else
+                    {
+                        // Fallback: if shape type changed somehow, recreate
+                        PhysicsSystem.RemovalQueue.Enqueue(existingBody);
+                        _personBodies.Clear();
+
+                        var shader = new SFMLPolyShader();
+                        var body = PhysicsSystem.CreatePolygon(newCentroid, localVerts, shader, locked: true, canRotate: false);
+                        _personBodies.Add(body);
+                    }
+                }
+                else
+                {
+                    // Polygon count changed or first frame - recreate all bodies
+                    foreach (var body in _personBodies)
+                    {
+                        PhysicsSystem.RemovalQueue.Enqueue(body);
+                    }
+                    _personBodies.Clear();
+
+                    // Create new bodies for each polygon
+                    foreach (var physicsVerts in polygonSet)
+                    {
+                        if (physicsVerts.Length < 3) continue;
+
+                        // Calculate centroid for body position
+                        var centroid = CalculateCentroid(physicsVerts);
+
+                        // Convert to local coordinates (relative to centroid)
+                        var localVerts = physicsVerts
+                            .Select(v => new Vector2(v.X - centroid.X, v.Y - centroid.Y))
+                            .ToArray();
+
+                        // Create new static body using the existing physics system
+                        var shader = new SFMLPolyShader();
+                        var body = PhysicsSystem.CreatePolygon(centroid, localVerts, shader, locked: true, canRotate: false);
+                        _personBodies.Add(body);
+                    }
                 }
             }
 
