@@ -45,9 +45,9 @@ namespace physics.Engine
             ObjectTemplates.CreateWall(new Vector2(0, (int)worldHeight - 15), (int)worldWidth, 15);
 
             //Create a grid of medium balls.
-            for (int i = 0; i < 1000; i += 25)
+            for (int i = 0; i < 1000; i += 50)
             {
-                for (int j = 0; j < 600; j += 25)
+                for (int j = 0; j < 600; j += 50)
                 {
                     if (j % 80 == 0)
                         ObjectTemplates.CreateMedBall(i + 210, j + 40);
