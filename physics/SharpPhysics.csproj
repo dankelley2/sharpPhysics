@@ -14,6 +14,9 @@
     <PackageReference Include="SFML.Net" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\ProjectorSegmentation\src\ProjectorSegmentation.Vision\ProjectorSegmentation.Vision.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <None Update="Resources\blackPoolBall_30px.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -21,6 +24,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Resources/good_timing_bd.otf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- Copy models folder to output (ONNX model for person detection) -->
+    <None Update="models\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

@@ -1,9 +1,11 @@
-﻿using System.Numerics;
+﻿#nullable enable
+using System.Numerics;
 using SFML.System;
 using System;
 using System.Diagnostics;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Input;
+using physics.Engine.Integration;
 using physics.Engine.Rendering;
 using SharpPhysics.Engine.Player;
 
@@ -26,13 +28,25 @@ namespace physics.Engine
         private InputManager inputManager;
         private Renderer renderer;
         private PlayerController playerController;
+        
+        // Person detection integration
+        private PersonColliderBridge? personColliderBridge;
+        private uint _windowWidth;
+        private uint _windowHeight;
+
+        // Path to the ONNX model - place the model in the "models" folder relative to the executable
+        private const string MODEL_PATH = "models/person-segmentation.onnx";
 
         public GameWindow(uint width, uint height, string title)
         {
+            _windowWidth = width;
+            _windowHeight = height;
+            
             // Instantiate the renderer and input manager.
             renderer = new Renderer(width, height, title, physicsSystem);
             inputManager = new InputManager(renderer.Window, physicsSystem, renderer.GameView);
             InitializeGame(width, height);
+            InitializePersonDetection(width, height);
             stopwatch.Start();
         }
 
@@ -73,6 +87,41 @@ namespace physics.Engine
             // }
         }
 
+        private void InitializePersonDetection(uint worldWidth, uint worldHeight)
+        {
+            try
+            {
+                personColliderBridge = new PersonColliderBridge(
+                    worldWidth: worldWidth,
+                    worldHeight: worldHeight,
+                    modelPath: MODEL_PATH,
+                    flipY: false  // SharpPhysics uses Y-down coordinate system (same as camera)
+                );
+
+                personColliderBridge.OnError += (s, ex) =>
+                {
+                    Console.WriteLine($"Person Detection Error: {ex.Message}");
+                };
+
+                personColliderBridge.OnPersonBodyUpdated += (s, body) =>
+                {
+                    Console.WriteLine($"Person polygon updated with {body.Shape.GetTransformedVertices(body.Center, body.Angle).Length} vertices");
+                };
+
+                // Start detection using webcam 0
+                personColliderBridge.Start(cameraIndex: 0, width: 640, height: 480);
+                
+                Console.WriteLine("Person detection initialized successfully.");
+                Console.WriteLine($"Model expected at: {System.IO.Path.GetFullPath(MODEL_PATH)}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to initialize person detection: {ex.Message}");
+                Console.WriteLine("The application will continue without person detection.");
+                personColliderBridge = null;
+            }
+        }
+
 
 
         public void Run()
@@ -98,6 +147,9 @@ namespace physics.Engine
                 // Update the player
                 playerController.Update(inputManager.GetKeyState());
 
+                // Process any pending person detection updates (thread-safe)
+                personColliderBridge?.ProcessPendingUpdates();
+
                 // Tick the physics system
                 physicsSystem.Tick(deltaTime);
 
@@ -114,6 +166,9 @@ namespace physics.Engine
                 msDrawTime = stopwatch.ElapsedMilliseconds - renderStart;
                 msFrameTime = stopwatch.ElapsedMilliseconds - frameStartTime;
             }
+            
+            // Cleanup person detection when window closes
+            personColliderBridge?.Dispose();
         }
     }
 }
