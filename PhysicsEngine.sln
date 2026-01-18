@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpPhysics.Tests", "Sharp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectorSegmentation.Vision", "..\..\ProjectorSegmentation\src\ProjectorSegmentation.Vision\ProjectorSegmentation.Vision.csproj", "{58D568AA-7BA6-90BF-B217-BF1497DB529A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectorSegmentation.Demo", "..\..\ProjectorSegmentation\src\ProjectorSegmentation.Demo\ProjectorSegmentation.Demo.csproj", "{C3112F8F-13A2-AC9D-988A-397C4B3B3A44}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{58D568AA-7BA6-90BF-B217-BF1497DB529A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{58D568AA-7BA6-90BF-B217-BF1497DB529A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{58D568AA-7BA6-90BF-B217-BF1497DB529A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3112F8F-13A2-AC9D-988A-397C4B3B3A44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3112F8F-13A2-AC9D-988A-397C4B3B3A44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3112F8F-13A2-AC9D-988A-397C4B3B3A44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3112F8F-13A2-AC9D-988A-397C4B3B3A44}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -3,6 +3,7 @@ using System.Numerics;
 using SFML.System;
 using System;
 using System.Diagnostics;
+using System.Linq;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Input;
 using physics.Engine.Integration;
@@ -35,7 +36,7 @@ namespace physics.Engine
         private uint _windowHeight;
 
         // Path to the ONNX model - place the model in the "models" folder relative to the executable
-        private const string MODEL_PATH = "models/person-segmentation.onnx";
+        private const string MODEL_PATH = "models/selfie_segmentation.onnx";
 
         public GameWindow(uint width, uint height, string title)
         {
@@ -103,9 +104,10 @@ namespace physics.Engine
                     Console.WriteLine($"Person Detection Error: {ex.Message}");
                 };
 
-                personColliderBridge.OnPersonBodyUpdated += (s, body) =>
+                personColliderBridge.OnPersonBodyUpdated += (s, bodies) =>
                 {
-                    Console.WriteLine($"Person polygon updated with {body.Shape.GetTransformedVertices(body.Center, body.Angle).Length} vertices");
+                    int totalVerts = bodies.Sum(b => b.Shape.GetTransformedVertices(b.Center, b.Angle).Length);
+                    Console.WriteLine($"Person updated: {bodies.Count} convex hull(s), {totalVerts} total vertices");
                 };
 
                 // Start detection using webcam 0

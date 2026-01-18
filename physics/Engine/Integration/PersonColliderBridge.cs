@@ -21,13 +21,15 @@ namespace physics.Engine.Integration
         private readonly float _worldHeight;
         private readonly string _modelPath;
         private readonly bool _flipY;
+        private readonly bool _flipX;
 
         private PersonDetector? _detector;
-        private PhysicsObject? _personBody;
+        private List<PhysicsObject> _personBodies = new();
         private readonly object _syncLock = new();
         
         // Queue for thread-safe polygon updates (detection runs on background thread)
-        private readonly ConcurrentQueue<Vector2[]> _pendingPolygons = new();
+        // Now holds lists of polygons to support multiple convex hulls per detection
+        private readonly ConcurrentQueue<List<Vector2[]>> _pendingPolygonSets = new();
 
         /// <summary>
         /// Creates a new PersonColliderBridge.
@@ -40,11 +42,13 @@ namespace physics.Engine.Integration
             float worldWidth,
             float worldHeight,
             string modelPath,
+            bool flipX = true,
             bool flipY = false)
         {
             _worldWidth = worldWidth;
             _worldHeight = worldHeight;
             _modelPath = modelPath;
+            _flipX = flipX;
             _flipY = flipY;
         }
 
@@ -56,40 +60,44 @@ namespace physics.Engine.Integration
         /// <summary>
         /// Fired after the person body is updated in the physics world.
         /// </summary>
-        public event EventHandler<PhysicsObject>? OnPersonBodyUpdated;
+        public event EventHandler<IReadOnlyList<PhysicsObject>>? OnPersonBodyUpdated;
 
         /// <summary>
-        /// The current person PhysicsObject (null if no person detected).
+        /// The current person PhysicsObjects (empty if no person detected).
+        /// Multiple objects represent convex hull decomposition of concave silhouette.
         /// </summary>
-        public PhysicsObject? PersonBody
+        public IReadOnlyList<PhysicsObject> PersonBodies
         {
-            get { lock (_syncLock) return _personBody; }
+            get { lock (_syncLock) return _personBodies.ToList(); }
         }
 
         /// <summary>
         /// Start detection with the specified camera.
         /// </summary>
-        public void Start(int cameraIndex = 0, int width = 640, int height = 480)
+        public void Start(int cameraIndex = 0, int width = 640, int height = 480, int fps = 30)
         {
             try
             {
-                // Configure ONNX options for FCN ResNet-50 model
+                // Configure ONNX options for MediaPipe Selfie Segmentation model
                 var options = new OnnxSegmentationOptions
                 {
                     ModelPath = _modelPath,
-                    InputTensorName = "input",
-                    OutputTensorName = "out",  // FCN ResNet-50 uses "out" not "output"
-                    InputWidth = 520,
-                    InputHeight = 520,
-                    Threshold = 0.5f
+                    ModelType = ModelType.MediaPipeSelfie,
+                    InputTensorName = "input_1:0",
+                    OutputTensorName = "activation_10",
+                    InputWidth = 256,
+                    InputHeight = 256,
+                    Threshold = 0.7f,
+                    ExecutionProvider = ExecutionProvider.DirectML,  // GPU acceleration
+                    GpuDeviceId = 0
                 };
                 
                 _detector = new PersonDetector(_modelPath, options);
                 _detector.OnPersonDetected += HandlePersonDetected;
                 _detector.OnError += (_, ex) => OnError?.Invoke(this, ex);
-                _detector.Start(cameraIndex, width, height);
+                _detector.Start(cameraIndex, width, height, fps);
                 
-                Console.WriteLine($"PersonColliderBridge started with camera {cameraIndex} at {width}x{height}");
+                Console.WriteLine($"PersonColliderBridge started with camera {cameraIndex} at {width}x{height} @ {fps}fps");
             }
             catch (Exception ex)
             {
@@ -109,11 +117,12 @@ namespace physics.Engine.Integration
 
             lock (_syncLock)
             {
-                if (_personBody != null)
+                // Remove all existing person bodies
+                foreach (var body in _personBodies)
                 {
-                    PhysicsSystem.RemovalQueue.Enqueue(_personBody);
-                    _personBody = null;
+                    PhysicsSystem.RemovalQueue.Enqueue(body);
                 }
+                _personBodies.Clear();
             }
         }
 
@@ -123,16 +132,16 @@ namespace physics.Engine.Integration
         /// </summary>
         public void ProcessPendingUpdates()
         {
-            // Only process the most recent polygon (discard older ones)
-            Vector2[]? latestPolygon = null;
-            while (_pendingPolygons.TryDequeue(out var polygon))
+            // Only process the most recent polygon set (discard older ones)
+            List<Vector2[]>? latestPolygonSet = null;
+            while (_pendingPolygonSets.TryDequeue(out var polygonSet))
             {
-                latestPolygon = polygon;
+                latestPolygonSet = polygonSet;
             }
 
-            if (latestPolygon != null && latestPolygon.Length >= 3)
+            if (latestPolygonSet != null && latestPolygonSet.Count > 0)
             {
-                UpdatePersonBody(latestPolygon);
+                UpdatePersonBodies(latestPolygonSet);
             }
         }
 
@@ -140,49 +149,71 @@ namespace physics.Engine.Integration
         {
             if (e.Polygons.Count == 0) return;
 
-            // Use first polygon (largest/primary silhouette)
-            var polygon = e.Polygons[0];
+            // Convert all polygons to physics coordinates
+            var polygonSet = new List<Vector2[]>();
             
-            if (polygon.Count < 3) return;
-
-            // Convert to physics coordinates
-            var physicsVerts = ConvertToPhysicsCoords(polygon);
+            foreach (var polygon in e.Polygons)
+            {
+                if (polygon.Count < 3) continue;
+                
+                var physicsVerts = ConvertToPhysicsCoords(polygon);
+                polygonSet.Add(physicsVerts);
+            }
             
-            // Queue for main thread processing
-            _pendingPolygons.Enqueue(physicsVerts);
+            if (polygonSet.Count > 0)
+            {
+                // Queue for main thread processing
+                _pendingPolygonSets.Enqueue(polygonSet);
+            }
         }
 
-        private void UpdatePersonBody(Vector2[] physicsVerts)
+        private void UpdatePersonBodies(List<Vector2[]> polygonSet)
         {
-            // Calculate centroid for body position
-            var centroid = CalculateCentroid(physicsVerts);
-
-            // Convert to local coordinates (relative to centroid)
-            var localVerts = physicsVerts
-                .Select(v => new Vector2(v.X - centroid.X, v.Y - centroid.Y))
-                .ToArray();
-
             lock (_syncLock)
             {
-                // Remove existing body
-                if (_personBody != null)
+                // Remove all existing bodies
+                foreach (var body in _personBodies)
                 {
-                    PhysicsSystem.RemovalQueue.Enqueue(_personBody);
+                    PhysicsSystem.RemovalQueue.Enqueue(body);
                 }
+                _personBodies.Clear();
 
-                // Create new static body using the existing physics system
-                var shader = new SFMLPolyShader();
-                _personBody = PhysicsSystem.CreatePolygon(centroid, localVerts, shader, locked: true, canRotate: false);
+                // Create new bodies for each convex hull
+                foreach (var physicsVerts in polygonSet)
+                {
+                    if (physicsVerts.Length < 3) continue;
+                    
+                    // Calculate centroid for body position
+                    var centroid = CalculateCentroid(physicsVerts);
+
+                    // Convert to local coordinates (relative to centroid)
+                    var localVerts = physicsVerts
+                        .Select(v => new Vector2(v.X - centroid.X, v.Y - centroid.Y))
+                        .ToArray();
+
+                    // Create new static body using the existing physics system
+                    var shader = new SFMLPolyShader();
+                    var body = PhysicsSystem.CreatePolygon(centroid, localVerts, shader, locked: true, canRotate: false);
+                    _personBodies.Add(body);
+                }
             }
 
-            OnPersonBodyUpdated?.Invoke(this, _personBody!);
+            if (_personBodies.Count > 0)
+            {
+                OnPersonBodyUpdated?.Invoke(this, _personBodies);
+            }
         }
 
+        /// <summary>
+        /// Converts normalized coordinates (0-1) to physics world coordinates.
+        /// </summary>
         private Vector2[] ConvertToPhysicsCoords(IReadOnlyList<Vector2> polygon)
         {
             return polygon.Select(p =>
             {
-                float x = p.X * _worldWidth;
+                float x = _flipX 
+                    ? _worldWidth - (p.X * _worldWidth) 
+                    : p.X * _worldWidth;
                 float y = _flipY
                     ? _worldHeight - (p.Y * _worldHeight)
                     : p.Y * _worldHeight;
