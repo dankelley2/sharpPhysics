@@ -86,31 +86,31 @@ namespace physics.Engine.Integration
         {
             try
             {
-                    // Configure ONNX options for MediaPipe Selfie Segmentation model
-                    var options = new OnnxSegmentationOptions
-                    {
-                        ModelPath = _modelPath,
-                        ModelType = ModelType.MediaPipeSelfie,
-                        InputTensorName = "input_1:0",
-                        OutputTensorName = "activation_10",
-                        InputWidth = 256,
-                        InputHeight = 256,
-                        Threshold = 0.7f,
-                        ExecutionProvider = ExecutionProvider.DirectML,  // GPU acceleration
-                        GpuDeviceId = 0
-                    };
+                            // Configure ONNX options for MediaPipe Selfie Segmentation model
+                            var options = new OnnxSegmentationOptions
+                            {
+                                ModelPath = _modelPath,
+                                ModelType = ModelType.MediaPipeSelfie,
+                                InputTensorName = "input_1:0",
+                                OutputTensorName = "activation_10",
+                                InputWidth = 256,
+                                InputHeight = 256,
+                                Threshold = 0.7f,
+                                ExecutionProvider = ExecutionProvider.DirectML,  // GPU acceleration
+                                GpuDeviceId = 0
+                            };
 
-                    _detector = new PersonDetector(
-                        _modelPath, 
-                        options,
-                        smoothingFactor: _smoothingFactor,
-                        fixedVertexCount: _fixedVertexCount);
-                    _detector.OnPersonDetected += HandlePersonDetected;
-                    _detector.OnError += (_, ex) => OnError?.Invoke(this, ex);
-                    _detector.Start(cameraIndex, width, height, fps);
+                            _detector = new PersonDetector(
+                                _modelPath, 
+                                options,
+                                smoothingFactor: _smoothingFactor,
+                                fixedVertexCount: _fixedVertexCount);
+                            _detector.OnPersonDetected += HandlePersonDetected;
+                            _detector.OnError += (_, ex) => OnError?.Invoke(this, ex);
+                            _detector.Start(cameraIndex, width, height, fps);
 
-                    Console.WriteLine($"PersonColliderBridge started with camera {cameraIndex} at {width}x{height} @ {fps}fps (smoothing: {_smoothingFactor})");
-                }
+                            Console.WriteLine($"PersonColliderBridge started with camera {cameraIndex} at {width}x{height} @ {fps}fps (smoothing: {_smoothingFactor})");
+                        }
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to start PersonDetector: {ex.Message}");
