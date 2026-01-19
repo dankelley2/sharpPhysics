@@ -49,7 +49,7 @@ namespace physics.Engine.Integration
             string modelPath,
             bool flipX = false,
             bool flipY = false,
-            float smoothingFactor = 0.8f,
+            float smoothingFactor = 0.0f,  // Changed to 0.0f to disable resampling
             int fixedVertexCount = 64)
         {
             _worldWidth = worldWidth;
@@ -172,15 +172,26 @@ namespace physics.Engine.Integration
 
             // Convert all polygons to physics coordinates
             var polygonSet = new List<Vector2[]>();
-            
+
+            // Configure scaling and positioning
+            const float scalingFactor = 0.5f;
+            float scaledWidth = _worldWidth * scalingFactor;
+            float scaledHeight = _worldHeight * scalingFactor;
+
+            // Position at bottom-middle of the screen (centered horizontally, at bottom)
+            var origin = new Vector2(
+                (_worldWidth - scaledWidth) / 2,  // Center horizontally
+                _worldHeight - scaledHeight        // Position at bottom
+            );
+
             foreach (var polygon in e.Polygons)
             {
                 if (polygon.Count < 3) continue;
-                
-                var physicsVerts = ConvertToPhysicsCoords(polygon);
+
+                var physicsVerts = ConvertToPhysicsCoords(polygon, origin, scalingFactor);
                 polygonSet.Add(physicsVerts);
             }
-            
+
             if (polygonSet.Count > 0)
             {
                 // Queue for main thread processing
@@ -319,7 +330,7 @@ namespace physics.Engine.Integration
                         foreach (var vertex in allVertices)
                         {
                             const int diameter = 10;
-                            var shader = new SFMLNoneShader();
+                            var shader = new SFMLPolyRainbowShader();
                             var ball = PhysicsSystem.CreateStaticCircle(vertex, diameter, 0.6f, locked: true, shader);
                             _personBalls.Add(ball);
                         }
@@ -332,22 +343,30 @@ namespace physics.Engine.Integration
                 }
             }
 
-            /// <summary>
-            /// Converts normalized coordinates (0-1) to physics world coordinates.
-            /// </summary>
-        private Vector2[] ConvertToPhysicsCoords(IReadOnlyList<Vector2> polygon)
-        {
-            return polygon.Select(p =>
+                /// <summary>
+                /// Converts normalized coordinates (0-1) to physics world coordinates.
+                /// </summary>
+                /// <param name="polygon">Normalized polygon vertices (0-1 range).</param>
+                /// <param name="origin">Origin point for the polygon in world coordinates.</param>
+                /// <param name="scalingFactor">Scaling factor applied to world dimensions (e.g., 0.5 = half size).</param>
+            private Vector2[] ConvertToPhysicsCoords(IReadOnlyList<Vector2> polygon, Vector2 origin, float scalingFactor)
             {
-                float x = _flipX 
-                    ? _worldWidth - (p.X * _worldWidth) 
-                    : p.X * _worldWidth;
-                float y = _flipY
-                    ? _worldHeight - (p.Y * _worldHeight)
-                    : p.Y * _worldHeight;
-                return new Vector2(x, y);
-            }).ToArray();
-        }
+                float scaledWidth = _worldWidth * scalingFactor;
+                float scaledHeight = _worldHeight * scalingFactor;
+
+                return polygon.Select(p =>
+                {
+                    // Apply flip logic to normalized coordinates
+                    float normalizedX = _flipX ? (1 - p.X) : p.X;
+                    float normalizedY = _flipY ? (1 - p.Y) : p.Y;
+
+                    // Scale and offset by origin
+                    float x = origin.X + (normalizedX * scaledWidth);
+                    float y = origin.Y + (normalizedY * scaledHeight);
+
+                    return new Vector2(x, y);
+                }).ToArray();
+            }
 
         private static Vector2 CalculateCentroid(Vector2[] vertices)
         {
