@@ -200,6 +200,11 @@ namespace physics.Engine.Objects
         /// </summary>
         public void Sleep()
         {
+
+            // No sleeping right now
+            return;
+
+            /////////
             if (Sleeping) return;
             Sleeping = true;
             Velocity = new Vector2(0, 0);

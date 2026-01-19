@@ -27,6 +27,7 @@ namespace physics.Engine.Integration
 
         private PersonDetector? _detector;
         private List<PhysicsObject> _personBodies = new();
+        private List<PhysicsObject> _personBalls = new();
         private readonly object _syncLock = new();
 
         // Queue for thread-safe polygon updates (detection runs on background thread)
@@ -127,16 +128,23 @@ namespace physics.Engine.Integration
             _detector?.Dispose();
             _detector = null;
 
-            lock (_syncLock)
-            {
-                // Remove all existing person bodies
-                foreach (var body in _personBodies)
+                lock (_syncLock)
                 {
-                    PhysicsSystem.RemovalQueue.Enqueue(body);
+                    // Remove all existing person bodies
+                    foreach (var body in _personBodies)
+                    {
+                        PhysicsSystem.RemovalQueue.Enqueue(body);
+                    }
+                    _personBodies.Clear();
+
+                    // Remove all existing person balls
+                    foreach (var ball in _personBalls)
+                    {
+                        PhysicsSystem.RemovalQueue.Enqueue(ball);
+                    }
+                    _personBalls.Clear();
                 }
-                _personBodies.Clear();
             }
-        }
 
         /// <summary>
         /// Call this from the main game loop to process any pending polygon updates.
@@ -153,6 +161,7 @@ namespace physics.Engine.Integration
 
             if (latestPolygonSet != null && latestPolygonSet.Count > 0)
             {
+                //UpdatePersonBodiesAsBalls(latestPolygonSet);
                 UpdatePersonBodies(latestPolygonSet);
             }
         }
@@ -257,15 +266,75 @@ namespace physics.Engine.Integration
                 }
             }
 
-            if (_personBodies.Count > 0)
-            {
-                OnPersonBodyUpdated?.Invoke(this, _personBodies);
+                if (_personBodies.Count > 0)
+                {
+                    OnPersonBodyUpdated?.Invoke(this, _personBodies);
+                }
             }
-        }
 
-        /// <summary>
-        /// Converts normalized coordinates (0-1) to physics world coordinates.
-        /// </summary>
+            /// <summary>
+            /// Updates person representation using small physics balls at each vertex position.
+            /// This is an alternative to UpdatePersonBodies that uses individual balls instead of polygons.
+            /// </summary>
+            private void UpdatePersonBodiesAsBalls(List<Vector2[]> polygonSet)
+            {
+                // Flatten all vertices from all polygons into a single list
+                var allVertices = polygonSet.SelectMany(p => p).ToList();
+
+                lock (_syncLock)
+                {
+                    // If vertex count matches ball count, update positions in place
+                    if (allVertices.Count == _personBalls.Count && allVertices.Count > 0)
+                    {
+                        for (int i = 0; i < allVertices.Count; i++)
+                        {
+                            var ball = _personBalls[i];
+                            var targetPos = allVertices[i];
+                            var currentPos = ball.Center;
+
+                            // Calculate movement delta
+                            var delta = targetPos - currentPos;
+
+                            // Temporarily unlock to allow position update
+                            bool wasLocked = ball.Locked;
+                            ball.Locked = false;
+
+                            // Move to new position
+                            ball.Move(delta);
+
+                            // Restore locked state
+                            ball.Locked = wasLocked;
+                        }
+                    }
+                    else
+                    {
+                        // Vertex count changed or first frame - recreate all balls
+                        foreach (var ball in _personBalls)
+                        {
+                            PhysicsSystem.RemovalQueue.Enqueue(ball);
+                        }
+                        _personBalls.Clear();
+
+                        // Create a ball for each vertex
+                        foreach (var vertex in allVertices)
+                        {
+                            const int diameter = 10;
+                            var shader = new SFMLNoneShader();
+                            var ball = PhysicsSystem.CreateStaticCircle(vertex, diameter, 0.6f, locked: true, shader);
+                            _personBalls.Add(ball);
+                        }
+                    }
+                }
+
+                if (_personBalls.Count > 0)
+                {
+                    OnPersonBodyUpdated?.Invoke(this, _personBalls);
+                }
+            }
+
+            /// <summary>
+            /// Converts normalized coordinates (0-1) to physics world coordinates.
+            /// </summary>
         private Vector2[] ConvertToPhysicsCoords(IReadOnlyList<Vector2> polygon)
         {
             return polygon.Select(p =>
