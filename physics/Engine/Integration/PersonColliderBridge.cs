@@ -10,6 +10,7 @@ using physics.Engine.Shaders;
 using ProjectorSegmentation.Vision.Models;
 using ProjectorSegmentation.Vision.PoseDetection;
 using ProjectorSegmentation.Vision.FrameSources;
+using ProjectorSegmentation.Vision.Abstractions;
 
 namespace physics.Engine.Integration
 {
@@ -29,7 +30,7 @@ namespace physics.Engine.Integration
         private readonly float _smoothingFactor;
 
         private YoloV8PoseDetector? _poseDetector;
-        private OpenCvCameraFrameSource? _camera;
+        private IFrameSource? _camera;
         private Thread? _detectionThread;
         private CancellationTokenSource? _cts;
         private volatile bool _isRunning;
@@ -187,6 +188,49 @@ namespace physics.Engine.Integration
                     if (_rightHandBall != null) balls.Add(_rightHandBall);
                     return balls;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Start pose detection with the specified camera.
+        /// </summary>
+        public void Start(string url, int width = 640, int height = 480, int fps = 30)
+        {
+            try
+            {
+                Console.WriteLine($"[PersonBridge] Loading model from: {System.IO.Path.GetFullPath(_modelPath)}");
+
+                if (!System.IO.File.Exists(_modelPath))
+                {
+                    throw new System.IO.FileNotFoundException($"Model file not found: {_modelPath}");
+                }
+
+                _poseDetector = new YoloV8PoseDetector(_modelPath, useGpu: true);
+                Console.WriteLine("[PersonBridge] YOLOv8 model loaded successfully");
+
+                _camera = new MjpegCameraFrameSource(url, 5, true);
+                Console.WriteLine($"[PersonBridge] Stream {url} opened at {width}x{height} @ {fps}fps");
+
+                // Create the tracking balls
+                CreateTrackingBalls();
+
+                _cts = new CancellationTokenSource();
+                _isRunning = true;
+
+                _detectionThread = new Thread(() => DetectionLoop(_cts.Token))
+                {
+                    Name = "PersonColliderBridge-Detection",
+                    IsBackground = true
+                };
+                _detectionThread.Start();
+
+                Console.WriteLine($"[PersonBridge] Detection thread started");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[PersonBridge] Failed to start: {ex.Message}");
+                Console.WriteLine($"[PersonBridge] Stack trace: {ex.StackTrace}");
+                OnError?.Invoke(this, ex);
             }
         }
 
