@@ -35,8 +35,8 @@ namespace physics.Engine
         private uint _windowWidth;
         private uint _windowHeight;
 
-        // Path to the ONNX model - place the model in the "models" folder relative to the executable
-        private const string MODEL_PATH = "models/selfie_segmentation.onnx";
+        // Path to the ONNX model - YOLOv8-Pose model for hand/head tracking
+        private const string MODEL_PATH = "models/pose_detection.onnx";
 
         public GameWindow(uint width, uint height, string title)
         {
@@ -96,8 +96,11 @@ namespace physics.Engine
                     worldWidth: worldWidth,
                     worldHeight: worldHeight,
                     modelPath: MODEL_PATH,
-                    flipX: true,  // Flip horizontally for webcam input
-                    flipY: false  // SharpPhysics uses Y-down coordinate system (same as camera)
+                    flipX: true,         // Mirror mode for natural interaction
+                    flipY: false,        // SharpPhysics uses Y-down coordinate system
+                    trackingSpeed: 15f,  // How fast balls follow detected positions
+                    ballRadius: 20,      // Radius of head/hand tracking balls
+                    smoothingFactor: 0.5f // Smoothing to reduce jitter (0 = none, 0.8 = very smooth)
                 );
 
                 personColliderBridge.OnError += (s, ex) =>
@@ -105,17 +108,22 @@ namespace physics.Engine
                     Console.WriteLine($"Person Detection Error: {ex.Message}");
                 };
 
-                personColliderBridge.OnPersonBodyUpdated += (s, bodies) =>
+                personColliderBridge.OnPersonBodyUpdated += (s, balls) =>
                 {
-                    int totalVerts = bodies.Sum(b => b.Shape.GetTransformedVertices(b.Center, b.Angle).Length);
-                    Console.WriteLine($"Person updated: {bodies.Count} convex hull(s), {totalVerts} total vertices");
+                    // Uncomment for debug output:
+                    // Console.WriteLine($"Tracking balls updated: {balls.Count} active");
                 };
 
-                // Start detection using webcam 0
-                personColliderBridge.Start(cameraIndex: 0, width: 640, height: 480);
-                
+                // Start detection using webcam 1 (same as working Demo)
+                personColliderBridge.Start(cameraIndex: 1, width: 640, height: 480, fps: 30);
+
+                // Pass the bridge to the renderer for skeleton visualization
+                renderer.SetPersonColliderBridge(personColliderBridge);
+
                 Console.WriteLine("Person detection initialized successfully.");
                 Console.WriteLine($"Model expected at: {System.IO.Path.GetFullPath(MODEL_PATH)}");
+                Console.WriteLine("Tracking: Head, Left Hand, Right Hand (20 radius balls)");
+                Console.WriteLine("Use personColliderBridge.SkeletonScale and .SkeletonOffset to adjust position/size");
             }
             catch (Exception ex)
             {

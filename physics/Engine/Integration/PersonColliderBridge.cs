@@ -4,16 +4,18 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Threading;
 using physics.Engine.Objects;
 using physics.Engine.Shaders;
-using ProjectorSegmentation.Vision;
-using ProjectorSegmentation.Vision.Segmentation;
+using ProjectorSegmentation.Vision.Models;
+using ProjectorSegmentation.Vision.PoseDetection;
+using ProjectorSegmentation.Vision.FrameSources;
 
 namespace physics.Engine.Integration
 {
     /// <summary>
-    /// Bridges ProjectorSegmentation person detection with the SharpPhysics engine.
-    /// Creates/updates a static PhysicsObject representing the detected person silhouette.
+    /// Bridges ProjectorSegmentation pose detection with the SharpPhysics engine.
+    /// Creates physics balls for hands and head that track detected keypoints.
     /// </summary>
     public sealed class PersonColliderBridge : IDisposable
     {
@@ -22,43 +24,138 @@ namespace physics.Engine.Integration
         private readonly string _modelPath;
         private readonly bool _flipY;
         private readonly bool _flipX;
+        private readonly float _trackingSpeed;
+        private readonly int _ballRadius;
         private readonly float _smoothingFactor;
-        private readonly int _fixedVertexCount;
 
-        private PersonDetector? _detector;
-        private List<PhysicsObject> _personBodies = new();
-        private List<PhysicsObject> _personBalls = new();
+        private YoloV8PoseDetector? _poseDetector;
+        private OpenCvCameraFrameSource? _camera;
+        private Thread? _detectionThread;
+        private CancellationTokenSource? _cts;
+        private volatile bool _isRunning;
+
+        // Physics balls for head and hands
+        private PhysicsObject? _headBall;
+        private PhysicsObject? _leftHandBall;
+        private PhysicsObject? _rightHandBall;
         private readonly object _syncLock = new();
 
-        // Queue for thread-safe polygon updates (detection runs on background thread)
-        // Now holds lists of polygons to support multiple convex hulls per detection
-        private readonly ConcurrentQueue<List<Vector2[]>> _pendingPolygonSets = new();
+        // Queue for thread-safe keypoint updates (detection runs on background thread)
+        private readonly ConcurrentQueue<PoseKeypoints> _pendingKeypoints = new();
+
+        // Smoothed keypoint positions (for temporal smoothing)
+        private Vector2? _smoothedHeadPos;
+        private Vector2? _smoothedLeftHandPos;
+        private Vector2? _smoothedRightHandPos;
+
+        // Full skeleton keypoints (all 17 COCO keypoints)
+        private Vector2[] _smoothedKeypoints = new Vector2[17];
+        private float[] _keypointConfidences = new float[17];
+        private bool _hasFullSkeleton = false;
+
+        // Skeleton transform parameters (adjustable from game engine)
+        private Vector2 _skeletonOffset = Vector2.Zero;
+        private float _skeletonScale = 1.0f;
+        private Vector2 _skeletonOrigin = new Vector2(0.5f, 0.25f); // Normalized origin point for scaling
+
+        // Keypoint indices for YOLOv8 COCO format
+        private const int NOSE_INDEX = 0;
+        private const int LEFT_WRIST_INDEX = 9;
+        private const int RIGHT_WRIST_INDEX = 10;
+
+        // COCO skeleton connections (17 keypoints)
+        private static readonly (int, int)[] SkeletonConnections = new[]
+        {
+            // Face
+            (0, 1), (0, 2), // Nose to eyes
+            (1, 3), (2, 4), // Eyes to ears
+
+            // Torso
+            (5, 6),   // Shoulders
+            (5, 11), (6, 12), // Shoulders to hips
+            (11, 12), // Hips
+
+            // Left arm
+            (5, 7), (7, 9),  // Shoulder -> elbow -> wrist
+
+            // Right arm
+            (6, 8), (8, 10), // Shoulder -> elbow -> wrist
+
+            // Left leg
+            (11, 13), (13, 15), // Hip -> knee -> ankle
+
+            // Right leg
+            (12, 14), (14, 16)  // Hip -> knee -> ankle
+        };
 
         /// <summary>
-        /// Creates a new PersonColliderBridge.
+        /// Stores the relevant keypoints for physics tracking.
+        /// </summary>
+        private record PoseKeypoints(
+            Vector2 HeadPos, float HeadConf,
+            Vector2 LeftHandPos, float LeftHandConf,
+            Vector2 RightHandPos, float RightHandConf
+        );
+
+        /// <summary>
+        /// Creates a new PersonColliderBridge for pose-based physics interaction.
         /// </summary>
         /// <param name="worldWidth">Physics world width (for coordinate scaling).</param>
         /// <param name="worldHeight">Physics world height (for coordinate scaling).</param>
-        /// <param name="modelPath">Path to the ONNX segmentation model.</param>
-        /// <param name="flipY">Set true if SharpPhysics uses Y-up coordinates.</param>
-        /// <param name="smoothingFactor">Temporal smoothing (0.0 = no smoothing, 0.7 = moderate, 0.9 = very smooth).</param>
-        /// <param name="fixedVertexCount">Fixed vertex count for resampling (default 64).</param>
+        /// <param name="modelPath">Path to the YOLOv8-Pose ONNX model.</param>
+        /// <param name="flipX">Flip X coordinates (mirror mode).</param>
+        /// <param name="flipY">Flip Y coordinates.</param>
+        /// <param name="trackingSpeed">How fast balls move toward target positions (higher = faster).</param>
+        /// <param name="ballRadius">Radius of the tracking balls (default 20).</param>
+        /// <param name="smoothingFactor">Temporal smoothing factor (0 = no smoothing, 0.8 = very smooth). Default 0.5.</param>
         public PersonColliderBridge(
             float worldWidth,
             float worldHeight,
             string modelPath,
-            bool flipX = false,
+            bool flipX = true,  // Mirror by default for natural interaction
             bool flipY = false,
-            float smoothingFactor = 0.0f,  // Changed to 0.0f to disable resampling
-            int fixedVertexCount = 64)
+            float trackingSpeed = 15f,
+            int ballRadius = 20,
+            float smoothingFactor = 0.5f)
         {
             _worldWidth = worldWidth;
             _worldHeight = worldHeight;
             _modelPath = modelPath;
             _flipX = flipX;
             _flipY = flipY;
-            _smoothingFactor = smoothingFactor;
-            _fixedVertexCount = fixedVertexCount;
+            _trackingSpeed = trackingSpeed;
+            _ballRadius = ballRadius;
+            _smoothingFactor = Math.Clamp(smoothingFactor, 0f, 0.95f);
+        }
+
+        /// <summary>
+        /// Gets or sets the skeleton offset in world coordinates.
+        /// Use this to move the entire skeleton around the screen.
+        /// </summary>
+        public Vector2 SkeletonOffset
+        {
+            get => _skeletonOffset;
+            set => _skeletonOffset = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the skeleton scale factor.
+        /// 1.0 = full screen, 0.5 = half size, 2.0 = double size.
+        /// </summary>
+        public float SkeletonScale
+        {
+            get => _skeletonScale;
+            set => _skeletonScale = Math.Max(0.1f, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the origin point for scaling (in normalized 0-1 coordinates).
+        /// Default is (0.5, 0.5) = center of screen.
+        /// </summary>
+        public Vector2 SkeletonOrigin
+        {
+            get => _skeletonOrigin;
+            set => _skeletonOrigin = value;
         }
 
         /// <summary>
@@ -67,315 +164,419 @@ namespace physics.Engine.Integration
         public event EventHandler<Exception>? OnError;
 
         /// <summary>
-        /// Fired after the person body is updated in the physics world.
+        /// Fired after the tracking balls are updated.
         /// </summary>
         public event EventHandler<IReadOnlyList<PhysicsObject>>? OnPersonBodyUpdated;
 
         /// <summary>
-        /// The current person PhysicsObjects (empty if no person detected).
-        /// Multiple objects represent convex hull decomposition of concave silhouette.
+        /// The current tracking balls (head, left hand, right hand).
         /// </summary>
-        public IReadOnlyList<PhysicsObject> PersonBodies
+        public IReadOnlyList<PhysicsObject> TrackingBalls
         {
-            get { lock (_syncLock) return _personBodies.ToList(); }
+            get
+            {
+                lock (_syncLock)
+                {
+                    var balls = new List<PhysicsObject>();
+                    if (_headBall != null) balls.Add(_headBall);
+                    if (_leftHandBall != null) balls.Add(_leftHandBall);
+                    if (_rightHandBall != null) balls.Add(_rightHandBall);
+                    return balls;
+                }
+            }
         }
 
         /// <summary>
-        /// Start detection with the specified camera.
+        /// Start pose detection with the specified camera.
         /// </summary>
         public void Start(int cameraIndex = 0, int width = 640, int height = 480, int fps = 30)
         {
             try
             {
-                // Configure ONNX options for MediaPipe Selfie Segmentation model
-                var options = new OnnxSegmentationOptions
+                Console.WriteLine($"[PersonBridge] Loading model from: {System.IO.Path.GetFullPath(_modelPath)}");
+
+                if (!System.IO.File.Exists(_modelPath))
                 {
-                    ModelPath = _modelPath,
-                    ModelType = ModelType.MediaPipeSelfie,
-                    InputTensorName = "input_1:0",
-                    OutputTensorName = "activation_10",
-                    InputWidth = 256,
-                    InputHeight = 256,
-                    Threshold = 0.7f,
-                    ExecutionProvider = ExecutionProvider.DirectML,  // GPU acceleration
-                    GpuDeviceId = 0
+                    throw new System.IO.FileNotFoundException($"Model file not found: {_modelPath}");
+                }
+
+                _poseDetector = new YoloV8PoseDetector(_modelPath, useGpu: true);
+                Console.WriteLine("[PersonBridge] YOLOv8 model loaded successfully");
+
+                _camera = new OpenCvCameraFrameSource(cameraIndex, width, height, fps);
+                Console.WriteLine($"[PersonBridge] Camera {cameraIndex} opened at {width}x{height} @ {fps}fps");
+
+                // Create the tracking balls
+                CreateTrackingBalls();
+                Console.WriteLine("[PersonBridge] Tracking balls created");
+
+                _cts = new CancellationTokenSource();
+                _isRunning = true;
+
+                _detectionThread = new Thread(() => DetectionLoop(_cts.Token))
+                {
+                    Name = "PersonColliderBridge-Detection",
+                    IsBackground = true
                 };
+                _detectionThread.Start();
 
-                _detector = new PersonDetector(
-                    segmentationOptions: options,
-                    smoothingFactor: _smoothingFactor,
-                    fixedVertexCount: _fixedVertexCount);
-                _detector.OnPersonDetected += HandlePersonDetected;
-                _detector.OnError += (_, ex) => OnError?.Invoke(this, ex);
-                _detector.Start(cameraIndex, width, height, fps);
-
-                Console.WriteLine($"PersonColliderBridge started with camera {cameraIndex} at {width}x{height} @ {fps}fps (smoothing: {_smoothingFactor})");
+                Console.WriteLine($"[PersonBridge] Detection thread started");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to start PersonDetector: {ex.Message}");
+                Console.WriteLine($"[PersonBridge] Failed to start: {ex.Message}");
+                Console.WriteLine($"[PersonBridge] Stack trace: {ex.StackTrace}");
                 OnError?.Invoke(this, ex);
             }
         }
 
         /// <summary>
-        /// Stop detection and remove person body from world.
+        /// Creates the initial tracking balls for head and hands.
         /// </summary>
-        public void Stop()
-        {
-            _detector?.Stop();
-            _detector?.Dispose();
-            _detector = null;
-
-                lock (_syncLock)
-                {
-                    // Remove all existing person bodies
-                    foreach (var body in _personBodies)
-                    {
-                        PhysicsSystem.RemovalQueue.Enqueue(body);
-                    }
-                    _personBodies.Clear();
-
-                    // Remove all existing person balls
-                    foreach (var ball in _personBalls)
-                    {
-                        PhysicsSystem.RemovalQueue.Enqueue(ball);
-                    }
-                    _personBalls.Clear();
-                }
-            }
-
-        /// <summary>
-        /// Call this from the main game loop to process any pending polygon updates.
-        /// This ensures physics objects are created/updated on the main thread.
-        /// </summary>
-        public void ProcessPendingUpdates()
-        {
-            // Only process the most recent polygon set (discard older ones)
-            List<Vector2[]>? latestPolygonSet = null;
-            while (_pendingPolygonSets.TryDequeue(out var polygonSet))
-            {
-                latestPolygonSet = polygonSet;
-            }
-
-            if (latestPolygonSet != null && latestPolygonSet.Count > 0)
-            {
-                //UpdatePersonBodiesAsBalls(latestPolygonSet);
-                UpdatePersonBodies(latestPolygonSet);
-            }
-        }
-
-        private void HandlePersonDetected(object? sender, PersonDetectedEventArgs e)
-        {
-            if (e.Polygons.Count == 0) return;
-
-            // Convert all polygons to physics coordinates
-            var polygonSet = new List<Vector2[]>();
-
-            // Configure scaling and positioning
-            const float scalingFactor = 0.5f;
-            float scaledWidth = _worldWidth * scalingFactor;
-            float scaledHeight = _worldHeight * scalingFactor;
-
-            // Position at bottom-middle of the screen (centered horizontally, at bottom)
-            var origin = new Vector2(
-                (_worldWidth - scaledWidth) / 2,  // Center horizontally
-                _worldHeight - scaledHeight        // Position at bottom
-            );
-
-            foreach (var polygon in e.Polygons)
-            {
-                if (polygon.Count < 3) continue;
-
-                var physicsVerts = ConvertToPhysicsCoords(polygon, origin, scalingFactor);
-                polygonSet.Add(physicsVerts);
-            }
-
-            if (polygonSet.Count > 0)
-            {
-                // Queue for main thread processing
-                _pendingPolygonSets.Enqueue(polygonSet);
-            }
-        }
-
-        private void UpdatePersonBodies(List<Vector2[]> polygonSet)
+        private void CreateTrackingBalls()
         {
             lock (_syncLock)
             {
-                // If we have exactly one polygon and exactly one existing body, update it instead of recreating
-                if (polygonSet.Count == 1 && _personBodies.Count == 1 && polygonSet[0].Length >= 3)
-                {
-                    var physicsVerts = polygonSet[0];
-                    var existingBody = _personBodies[0];
+                // Create balls at center of screen initially
+                var centerPos = new Vector2(_worldWidth / 2, _worldHeight / 2);
 
-                    // Calculate new centroid
-                    var newCentroid = CalculateCentroid(physicsVerts);
-                    var currentCenter = existingBody.Center;
+                // Head ball (slightly above center) - locked so gravity doesn't affect it
+                var headShader = new SFMLBallShader();
+                _headBall = PhysicsSystem.CreateStaticCircle(
+                    centerPos - new Vector2(0, 100),
+                    _ballRadius * 2,
+                    0.8f,
+                    locked: true,  // Locked so gravity doesn't affect it
+                    headShader
+                );
 
-                    // Convert to local coordinates (relative to centroid)
-                    var localVerts = physicsVerts
-                        .Select(v => new Vector2(v.X - newCentroid.X, v.Y - newCentroid.Y))
-                        .ToArray();
+                // Left hand ball
+                var leftHandShader = new SFMLBallShader();
+                _leftHandBall = PhysicsSystem.CreateStaticCircle(
+                    centerPos - new Vector2(100, 0),
+                    _ballRadius * 2,
+                    0.8f,
+                    locked: true,
+                    leftHandShader
+                );
 
-                    // Update existing body's shape vertices and position
-                    if (existingBody.Shape is Shapes.PolygonPhysShape polyShape)
-                    {
-                        // Update the vertices in place
-                        polyShape.LocalVertices.Clear();
-                        polyShape.LocalVertices.AddRange(localVerts);
-
-                        // Temporarily unlock to allow position update
-                        bool wasLocked = existingBody.Locked;
-                        existingBody.Locked = false;
-
-                        // Move to new position
-                        var delta = newCentroid - currentCenter;
-                        existingBody.Move(delta);
-
-                        // Restore locked state
-                        existingBody.Locked = wasLocked;
-                    }
-                    else
-                    {
-                        // Fallback: if shape type changed somehow, recreate
-                        PhysicsSystem.RemovalQueue.Enqueue(existingBody);
-                        _personBodies.Clear();
-
-                        var shader = new SFMLPolyShader();
-                        var body = PhysicsSystem.CreatePolygon(newCentroid, localVerts, shader, locked: true, canRotate: false);
-                        _personBodies.Add(body);
-                    }
-                }
-                else
-                {
-                    // Polygon count changed or first frame - recreate all bodies
-                    foreach (var body in _personBodies)
-                    {
-                        PhysicsSystem.RemovalQueue.Enqueue(body);
-                    }
-                    _personBodies.Clear();
-
-                    // Create new bodies for each polygon
-                    foreach (var physicsVerts in polygonSet)
-                    {
-                        if (physicsVerts.Length < 3) continue;
-
-                        // Calculate centroid for body position
-                        var centroid = CalculateCentroid(physicsVerts);
-
-                        // Convert to local coordinates (relative to centroid)
-                        var localVerts = physicsVerts
-                            .Select(v => new Vector2(v.X - centroid.X, v.Y - centroid.Y))
-                            .ToArray();
-
-                        // Create new static body using the existing physics system
-                        var shader = new SFMLPolyShader();
-                        var body = PhysicsSystem.CreatePolygon(centroid, localVerts, shader, locked: true, canRotate: false);
-                        _personBodies.Add(body);
-                    }
-                }
+                // Right hand ball
+                var rightHandShader = new SFMLBallShader();
+                _rightHandBall = PhysicsSystem.CreateStaticCircle(
+                    centerPos + new Vector2(100, 0),
+                    _ballRadius * 2,
+                    0.8f,
+                    locked: true,
+                    rightHandShader
+                );
             }
+        }
 
-                if (_personBodies.Count > 0)
-                {
-                    OnPersonBodyUpdated?.Invoke(this, _personBodies);
-                }
-            }
-
-            /// <summary>
-            /// Updates person representation using small physics balls at each vertex position.
-            /// This is an alternative to UpdatePersonBodies that uses individual balls instead of polygons.
-            /// </summary>
-            private void UpdatePersonBodiesAsBalls(List<Vector2[]> polygonSet)
-            {
-                // Flatten all vertices from all polygons into a single list
-                var allVertices = polygonSet.SelectMany(p => p).ToList();
-
-                lock (_syncLock)
-                {
-                    // If vertex count matches ball count, update positions in place
-                    if (allVertices.Count == _personBalls.Count && allVertices.Count > 0)
-                    {
-                        for (int i = 0; i < allVertices.Count; i++)
-                        {
-                            var ball = _personBalls[i];
-                            var targetPos = allVertices[i];
-                            var currentPos = ball.Center;
-
-                            // Calculate movement delta
-                            var delta = targetPos - currentPos;
-
-                            // Temporarily unlock to allow position update
-                            bool wasLocked = ball.Locked;
-                            ball.Locked = false;
-
-                            // Move to new position
-                            ball.Move(delta);
-
-                            // Restore locked state
-                            ball.Locked = wasLocked;
-                        }
-                    }
-                    else
-                    {
-                        // Vertex count changed or first frame - recreate all balls
-                        foreach (var ball in _personBalls)
-                        {
-                            PhysicsSystem.RemovalQueue.Enqueue(ball);
-                        }
-                        _personBalls.Clear();
-
-                        // Create a ball for each vertex
-                        foreach (var vertex in allVertices)
-                        {
-                            const int diameter = 10;
-                            var shader = new SFMLPolyRainbowShader();
-                            var ball = PhysicsSystem.CreateStaticCircle(vertex, diameter, 0.6f, locked: true, shader);
-                            _personBalls.Add(ball);
-                        }
-                    }
-                }
-
-                if (_personBalls.Count > 0)
-                {
-                    OnPersonBodyUpdated?.Invoke(this, _personBalls);
-                }
-            }
-
-                /// <summary>
-                /// Converts normalized coordinates (0-1) to physics world coordinates.
-                /// </summary>
-                /// <param name="polygon">Normalized polygon vertices (0-1 range).</param>
-                /// <param name="origin">Origin point for the polygon in world coordinates.</param>
-                /// <param name="scalingFactor">Scaling factor applied to world dimensions (e.g., 0.5 = half size).</param>
-            private Vector2[] ConvertToPhysicsCoords(IReadOnlyList<Vector2> polygon, Vector2 origin, float scalingFactor)
-            {
-                float scaledWidth = _worldWidth * scalingFactor;
-                float scaledHeight = _worldHeight * scalingFactor;
-
-                return polygon.Select(p =>
-                {
-                    // Apply flip logic to normalized coordinates
-                    float normalizedX = _flipX ? (1 - p.X) : p.X;
-                    float normalizedY = _flipY ? (1 - p.Y) : p.Y;
-
-                    // Scale and offset by origin
-                    float x = origin.X + (normalizedX * scaledWidth);
-                    float y = origin.Y + (normalizedY * scaledHeight);
-
-                    return new Vector2(x, y);
-                }).ToArray();
-            }
-
-        private static Vector2 CalculateCentroid(Vector2[] vertices)
+        /// <summary>
+        /// Background thread detection loop.
+        /// </summary>
+        private void DetectionLoop(CancellationToken ct)
         {
-            float x = 0, y = 0;
-            foreach (var v in vertices)
+            int frameCount = 0;
+            int detectionCount = 0;
+
+            while (!ct.IsCancellationRequested && _isRunning)
             {
-                x += v.X;
-                y += v.Y;
+                try
+                {
+                    if (_camera == null || _poseDetector == null)
+                        break;
+
+                    if (!_camera.TryGetFrame(out var frame, out var timestamp))
+                    {
+                        Thread.Sleep(5);
+                        continue;
+                    }
+
+                    frameCount++;
+
+                    try
+                    {
+                        var poseResult = _poseDetector.Detect(frame, timestamp);
+
+                        // Debug: Log detection status every 30 frames
+                        if (frameCount % 30 == 0)
+                        {
+                            Console.WriteLine($"[PersonBridge] Frame {frameCount}: PersonDetected={poseResult.PersonDetected}, Keypoints={poseResult.Keypoints.Count}, Conf={poseResult.Confidence:F2}");
+                        }
+
+                        if (poseResult.PersonDetected && poseResult.Keypoints.Count >= 17)
+                        {
+                            var keypoints = ExtractRelevantKeypoints(poseResult.Keypoints);
+                            if (keypoints != null)
+                            {
+                                _pendingKeypoints.Enqueue(keypoints);
+                                detectionCount++;
+
+                                // Debug: Log successful detection
+                                if (detectionCount % 30 == 0)
+                                {
+                                    Console.WriteLine($"[PersonBridge] Detection {detectionCount}: Head=({keypoints.HeadPos.X:F0},{keypoints.HeadPos.Y:F0}), " +
+                                        $"LHand=({keypoints.LeftHandPos.X:F0},{keypoints.LeftHandPos.Y:F0}), " +
+                                        $"RHand=({keypoints.RightHandPos.X:F0},{keypoints.RightHandPos.Y:F0})");
+                                }
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        frame.Dispose();
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    Console.WriteLine($"[PersonBridge] Detection error: {ex.Message}");
+                    OnError?.Invoke(this, ex);
+                    Thread.Sleep(100);
+                }
             }
-            return new Vector2(x / vertices.Length, y / vertices.Length);
+
+            Console.WriteLine($"[PersonBridge] Detection loop ended. Total frames: {frameCount}, Detections: {detectionCount}");
+        }
+
+        /// <summary>
+        /// Extracts head and hand keypoints from the pose result.
+        /// Also stores all keypoints for full skeleton rendering.
+        /// </summary>
+        private PoseKeypoints? ExtractRelevantKeypoints(IReadOnlyList<Keypoint> keypoints)
+        {
+            if (keypoints.Count < 17)
+                return null;
+
+            var nose = keypoints[NOSE_INDEX];
+            var leftWrist = keypoints[LEFT_WRIST_INDEX];
+            var rightWrist = keypoints[RIGHT_WRIST_INDEX];
+
+            // Convert normalized coordinates (0-1) to physics world coordinates
+            var headPos = ConvertToPhysicsCoords(nose.X, nose.Y);
+            var leftHandPos = ConvertToPhysicsCoords(leftWrist.X, leftWrist.Y);
+            var rightHandPos = ConvertToPhysicsCoords(rightWrist.X, rightWrist.Y);
+
+            // Store all 17 keypoints for full skeleton rendering
+            lock (_syncLock)
+            {
+                for (int i = 0; i < 17 && i < keypoints.Count; i++)
+                {
+                    var kp = keypoints[i];
+                    _smoothedKeypoints[i] = ConvertToPhysicsCoords(kp.X, kp.Y);
+                    _keypointConfidences[i] = kp.Confidence;
+                }
+                _hasFullSkeleton = true;
+            }
+
+            return new PoseKeypoints(
+                headPos, nose.Confidence,
+                leftHandPos, leftWrist.Confidence,
+                rightHandPos, rightWrist.Confidence
+            );
+        }
+
+        /// <summary>
+        /// Converts normalized coordinates (0-1) to physics world coordinates.
+        /// Applies skeleton transform (scale and offset).
+        /// </summary>
+        private Vector2 ConvertToPhysicsCoords(float normX, float normY)
+        {
+            // Flip coordinates if needed
+            float x = _flipX ? (1 - normX) : normX;
+            float y = _flipY ? (1 - normY) : normY;
+
+            // Apply scale around the origin point
+            float scaledX = _skeletonOrigin.X + (x - _skeletonOrigin.X) * _skeletonScale;
+            float scaledY = _skeletonOrigin.Y + (y - _skeletonOrigin.Y) * _skeletonScale;
+
+            // Convert to world coordinates and apply offset
+            return new Vector2(
+                scaledX * _worldWidth + _skeletonOffset.X,
+                scaledY * _worldHeight + _skeletonOffset.Y
+            );
+        }
+
+        /// <summary>
+        /// Applies temporal smoothing to a position using exponential moving average.
+        /// </summary>
+        private Vector2 SmoothPosition(Vector2 newPos, ref Vector2? smoothedPos)
+        {
+            if (smoothedPos == null || _smoothingFactor <= 0)
+            {
+                smoothedPos = newPos;
+                return newPos;
+            }
+
+            // Exponential moving average: smoothed = smoothed * factor + new * (1 - factor)
+            smoothedPos = smoothedPos.Value * _smoothingFactor + newPos * (1 - _smoothingFactor);
+            return smoothedPos.Value;
+        }
+
+        /// <summary>
+        /// Stop detection and remove tracking balls from world.
+        /// </summary>
+        public void Stop()
+        {
+            _isRunning = false;
+            _cts?.Cancel();
+
+            _detectionThread?.Join(TimeSpan.FromSeconds(2));
+            _detectionThread = null;
+
+            _cts?.Dispose();
+            _cts = null;
+
+            _camera?.Dispose();
+            _camera = null;
+
+            _poseDetector?.Dispose();
+            _poseDetector = null;
+
+            lock (_syncLock)
+            {
+                if (_headBall != null)
+                {
+                    PhysicsSystem.RemovalQueue.Enqueue(_headBall);
+                    _headBall = null;
+                }
+                if (_leftHandBall != null)
+                {
+                    PhysicsSystem.RemovalQueue.Enqueue(_leftHandBall);
+                    _leftHandBall = null;
+                }
+                if (_rightHandBall != null)
+                {
+                    PhysicsSystem.RemovalQueue.Enqueue(_rightHandBall);
+                    _rightHandBall = null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Call this from the main game loop to process any pending keypoint updates.
+        /// This ensures physics objects are updated on the main thread.
+        /// </summary>
+        public void ProcessPendingUpdates()
+        {
+            // Only process the most recent keypoints (discard older ones)
+            PoseKeypoints? latestKeypoints = null;
+            int discardCount = 0;
+
+            while (_pendingKeypoints.TryDequeue(out var keypoints))
+            {
+                if (latestKeypoints != null) discardCount++;
+                latestKeypoints = keypoints;
+            }
+
+            if (latestKeypoints != null)
+            {
+                UpdateTrackingBalls(latestKeypoints);
+            }
+        }
+
+        /// <summary>
+        /// Updates the tracking balls to move toward the detected keypoint positions.
+        /// Applies smoothing and transforms before moving balls.
+        /// </summary>
+        private void UpdateTrackingBalls(PoseKeypoints keypoints)
+        {
+            lock (_syncLock)
+            {
+                // Apply smoothing to each keypoint
+                var smoothedHead = SmoothPosition(keypoints.HeadPos, ref _smoothedHeadPos);
+                var smoothedLeftHand = SmoothPosition(keypoints.LeftHandPos, ref _smoothedLeftHandPos);
+                var smoothedRightHand = SmoothPosition(keypoints.RightHandPos, ref _smoothedRightHandPos);
+
+                // Apply smoothing to all skeleton keypoints
+                for (int i = 0; i < 17; i++)
+                {
+                    Vector2? smoothed = _smoothedKeypoints[i];
+                    _smoothedKeypoints[i] = SmoothPosition(_smoothedKeypoints[i], ref smoothed);
+                }
+
+                // Update head ball
+                if (_headBall != null && keypoints.HeadConf > 0.5f)
+                {
+                    MoveBallToPosition(_headBall, smoothedHead);
+                }
+
+                // Update left hand ball
+                if (_leftHandBall != null && keypoints.LeftHandConf > 0.5f)
+                {
+                    MoveBallToPosition(_leftHandBall, smoothedLeftHand);
+                }
+
+                // Update right hand ball
+                if (_rightHandBall != null && keypoints.RightHandConf > 0.5f)
+                {
+                    MoveBallToPosition(_rightHandBall, smoothedRightHand);
+                }
+
+                // Store smoothed keypoints for skeleton rendering
+                _latestKeypoints = new PoseKeypoints(
+                    smoothedHead, keypoints.HeadConf,
+                    smoothedLeftHand, keypoints.LeftHandConf,
+                    smoothedRightHand, keypoints.RightHandConf
+                );
+            }
+
+            OnPersonBodyUpdated?.Invoke(this, TrackingBalls);
+        }
+
+        /// <summary>
+        /// Directly moves a ball to the target position.
+        /// Temporarily unlocks to allow movement, then re-locks.
+        /// </summary>
+        private void MoveBallToPosition(PhysicsObject ball, Vector2 targetPos)
+        {
+            var currentPos = ball.Center;
+            var delta = targetPos - currentPos;
+
+            // Apply smoothing for less jittery movement
+            delta *= Math.Min(1f, _trackingSpeed * 0.1f);
+
+            // Temporarily unlock to move
+            ball.Locked = false;
+            ball.Move(delta);
+            ball.Locked = true;
+
+            // Zero out any velocity
+            ball.Velocity = Vector2.Zero;
+        }
+
+        // Store latest keypoints for external access (e.g., skeleton rendering)
+        private PoseKeypoints? _latestKeypoints;
+
+        /// <summary>
+        /// Gets the latest detected keypoints for rendering (head and hands only).
+        /// Returns null if no keypoints have been detected yet.
+        /// </summary>
+        public (Vector2 Head, Vector2 LeftHand, Vector2 RightHand, float HeadConf, float LeftConf, float RightConf)? GetLatestKeypoints()
+        {
+            var kp = _latestKeypoints;
+            if (kp == null) return null;
+            return (kp.HeadPos, kp.LeftHandPos, kp.RightHandPos, kp.HeadConf, kp.LeftHandConf, kp.RightHandConf);
+        }
+
+        /// <summary>
+        /// Gets the full skeleton data for rendering (all 17 COCO keypoints).
+        /// Returns null if no skeleton has been detected yet.
+        /// </summary>
+        public (Vector2[] Keypoints, float[] Confidences, (int, int)[] Connections)? GetFullSkeleton()
+        {
+            lock (_syncLock)
+            {
+                if (!_hasFullSkeleton) return null;
+
+                // Return copies to avoid threading issues
+                var keypoints = new Vector2[17];
+                var confidences = new float[17];
+                Array.Copy(_smoothedKeypoints, keypoints, 17);
+                Array.Copy(_keypointConfidences, confidences, 17);
+
+                return (keypoints, confidences, SkeletonConnections);
+            }
         }
 
         public void Dispose()

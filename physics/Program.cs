@@ -6,7 +6,7 @@ namespace physics
     {
         static void Main()
         {
-            var window = new GameWindow(1280, 960, "SharpPhysics");
+            var window = new GameWindow(1280, 640, "SharpPhysics");
             window.Run();
         }
     }

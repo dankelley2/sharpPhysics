@@ -7,6 +7,7 @@ using SFML.Window;
 using System.Numerics;
 using physics.Engine.Shaders;
 using physics.Engine.Objects;
+using physics.Engine.Integration;
 
 namespace physics.Engine.Rendering
 {
@@ -20,6 +21,9 @@ namespace physics.Engine.Rendering
         private Font debugFont;
         private List<UiElement> _uiElements = new List<UiElement>();
         private PhysicsSystem _physicsSystem;
+
+        // Reference to person collider bridge for skeleton rendering
+        private PersonColliderBridge? _personColliderBridge;
 
         public Renderer(uint windowWidth, uint windowHeight, string windowTitle, PhysicsSystem physicsSystem)
         {
@@ -233,18 +237,232 @@ namespace physics.Engine.Rendering
                 Window.Draw(previewRect);
             }
 
-            // Draw all static objects with their shaders.
-            foreach (var obj in PhysicsSystem.ListStaticObjects)
-            {
-                var sfmlShader = obj.Shader;
-                if (sfmlShader != null)
+                // Draw all static objects with their shaders.
+                foreach (var obj in PhysicsSystem.ListStaticObjects)
                 {
-                    sfmlShader.PreDraw(obj, Window);
-                    sfmlShader.Draw(obj, Window);
-                    sfmlShader.PostDraw(obj, Window);
+                    var sfmlShader = obj.Shader;
+                    if (sfmlShader != null)
+                    {
+                        sfmlShader.PreDraw(obj, Window);
+                        sfmlShader.Draw(obj, Window);
+                        sfmlShader.PostDraw(obj, Window);
+                    }
+                }
+
+                // Draw skeleton overlay if available
+                DrawSkeletonOverlay();
+            }
+
+            /// <summary>
+            /// Sets the person collider bridge for skeleton rendering.
+            /// </summary>
+            public void SetPersonColliderBridge(PersonColliderBridge? bridge)
+            {
+                _personColliderBridge = bridge;
+            }
+
+            /// <summary>
+            /// Draws the skeleton overlay showing detected keypoints and connections.
+            /// </summary>
+            private void DrawSkeletonOverlay()
+            {
+                if (_personColliderBridge == null) return;
+
+                // Try to get full skeleton first
+                var fullSkeleton = _personColliderBridge.GetFullSkeleton();
+                if (fullSkeleton != null)
+                {
+                    DrawFullSkeleton(fullSkeleton.Value.Keypoints, fullSkeleton.Value.Confidences, fullSkeleton.Value.Connections);
+                    return;
+                }
+
+                // Fallback to simple keypoints if full skeleton not available
+                var keypoints = _personColliderBridge.GetLatestKeypoints();
+                if (keypoints == null) return;
+
+                var (head, leftHand, rightHand, headConf, leftConf, rightConf) = keypoints.Value;
+
+                // Draw connections (skeleton lines)
+                var lineColor = new Color(0, 255, 255, 180); // Cyan with transparency
+
+                // Head to left hand
+                if (headConf > 0.5f && leftConf > 0.5f)
+                {
+                    DrawLine(head, leftHand, lineColor, 2);
+                }
+
+                // Head to right hand
+                if (headConf > 0.5f && rightConf > 0.5f)
+                {
+                    DrawLine(head, rightHand, lineColor, 2);
+                }
+
+                // Draw keypoint markers
+                var circleRadius = 8f;
+
+                // Head (green)
+                if (headConf > 0.5f)
+                {
+                    DrawCircleMarker(head, circleRadius, new Color(0, 255, 0, 200));
+                }
+
+                // Left hand (blue)
+                if (leftConf > 0.5f)
+                {
+                    DrawCircleMarker(leftHand, circleRadius, new Color(0, 100, 255, 200));
+                }
+
+                // Right hand (red)
+                if (rightConf > 0.5f)
+                {
+                    DrawCircleMarker(rightHand, circleRadius, new Color(255, 100, 0, 200));
                 }
             }
-        }
+
+            /// <summary>
+            /// Draws the full 17-keypoint COCO skeleton.
+            /// </summary>
+            private void DrawFullSkeleton(Vector2[] keypoints, float[] confidences, (int, int)[] connections)
+            {
+                const float confidenceThreshold = 0.3f;
+
+                // Define colors for different body parts
+                var faceColor = new Color(255, 255, 0, 200);      // Yellow for face
+                var torsoColor = new Color(0, 255, 255, 200);     // Cyan for torso
+                var leftArmColor = new Color(0, 255, 0, 200);     // Green for left arm
+                var rightArmColor = new Color(255, 0, 0, 200);    // Red for right arm
+                var leftLegColor = new Color(0, 200, 100, 200);   // Teal for left leg
+                var rightLegColor = new Color(200, 100, 0, 200);  // Orange for right leg
+
+                // Draw skeleton connections
+                foreach (var (idx1, idx2) in connections)
+                {
+                    if (idx1 >= keypoints.Length || idx2 >= keypoints.Length)
+                        continue;
+
+                    if (confidences[idx1] < confidenceThreshold || confidences[idx2] < confidenceThreshold)
+                        continue;
+
+                    var pt1 = keypoints[idx1];
+                    var pt2 = keypoints[idx2];
+
+                    // Choose color based on body part
+                    Color lineColor = GetConnectionColor(idx1, idx2, torsoColor, leftArmColor, rightArmColor, leftLegColor, rightLegColor, faceColor);
+
+                    DrawLine(pt1, pt2, lineColor, 3);
+                }
+
+                // Draw keypoint circles
+                for (int i = 0; i < keypoints.Length; i++)
+                {
+                    if (confidences[i] < confidenceThreshold)
+                        continue;
+
+                    var pt = keypoints[i];
+                    Color circleColor = GetKeypointColor(i);
+                    float radius = GetKeypointRadius(i);
+
+                    DrawCircleMarker(pt, radius, circleColor);
+                }
+            }
+
+            /// <summary>
+            /// Gets the color for a skeleton connection based on body part.
+            /// </summary>
+            private Color GetConnectionColor(int idx1, int idx2, Color torso, Color leftArm, Color rightArm, Color leftLeg, Color rightLeg, Color face)
+            {
+                // Face connections (0-4)
+                if (idx1 <= 4 && idx2 <= 4) return face;
+
+                // Left arm (5, 7, 9)
+                if ((idx1 == 5 && idx2 == 7) || (idx1 == 7 && idx2 == 9)) return leftArm;
+
+                // Right arm (6, 8, 10)
+                if ((idx1 == 6 && idx2 == 8) || (idx1 == 8 && idx2 == 10)) return rightArm;
+
+                // Left leg (11, 13, 15)
+                if ((idx1 == 11 && idx2 == 13) || (idx1 == 13 && idx2 == 15)) return leftLeg;
+
+                // Right leg (12, 14, 16)
+                if ((idx1 == 12 && idx2 == 14) || (idx1 == 14 && idx2 == 16)) return rightLeg;
+
+                // Torso (shoulders, hips, shoulder-hip connections)
+                return torso;
+            }
+
+            /// <summary>
+            /// Gets the color for a keypoint based on its index.
+            /// </summary>
+            private Color GetKeypointColor(int idx)
+            {
+                return idx switch
+                {
+                    0 => new Color(255, 255, 0, 255),    // Nose - yellow
+                    1 or 2 => new Color(255, 200, 0, 255), // Eyes - orange-yellow
+                    3 or 4 => new Color(255, 150, 0, 255), // Ears - orange
+                    5 or 7 or 9 => new Color(0, 255, 0, 255),  // Left arm - green
+                    6 or 8 or 10 => new Color(255, 0, 0, 255), // Right arm - red
+                    11 or 13 or 15 => new Color(0, 200, 100, 255), // Left leg - teal
+                    12 or 14 or 16 => new Color(200, 100, 0, 255), // Right leg - orange
+                    _ => new Color(255, 255, 255, 255)    // Default - white
+                };
+            }
+
+            /// <summary>
+            /// Gets the radius for a keypoint based on its type.
+            /// </summary>
+            private float GetKeypointRadius(int idx)
+            {
+                return idx switch
+                {
+                    0 => 8f,      // Nose - larger
+                    1 or 2 => 5f, // Eyes - smaller
+                    3 or 4 => 5f, // Ears - smaller
+                    5 or 6 => 7f, // Shoulders - medium
+                    7 or 8 => 6f, // Elbows - medium
+                    9 or 10 => 8f, // Wrists - larger (hands)
+                    11 or 12 => 7f, // Hips - medium
+                    13 or 14 => 6f, // Knees - medium
+                    15 or 16 => 6f, // Ankles - medium
+                    _ => 5f
+                };
+            }
+
+            /// <summary>
+            /// Draws a line between two points.
+            /// </summary>
+            private void DrawLine(Vector2 start, Vector2 end, Color color, float thickness)
+            {
+                var direction = end - start;
+                var length = direction.Length();
+                var angle = MathF.Atan2(direction.Y, direction.X) * 180f / MathF.PI;
+
+                var line = new RectangleShape(new Vector2f(length, thickness))
+                {
+                    Position = new Vector2f(start.X, start.Y),
+                    FillColor = color,
+                    Rotation = angle,
+                    Origin = new Vector2f(0, thickness / 2)
+                };
+
+                Window.Draw(line);
+            }
+
+            /// <summary>
+            /// Draws a circle marker at the specified position.
+            /// </summary>
+            private void DrawCircleMarker(Vector2 position, float radius, Color color)
+            {
+                var circle = new CircleShape(radius)
+                {
+                    Position = new Vector2f(position.X - radius, position.Y - radius),
+                    FillColor = color,
+                    OutlineColor = Color.White,
+                    OutlineThickness = 2
+                };
+
+                Window.Draw(circle);
+            }
 
         private void DrawUiView(long msPhysicsTime, long msDrawTime, long msFrameTime)
         {
