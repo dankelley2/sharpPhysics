@@ -44,19 +44,23 @@ namespace physics.Engine.Integration
         private readonly ConcurrentQueue<PoseKeypoints> _pendingKeypoints = new();
 
         // Smoothed keypoint positions (for temporal smoothing)
-        private Vector2? _smoothedHeadPos;
-        private Vector2? _smoothedLeftHandPos;
-        private Vector2? _smoothedRightHandPos;
+        private Vector2 _smoothedHeadPos;
+        private Vector2 _smoothedLeftHandPos;
+        private Vector2 _smoothedRightHandPos;
+        private bool _hasInitialPositions = false;
 
         // Full skeleton keypoints (all 17 COCO keypoints)
+        // Raw positions from detection
+        private Vector2[] _rawKeypoints = new Vector2[17];
+        // Smoothed positions for rendering
         private Vector2[] _smoothedKeypoints = new Vector2[17];
         private float[] _keypointConfidences = new float[17];
         private bool _hasFullSkeleton = false;
 
         // Skeleton transform parameters (adjustable from game engine)
         private Vector2 _skeletonOffset = Vector2.Zero;
-        private float _skeletonScale = 1.0f;
-        private Vector2 _skeletonOrigin = new Vector2(0.5f, 0.25f); // Normalized origin point for scaling
+        private float _skeletonScale = 0.5f;
+        private Vector2 _skeletonOrigin = new Vector2(0.5f, 0.8f); // Normalized origin point for scaling
 
         // Keypoint indices for YOLOv8 COCO format
         private const int NOSE_INDEX = 0;
@@ -116,7 +120,7 @@ namespace physics.Engine.Integration
             bool flipY = false,
             float trackingSpeed = 15f,
             int ballRadius = 20,
-            float smoothingFactor = 0.5f)
+            float smoothingFactor = 0.75f)
         {
             _worldWidth = worldWidth;
             _worldHeight = worldHeight;
@@ -208,7 +212,6 @@ namespace physics.Engine.Integration
 
                 // Create the tracking balls
                 CreateTrackingBalls();
-                Console.WriteLine("[PersonBridge] Tracking balls created");
 
                 _cts = new CancellationTokenSource();
                 _isRunning = true;
@@ -277,9 +280,6 @@ namespace physics.Engine.Integration
         /// </summary>
         private void DetectionLoop(CancellationToken ct)
         {
-            int frameCount = 0;
-            int detectionCount = 0;
-
             while (!ct.IsCancellationRequested && _isRunning)
             {
                 try
@@ -293,17 +293,9 @@ namespace physics.Engine.Integration
                         continue;
                     }
 
-                    frameCount++;
-
                     try
                     {
                         var poseResult = _poseDetector.Detect(frame, timestamp);
-
-                        // Debug: Log detection status every 30 frames
-                        if (frameCount % 30 == 0)
-                        {
-                            Console.WriteLine($"[PersonBridge] Frame {frameCount}: PersonDetected={poseResult.PersonDetected}, Keypoints={poseResult.Keypoints.Count}, Conf={poseResult.Confidence:F2}");
-                        }
 
                         if (poseResult.PersonDetected && poseResult.Keypoints.Count >= 17)
                         {
@@ -311,15 +303,6 @@ namespace physics.Engine.Integration
                             if (keypoints != null)
                             {
                                 _pendingKeypoints.Enqueue(keypoints);
-                                detectionCount++;
-
-                                // Debug: Log successful detection
-                                if (detectionCount % 30 == 0)
-                                {
-                                    Console.WriteLine($"[PersonBridge] Detection {detectionCount}: Head=({keypoints.HeadPos.X:F0},{keypoints.HeadPos.Y:F0}), " +
-                                        $"LHand=({keypoints.LeftHandPos.X:F0},{keypoints.LeftHandPos.Y:F0}), " +
-                                        $"RHand=({keypoints.RightHandPos.X:F0},{keypoints.RightHandPos.Y:F0})");
-                                }
                             }
                         }
                     }
@@ -335,8 +318,6 @@ namespace physics.Engine.Integration
                     Thread.Sleep(100);
                 }
             }
-
-            Console.WriteLine($"[PersonBridge] Detection loop ended. Total frames: {frameCount}, Detections: {detectionCount}");
         }
 
         /// <summary>
@@ -357,13 +338,13 @@ namespace physics.Engine.Integration
             var leftHandPos = ConvertToPhysicsCoords(leftWrist.X, leftWrist.Y);
             var rightHandPos = ConvertToPhysicsCoords(rightWrist.X, rightWrist.Y);
 
-            // Store all 17 keypoints for full skeleton rendering
+            // Store all 17 RAW keypoints for smoothing later
             lock (_syncLock)
             {
                 for (int i = 0; i < 17 && i < keypoints.Count; i++)
                 {
                     var kp = keypoints[i];
-                    _smoothedKeypoints[i] = ConvertToPhysicsCoords(kp.X, kp.Y);
+                    _rawKeypoints[i] = ConvertToPhysicsCoords(kp.X, kp.Y);
                     _keypointConfidences[i] = kp.Confidence;
                 }
                 _hasFullSkeleton = true;
@@ -398,19 +379,29 @@ namespace physics.Engine.Integration
         }
 
         /// <summary>
-        /// Applies temporal smoothing to a position using exponential moving average.
+        /// Lerp (linear interpolation) between two vectors.
         /// </summary>
-        private Vector2 SmoothPosition(Vector2 newPos, ref Vector2? smoothedPos)
+        private static Vector2 Lerp(Vector2 from, Vector2 to, float t)
         {
-            if (smoothedPos == null || _smoothingFactor <= 0)
+            return from + (to - from) * t;
+        }
+
+        /// <summary>
+        /// Applies temporal smoothing using lerp toward target position.
+        /// Higher smoothing factor = slower movement toward target.
+        /// </summary>
+        private Vector2 SmoothPosition(Vector2 target, Vector2 current, bool hasInitial)
+        {
+            if (!hasInitial || _smoothingFactor <= 0)
             {
-                smoothedPos = newPos;
-                return newPos;
+                return target;
             }
 
-            // Exponential moving average: smoothed = smoothed * factor + new * (1 - factor)
-            smoothedPos = smoothedPos.Value * _smoothingFactor + newPos * (1 - _smoothingFactor);
-            return smoothedPos.Value;
+            // Lerp factor: lower smoothingFactor = faster response
+            // smoothingFactor of 0.75 means we move 25% of the way each frame
+            float lerpSpeed = 1f - _smoothingFactor;
+
+            return Lerp(current, target, lerpSpeed);
         }
 
         /// <summary>
@@ -483,41 +474,52 @@ namespace physics.Engine.Integration
         {
             lock (_syncLock)
             {
-                // Apply smoothing to each keypoint
-                var smoothedHead = SmoothPosition(keypoints.HeadPos, ref _smoothedHeadPos);
-                var smoothedLeftHand = SmoothPosition(keypoints.LeftHandPos, ref _smoothedLeftHandPos);
-                var smoothedRightHand = SmoothPosition(keypoints.RightHandPos, ref _smoothedRightHandPos);
+                // Initialize positions on first detection
+                if (!_hasInitialPositions)
+                {
+                    _smoothedHeadPos = keypoints.HeadPos;
+                    _smoothedLeftHandPos = keypoints.LeftHandPos;
+                    _smoothedRightHandPos = keypoints.RightHandPos;
 
-                // Apply smoothing to all skeleton keypoints
+                    // Initialize all skeleton keypoints
+                    Array.Copy(_rawKeypoints, _smoothedKeypoints, 17);
+                    _hasInitialPositions = true;
+                }
+
+                // Apply lerp smoothing to head and hands
+                _smoothedHeadPos = SmoothPosition(keypoints.HeadPos, _smoothedHeadPos, true);
+                _smoothedLeftHandPos = SmoothPosition(keypoints.LeftHandPos, _smoothedLeftHandPos, true);
+                _smoothedRightHandPos = SmoothPosition(keypoints.RightHandPos, _smoothedRightHandPos, true);
+
+                // Apply lerp smoothing to all skeleton keypoints
                 for (int i = 0; i < 17; i++)
                 {
-                    Vector2? smoothed = _smoothedKeypoints[i];
-                    _smoothedKeypoints[i] = SmoothPosition(_smoothedKeypoints[i], ref smoothed);
+                    _smoothedKeypoints[i] = SmoothPosition(_rawKeypoints[i], _smoothedKeypoints[i], true);
                 }
 
                 // Update head ball
                 if (_headBall != null && keypoints.HeadConf > 0.5f)
                 {
-                    MoveBallToPosition(_headBall, smoothedHead);
+                    MoveBallToPosition(_headBall, _smoothedHeadPos);
                 }
 
                 // Update left hand ball
                 if (_leftHandBall != null && keypoints.LeftHandConf > 0.5f)
                 {
-                    MoveBallToPosition(_leftHandBall, smoothedLeftHand);
+                    MoveBallToPosition(_leftHandBall, _smoothedLeftHandPos);
                 }
 
                 // Update right hand ball
                 if (_rightHandBall != null && keypoints.RightHandConf > 0.5f)
                 {
-                    MoveBallToPosition(_rightHandBall, smoothedRightHand);
+                    MoveBallToPosition(_rightHandBall, _smoothedRightHandPos);
                 }
 
                 // Store smoothed keypoints for skeleton rendering
                 _latestKeypoints = new PoseKeypoints(
-                    smoothedHead, keypoints.HeadConf,
-                    smoothedLeftHand, keypoints.LeftHandConf,
-                    smoothedRightHand, keypoints.RightHandConf
+                    _smoothedHeadPos, keypoints.HeadConf,
+                    _smoothedLeftHandPos, keypoints.LeftHandConf,
+                    _smoothedRightHandPos, keypoints.RightHandConf
                 );
             }
 
@@ -525,7 +527,7 @@ namespace physics.Engine.Integration
         }
 
         /// <summary>
-        /// Directly moves a ball to the target position.
+        /// Directly moves a ball to the target position (already smoothed).
         /// Temporarily unlocks to allow movement, then re-locks.
         /// </summary>
         private void MoveBallToPosition(PhysicsObject ball, Vector2 targetPos)
@@ -533,16 +535,14 @@ namespace physics.Engine.Integration
             var currentPos = ball.Center;
             var delta = targetPos - currentPos;
 
-            // Apply smoothing for less jittery movement
-            delta *= Math.Min(1f, _trackingSpeed * 0.1f);
-
             // Temporarily unlock to move
             ball.Locked = false;
+            ball.Velocity = delta * 5;
             ball.Move(delta);
             ball.Locked = true;
 
             // Zero out any velocity
-            ball.Velocity = Vector2.Zero;
+            //ball.Velocity = Vector2.Zero;
         }
 
         // Store latest keypoints for external access (e.g., skeleton rendering)

@@ -100,7 +100,7 @@ namespace physics.Engine
                     flipY: false,        // SharpPhysics uses Y-down coordinate system
                     trackingSpeed: 15f,  // How fast balls follow detected positions
                     ballRadius: 20,      // Radius of head/hand tracking balls
-                    smoothingFactor: 0.5f // Smoothing to reduce jitter (0 = none, 0.8 = very smooth)
+                    smoothingFactor: 0.7f // Smoothing to reduce jitter (0 = none, 0.8 = very smooth)
                 );
 
                 personColliderBridge.OnError += (s, ex) =>
@@ -114,8 +114,8 @@ namespace physics.Engine
                     // Console.WriteLine($"Tracking balls updated: {balls.Count} active");
                 };
 
-                // Start detection using webcam 1 (same as working Demo)
-                personColliderBridge.Start(cameraIndex: 1, width: 640, height: 480, fps: 30);
+                // Start detection using webcam or default camera
+                personColliderBridge.Start(cameraIndex: 0, width: 640, height: 480, fps: 30);
 
                 // Pass the bridge to the renderer for skeleton visualization
                 renderer.SetPersonColliderBridge(personColliderBridge);
