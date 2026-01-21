@@ -232,12 +232,13 @@ namespace physics.Engine.Input
                     objectTemplates.CreateAttractor(MousePosition.X, MousePosition.Y);
                     break;
                 case Keyboard.Key.Semicolon:
-                    actionTemplates.PopAndMultiply();
-                    break;
-                case Keyboard.Key.Escape:
-                    window.Close();
-                    break;
-                case Keyboard.Key.Left:
+                        actionTemplates.PopAndMultiply();
+                        break;
+                    case Keyboard.Key.Escape:
+                        keyState.Escape = true;
+                        // Don't close window - let games handle ESC
+                        break;
+                    case Keyboard.Key.Left:
                     keyState.Left = true;
                     break;
                 case Keyboard.Key.Right:
@@ -265,44 +266,48 @@ namespace physics.Engine.Input
             }
         }
 
-        private void OnKeyReleased(object sender, KeyEventArgs e)
-        {
-            switch (e.Code)
-            {
-                case Keyboard.Key.Space:
-                    keyState.Space = false;
-                    break;
-                case Keyboard.Key.Left:
-                    keyState.Left = false;
-                    break;
-                case Keyboard.Key.Right:
-                    keyState.Right = false;
-                    break;
-                case Keyboard.Key.Up:
-                    keyState.Up = false;
-                    break;
-                case Keyboard.Key.Down:
-                    keyState.Down = false;
-                    break;
-                // Add other keys if necessary.
+                private void OnKeyReleased(object sender, KeyEventArgs e)
+                {
+                    switch (e.Code)
+                    {
+                        case Keyboard.Key.Space:
+                            keyState.Space = false;
+                            break;
+                        case Keyboard.Key.Escape:
+                            keyState.Escape = false;
+                            break;
+                        case Keyboard.Key.Left:
+                            keyState.Left = false;
+                            break;
+                        case Keyboard.Key.Right:
+                            keyState.Right = false;
+                            break;
+                        case Keyboard.Key.Up:
+                            keyState.Up = false;
+                            break;
+                        case Keyboard.Key.Down:
+                            keyState.Down = false;
+                            break;
+                        // Add other keys if necessary.
+                    }
+                }
+
+                /// <summary>
+                /// Returns a snapshot of the current key states.
+                /// The caller can poll this method each frame to determine which keys are pressed.
+                /// </summary>
+                public KeyState GetKeyState()
+                {
+                    // Return a copy so external systems cannot modify internal state.
+                    return new KeyState
+                    {
+                        Left = keyState.Left,
+                        Right = keyState.Right,
+                        Up = keyState.Up,
+                        Down = keyState.Down,
+                        Space = keyState.Space,
+                        Escape = keyState.Escape
+                    };
+                }
             }
         }
-
-        /// <summary>
-        /// Returns a snapshot of the current key states.
-        /// The caller can poll this method each frame to determine which keys are pressed.
-        /// </summary>
-        public KeyState GetKeyState()
-        {
-            // Return a copy so external systems cannot modify internal state.
-            return new KeyState
-            {
-                Left = keyState.Left,
-                Right = keyState.Right,
-                Up = keyState.Up,
-                Down = keyState.Down,
-                Space = keyState.Space
-            };
-        }
-    }
-}

@@ -29,6 +29,9 @@ public class DemoGame : IGame
         _engine = engine;
         _objectTemplates = new ObjectTemplates(engine.PhysicsSystem);
 
+        // Show debug UI for sandbox mode
+        _engine.Renderer.ShowDebugUI = true;
+
         InitializeWorld(engine.WindowWidth, engine.WindowHeight);
         InitializePersonDetection(engine.WindowWidth, engine.WindowHeight);
     }
@@ -105,6 +108,13 @@ public class DemoGame : IGame
 
     public void Update(float deltaTime, KeyState keyState)
     {
+        // Check for ESC to return to menu
+        if (keyState.Escape)
+        {
+            _engine.SwitchGame(new MenuGame());
+            return;
+        }
+
         // Update player controller
         _playerController.Update(keyState);
 

@@ -7,6 +7,6 @@ namespace physics.Engine.Input
         public bool Up { get; set; }
         public bool Down { get; set; }
         public bool Space { get; set; }
-        
+        public bool Escape { get; set; }
     }
 }

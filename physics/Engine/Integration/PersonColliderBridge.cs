@@ -332,10 +332,14 @@ namespace physics.Engine.Integration
             {
                 try
                 {
-                    if (_camera == null || _poseDetector == null)
+                    // Capture local references to avoid race conditions during disposal
+                    var camera = _camera;
+                    var poseDetector = _poseDetector;
+
+                    if (camera == null || poseDetector == null || !_isRunning)
                         break;
 
-                    if (!_camera.TryGetFrame(out var frame, out var timestamp))
+                    if (!camera.TryGetFrame(out var frame, out var timestamp))
                     {
                         Thread.Sleep(5);
                         continue;
@@ -343,12 +347,19 @@ namespace physics.Engine.Integration
 
                     try
                     {
-                        var poseResult = _poseDetector.Detect(frame, timestamp);
+                        // Double-check we're still running before expensive detection
+                        if (!_isRunning || ct.IsCancellationRequested)
+                        {
+                            frame.Dispose();
+                            break;
+                        }
+
+                        var poseResult = poseDetector.Detect(frame, timestamp);
 
                         if (poseResult.PersonDetected && poseResult.Keypoints.Count >= 17)
                         {
                             var keypoints = ExtractRelevantKeypoints(poseResult.Keypoints);
-                            if (keypoints != null)
+                            if (keypoints != null && _isRunning)
                             {
                                 _pendingKeypoints.Enqueue(keypoints);
                             }
@@ -359,13 +370,28 @@ namespace physics.Engine.Integration
                         frame.Dispose();
                     }
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                catch (OperationCanceledException)
                 {
-                    Console.WriteLine($"[PersonBridge] Detection error: {ex.Message}");
-                    OnError?.Invoke(this, ex);
+                    // Normal cancellation
+                    break;
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Resources disposed during shutdown
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    if (_isRunning)
+                    {
+                        Console.WriteLine($"[PersonBridge] Detection error: {ex.Message}");
+                        OnError?.Invoke(this, ex);
+                    }
                     Thread.Sleep(100);
                 }
             }
+
+            Console.WriteLine("[PersonBridge] Detection loop exited");
         }
 
         /// <summary>
@@ -457,21 +483,63 @@ namespace physics.Engine.Integration
         /// </summary>
         public void Stop()
         {
-            _isRunning = false;
-            _cts?.Cancel();
+            if (!_isRunning && _detectionThread == null)
+                return; // Already stopped
 
-            _detectionThread?.Join(TimeSpan.FromSeconds(2));
+            Console.WriteLine("[PersonBridge] Stopping...");
+
+            // Signal thread to stop first
+            _isRunning = false;
+
+            try
+            {
+                _cts?.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Already disposed
+            }
+
+            // Wait for thread to finish
+            var thread = _detectionThread;
+            if (thread != null && thread.IsAlive)
+            {
+                if (!thread.Join(TimeSpan.FromSeconds(3)))
+                {
+                    Console.WriteLine("[PersonBridge] Warning: Detection thread did not stop in time");
+                }
+            }
             _detectionThread = null;
 
-            _cts?.Dispose();
+            // Now safe to dispose resources
+            try
+            {
+                _cts?.Dispose();
+            }
+            catch (ObjectDisposedException) { }
             _cts = null;
 
-            _camera?.Dispose();
+            try
+            {
+                _camera?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[PersonBridge] Error disposing camera: {ex.Message}");
+            }
             _camera = null;
 
-            _poseDetector?.Dispose();
+            try
+            {
+                _poseDetector?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[PersonBridge] Error disposing detector: {ex.Message}");
+            }
             _poseDetector = null;
 
+            // Clear tracking balls
             lock (_syncLock)
             {
                 if (_headBall != null)
@@ -489,7 +557,14 @@ namespace physics.Engine.Integration
                     _physicsSystem.RemovalQueue.Enqueue(_rightHandBall);
                     _rightHandBall = null;
                 }
+
+                _hasFullSkeleton = false;
             }
+
+            // Clear pending keypoints queue
+            while (_pendingKeypoints.TryDequeue(out _)) { }
+
+            Console.WriteLine("[PersonBridge] Stopped");
         }
 
         /// <summary>
@@ -498,6 +573,9 @@ namespace physics.Engine.Integration
         /// </summary>
         public void ProcessPendingUpdates()
         {
+            // Early exit if not running
+            if (!_isRunning) return;
+
             // Only process the most recent keypoints (discard older ones)
             PoseKeypoints? latestKeypoints = null;
             int discardCount = 0;
@@ -508,7 +586,7 @@ namespace physics.Engine.Integration
                 latestKeypoints = keypoints;
             }
 
-            if (latestKeypoints != null)
+            if (latestKeypoints != null && _isRunning)
             {
                 UpdateTrackingBalls(latestKeypoints);
             }

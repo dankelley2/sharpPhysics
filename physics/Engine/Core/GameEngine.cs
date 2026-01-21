@@ -4,6 +4,8 @@ using System.Diagnostics;
 using SFML.System;
 using physics.Engine.Input;
 using physics.Engine.Rendering;
+using physics.Engine.Rendering.UI;
+using physics.Engine.Objects;
 
 namespace physics.Engine.Core
 {
@@ -13,10 +15,11 @@ namespace physics.Engine.Core
     /// </summary>
     public class GameEngine
     {
-        private readonly PhysicsSystem _physicsSystem;
+        private PhysicsSystem _physicsSystem;
         private readonly Renderer _renderer;
-        private readonly InputManager _inputManager;
-        private readonly IGame _game;
+        private InputManager _inputManager;
+        private IGame _currentGame;
+        private IGame? _pendingGame;
 
         private readonly Clock _clock = new Clock();
         private readonly Stopwatch _stopwatch = new Stopwatch();
@@ -65,11 +68,85 @@ namespace physics.Engine.Core
         {
             WindowWidth = width;
             WindowHeight = height;
-            _game = game;
+            _currentGame = game;
 
             _physicsSystem = new PhysicsSystem();
             _renderer = new Renderer(width, height, title, _physicsSystem);
             _inputManager = new InputManager(_renderer.Window, _physicsSystem, _renderer.GameView);
+        }
+
+        /// <summary>
+        /// Switches to a new game. The switch happens at the start of the next frame.
+        /// </summary>
+        /// <param name="newGame">The new game to switch to.</param>
+        public void SwitchGame(IGame newGame)
+        {
+            _pendingGame = newGame;
+        }
+
+        /// <summary>
+        /// Performs the actual game switch, cleaning up old game and initializing new one.
+        /// </summary>
+        private void PerformGameSwitch()
+        {
+            if (_pendingGame == null) return;
+
+            Console.WriteLine("[GameEngine] Switching games...");
+
+            // Clear person collider bridge reference first (before shutdown)
+            _renderer.SetPersonColliderBridge(null);
+
+            // Shutdown current game (this should dispose PersonColliderBridge, etc.)
+            try
+            {
+                _currentGame.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GameEngine] Error during game shutdown: {ex.Message}");
+            }
+
+            // Give time for HTTP connections to fully close and threads to terminate
+            System.Threading.Thread.Sleep(300);
+
+            // Clear all physics objects
+            foreach (var obj in _physicsSystem.ListStaticObjects.ToArray())
+            {
+                _physicsSystem.RemovalQueue.Enqueue(obj);
+            }
+            _physicsSystem.ListGravityObjects.Clear();
+
+            // Process removal queue
+            while (_physicsSystem.RemovalQueue.Count > 0)
+            {
+                var obj = _physicsSystem.RemovalQueue.Dequeue();
+                _physicsSystem.ListStaticObjects.Remove(obj);
+            }
+
+            // Clear all UI elements
+            UiElement.GlobalUiElements.Clear();
+
+            // Reset physics properties
+            _physicsSystem.Gravity = new System.Numerics.Vector2(0, 9.8f);
+            _physicsSystem.GravityScale = 30f;
+            _physicsSystem.TimeScale = 1f;
+            _physicsSystem.IsPaused = false;
+
+            // Switch to new game
+            _currentGame = _pendingGame;
+            _pendingGame = null;
+
+            // Initialize new game
+            try
+            {
+                _currentGame.Initialize(this);
+                Console.WriteLine("[GameEngine] Game switch complete");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GameEngine] Error initializing new game: {ex.Message}");
+                throw;
+            }
         }
 
         /// <summary>
@@ -79,12 +156,18 @@ namespace physics.Engine.Core
         public void Run()
         {
             // Initialize the game
-            _game.Initialize(this);
+            _currentGame.Initialize(this);
 
             _stopwatch.Start();
 
             while (_renderer.Window.IsOpen)
             {
+                // Check for pending game switch
+                if (_pendingGame != null)
+                {
+                    PerformGameSwitch();
+                }
+
                 // Handle window events
                 _renderer.Window.DispatchEvents();
 
@@ -98,7 +181,7 @@ namespace physics.Engine.Core
                 _inputManager.Update(deltaTime);
 
                 // Update game logic
-                _game.Update(deltaTime, _inputManager.GetKeyState());
+                _currentGame.Update(deltaTime, _inputManager.GetKeyState());
 
                 // Physics update
                 long physicsStart = _stopwatch.ElapsedMilliseconds;
@@ -115,14 +198,14 @@ namespace physics.Engine.Core
                                  _inputManager.BoxEndPoint);
 
                 // Game-specific rendering
-                _game.Render(_renderer);
+                _currentGame.Render(_renderer);
 
                 MsDrawTime = _stopwatch.ElapsedMilliseconds - renderStart;
                 MsFrameTime = _stopwatch.ElapsedMilliseconds - frameStartTime;
             }
 
             // Cleanup
-            _game.Shutdown();
+            _currentGame.Shutdown();
         }
     }
 }
