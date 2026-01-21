@@ -1,4 +1,5 @@
-using physics.Engine;
+using physics.Demo;
+using physics.Engine.Core;
 
 namespace physics
 {
@@ -6,8 +7,9 @@ namespace physics
     {
         static void Main()
         {
-            var window = new GameWindow(1280, 720, "SharpPhysics");
-            window.Run();
+            var game = new DemoGame();
+            var engine = new GameEngine(1280, 720, "SharpPhysics Demo", game);
+            engine.Run();
         }
     }
 }
