@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
+using physics.Engine;
 using physics.Engine.Objects;
 using physics.Engine.Shaders;
 using ProjectorSegmentation.Vision.Models;
@@ -12,7 +13,7 @@ using ProjectorSegmentation.Vision.PoseDetection;
 using ProjectorSegmentation.Vision.FrameSources;
 using ProjectorSegmentation.Vision.Abstractions;
 
-namespace physics.Engine.Integration
+namespace SharpPhysics.Demo.Integration
 {
     /// <summary>
     /// Bridges ProjectorSegmentation pose detection with the SharpPhysics engine.
@@ -69,8 +70,8 @@ namespace physics.Engine.Integration
         private const int LEFT_WRIST_INDEX = 9;
         private const int RIGHT_WRIST_INDEX = 10;
 
-        // COCO skeleton connections (17 keypoints)
-        private static readonly (int, int)[] SkeletonConnections = new[]
+        // COCO skeleton connections (17 keypoints) - made public for external rendering
+        public static readonly (int, int)[] SkeletonConnections = new[]
         {
             // Face
             (0, 1), (0, 2), // Nose to eyes
@@ -196,7 +197,7 @@ namespace physics.Engine.Integration
         }
 
         /// <summary>
-        /// Start pose detection with the specified camera.
+        /// Start pose detection with the specified MJPEG stream URL.
         /// </summary>
         public void Start(string url, int width = 640, int height = 480, int fps = 30)
         {
@@ -239,7 +240,7 @@ namespace physics.Engine.Integration
         }
 
         /// <summary>
-        /// Start pose detection with the specified camera.
+        /// Start pose detection with the specified camera index.
         /// </summary>
         public void Start(int cameraIndex = 0, int width = 640, int height = 480, int fps = 30)
         {
@@ -335,7 +336,7 @@ namespace physics.Engine.Integration
                     // Capture local references to avoid race conditions during disposal
                     var camera = _camera;
                     var poseDetector = _poseDetector;
-
+                    
                     if (camera == null || poseDetector == null || !_isRunning)
                         break;
 
@@ -390,7 +391,7 @@ namespace physics.Engine.Integration
                     Thread.Sleep(100);
                 }
             }
-
+            
             Console.WriteLine("[PersonBridge] Detection loop exited");
         }
 
@@ -485,12 +486,12 @@ namespace physics.Engine.Integration
         {
             if (!_isRunning && _detectionThread == null)
                 return; // Already stopped
-
+                
             Console.WriteLine("[PersonBridge] Stopping...");
-
+            
             // Signal thread to stop first
             _isRunning = false;
-
+            
             try
             {
                 _cts?.Cancel();
@@ -557,7 +558,7 @@ namespace physics.Engine.Integration
                     _physicsSystem.RemovalQueue.Enqueue(_rightHandBall);
                     _rightHandBall = null;
                 }
-
+                
                 _hasFullSkeleton = false;
             }
 
@@ -575,7 +576,7 @@ namespace physics.Engine.Integration
         {
             // Early exit if not running
             if (!_isRunning) return;
-
+            
             // Only process the most recent keypoints (discard older ones)
             PoseKeypoints? latestKeypoints = null;
             int discardCount = 0;
@@ -666,9 +667,6 @@ namespace physics.Engine.Integration
             ball.Velocity = delta * 10;
             ball.Move(delta);
             ball.Locked = true;
-
-            // Zero out any velocity
-            //ball.Velocity = Vector2.Zero;
         }
 
         // Store latest keypoints for external access (e.g., skeleton rendering)

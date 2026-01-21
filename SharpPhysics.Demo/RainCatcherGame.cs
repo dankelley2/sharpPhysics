@@ -4,10 +4,11 @@ using physics.Engine;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Core;
 using physics.Engine.Input;
-using physics.Engine.Integration;
 using physics.Engine.Objects;
 using physics.Engine.Rendering;
 using physics.Engine.Shaders;
+using SharpPhysics.Demo.Helpers;
+using SharpPhysics.Demo.Integration;
 using SharpPhysics.Engine.Player;
 
 namespace SharpPhysics.Demo;
@@ -156,32 +157,31 @@ public class RainCatcherGame : IGame
                 smoothingFactor: 0.4f  // Less smoothing for more responsive feel
             );
 
-            _personColliderBridge.OnError += (s, ex) =>
+                    _personColliderBridge.OnError += (s, ex) =>
+                    {
+                        Console.WriteLine($"Person Detection Error: {ex.Message}");
+                    };
+
+                    // Start detection
+                    _personColliderBridge.Start(url: "http://192.168.1.161:8080", width: 640, height: 480, fps: 30);
+
+                    Console.WriteLine("🎮 Body tracking initialized!");
+                    Console.WriteLine("👋 Wave your hands to catch balls!");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️ Body tracking not available: {ex.Message}");
+                    Console.WriteLine("Game will run without body tracking.");
+                    _personColliderBridge = null;
+                }
+            }
+
+            public void Update(float deltaTime, KeyState keyState)
             {
-                Console.WriteLine($"Person Detection Error: {ex.Message}");
-            };
-
-            // Start detection
-            _personColliderBridge.Start(url: "http://192.168.1.161:8080", width: 640, height: 480, fps: 30);
-            _engine.Renderer.SetPersonColliderBridge(_personColliderBridge);
-
-            Console.WriteLine("🎮 Body tracking initialized!");
-            Console.WriteLine("👋 Wave your hands to catch balls!");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"⚠️ Body tracking not available: {ex.Message}");
-            Console.WriteLine("Game will run without body tracking.");
-            _personColliderBridge = null;
-        }
-    }
-
-    public void Update(float deltaTime, KeyState keyState)
-    {
-        // Check for ESC to return to menu
-        if (keyState.Escape)
-        {
-            _engine.SwitchGame(new MenuGame());
+                // Check for ESC to return to menu
+                if (keyState.Escape)
+                {
+                    _engine.SwitchGame(new MenuGame());
             return;
         }
 
@@ -477,22 +477,25 @@ public class RainCatcherGame : IGame
             for (int i = 0; i < 5; i++)
             {
                 SpawnBall();
+                    }
+                }
             }
-        }
-    }
 
-    public void Render(Renderer renderer)
-    {
-        // Draw score (top right)
-        string scoreText = $"SCORE: {_score:N0}";
-        renderer.DrawText(scoreText, _engine.WindowWidth - 250, 30, 32, SFML.Graphics.Color.White);
-
-        // Draw combo if active
-        if (_combo > 1)
-        {
-            var comboColor = _combo switch
+            public void Render(Renderer renderer)
             {
-                >= 10 => new SFML.Graphics.Color(255, 50, 50),   // Red for high combo
+                // Draw skeleton overlay
+                SkeletonRenderer.DrawSkeleton(renderer, _personColliderBridge);
+
+                // Draw score (top right)
+                string scoreText = $"SCORE: {_score:N0}";
+                renderer.DrawText(scoreText, _engine.WindowWidth - 250, 30, 32, SFML.Graphics.Color.White);
+
+                // Draw combo if active
+                if (_combo > 1)
+                {
+                    var comboColor = _combo switch
+                    {
+                        >= 10 => new SFML.Graphics.Color(255, 50, 50),   // Red for high combo
                 >= 5 => new SFML.Graphics.Color(255, 200, 50),   // Gold
                 _ => new SFML.Graphics.Color(100, 255, 100)       // Green
             };

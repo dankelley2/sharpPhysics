@@ -15,9 +15,6 @@
     <PackageReference Include="SFML.Net" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\ProjectorSegmentation\src\ProjectorSegmentation.Vision\ProjectorSegmentation.Vision.csproj" />
-  </ItemGroup>
-  <ItemGroup>
     <None Update="Resources\blackPoolBall_30px.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -7,7 +7,6 @@ using SFML.Window;
 using System.Numerics;
 using physics.Engine.Shaders;
 using physics.Engine.Objects;
-using physics.Engine.Integration;
 
 namespace physics.Engine.Rendering
 {
@@ -21,9 +20,6 @@ namespace physics.Engine.Rendering
         private Font debugFont;
         private List<UiElement> _debugUiElements = new List<UiElement>();
         private PhysicsSystem _physicsSystem;
-
-        // Reference to person collider bridge for skeleton rendering
-        private PersonColliderBridge? _personColliderBridge;
 
         /// <summary>
         /// Gets the default font used for UI rendering.
@@ -213,6 +209,15 @@ namespace physics.Engine.Rendering
 
             DrawUiView(msPhysicsTime, msDrawTime, msFrameTime);
 
+            // Note: Window.Display() is called by GameEngine after game-specific rendering
+        }
+
+        /// <summary>
+        /// Presents the rendered frame to the screen.
+        /// Called by GameEngine after all rendering (engine + game) is complete.
+        /// </summary>
+        public void Display()
+        {
             Window.Display();
         }
 
@@ -241,202 +246,113 @@ namespace physics.Engine.Rendering
                 Window.Draw(previewRect);
             }
 
-                // Draw all static objects with their shaders.
-                foreach (var obj in _physicsSystem.ListStaticObjects)
-                {
-                    var sfmlShader = obj.Shader;
-                    if (sfmlShader != null)
-                    {
-                        sfmlShader.PreDraw(obj, Window);
-                        sfmlShader.Draw(obj, Window);
-                        sfmlShader.PostDraw(obj, Window);
-                    }
-                }
-
-                // Draw skeleton overlay if available
-                DrawSkeletonOverlay();
-            }
-
-            /// <summary>
-            /// Sets the person collider bridge for skeleton rendering.
-            /// </summary>
-            public void SetPersonColliderBridge(PersonColliderBridge? bridge)
+            // Draw all static objects with their shaders.
+            foreach (var obj in _physicsSystem.ListStaticObjects)
             {
-                _personColliderBridge = bridge;
-            }
-
-            /// <summary>
-            /// Draws the skeleton overlay showing detected keypoints and connections.
-            /// </summary>
-            private void DrawSkeletonOverlay()
-            {
-                if (_personColliderBridge == null) return;
-
-                // Try to get full skeleton first
-                var fullSkeleton = _personColliderBridge.GetFullSkeleton();
-                if (fullSkeleton != null)
+                var sfmlShader = obj.Shader;
+                if (sfmlShader != null)
                 {
-                    DrawFullSkeleton(fullSkeleton.Value.Keypoints, fullSkeleton.Value.Confidences, fullSkeleton.Value.Connections);
-                    return;
-                }
-
-                // Fallback to simple keypoints if full skeleton not available
-                var keypoints = _personColliderBridge.GetLatestKeypoints();
-                if (keypoints == null) return;
-
-                var (head, leftHand, rightHand, headConf, leftConf, rightConf) = keypoints.Value;
-
-                // Draw connections (skeleton lines)
-                var lineColor = new Color(0, 255, 255, 180); // Cyan with transparency
-
-                // Head to left hand
-                if (headConf > 0.5f && leftConf > 0.5f)
-                {
-                    DrawLine(head, leftHand, lineColor, 2);
-                }
-
-                // Head to right hand
-                if (headConf > 0.5f && rightConf > 0.5f)
-                {
-                    DrawLine(head, rightHand, lineColor, 2);
-                }
-
-                // Draw keypoint markers
-                var circleRadius = 8f;
-
-                // Head (green)
-                if (headConf > 0.5f)
-                {
-                    DrawCircleMarker(head, circleRadius, new Color(0, 255, 0, 200));
-                }
-
-                // Left hand (blue)
-                if (leftConf > 0.5f)
-                {
-                    DrawCircleMarker(leftHand, circleRadius, new Color(0, 100, 255, 200));
-                }
-
-                // Right hand (red)
-                if (rightConf > 0.5f)
-                {
-                    DrawCircleMarker(rightHand, circleRadius, new Color(255, 100, 0, 200));
+                    sfmlShader.PreDraw(obj, Window);
+                    sfmlShader.Draw(obj, Window);
+                    sfmlShader.PostDraw(obj, Window);
                 }
             }
+        }
 
-            /// <summary>
-            /// Draws the full 17-keypoint COCO skeleton.
-            /// </summary>
-            private void DrawFullSkeleton(Vector2[] keypoints, float[] confidences, (int, int)[] connections)
+        #region Public Primitive Drawing Methods
+
+        /// <summary>
+        /// Draws a line between two points in game coordinates.
+        /// </summary>
+        /// <param name="start">Start point of the line.</param>
+        /// <param name="end">End point of the line.</param>
+        /// <param name="color">Color of the line.</param>
+        /// <param name="thickness">Thickness of the line in pixels.</param>
+        public void DrawLine(Vector2 start, Vector2 end, Color color, float thickness = 2f)
+        {
+            Window.SetView(GameView);
+
+            var direction = end - start;
+            var length = direction.Length();
+            var angle = MathF.Atan2(direction.Y, direction.X) * 180f / MathF.PI;
+
+            var line = new RectangleShape(new Vector2f(length, thickness))
             {
-                const float confidenceThreshold = 0.3f;
+                Position = new Vector2f(start.X, start.Y),
+                FillColor = color,
+                Rotation = angle,
+                Origin = new Vector2f(0, thickness / 2)
+            };
 
-                // Define colors for different body parts
-                var faceColor = new Color(255, 255, 0, 200);      // Yellow for face
-                var torsoColor = new Color(0, 255, 255, 200);     // Cyan for torso
-                var leftArmColor = new Color(0, 255, 0, 200);     // Green for left arm
-                var rightArmColor = new Color(255, 0, 0, 200);    // Red for right arm
-                var leftLegColor = new Color(0, 200, 100, 200);   // Teal for left leg
-                var rightLegColor = new Color(200, 100, 0, 200);  // Orange for right leg
+            Window.Draw(line);
+        }
 
-                // Draw skeleton connections
-                foreach (var (idx1, idx2) in connections)
-                {
-                    if (idx1 >= keypoints.Length || idx2 >= keypoints.Length)
-                        continue;
+        /// <summary>
+        /// Draws a circle at the specified position in game coordinates.
+        /// </summary>
+        /// <param name="center">Center position of the circle.</param>
+        /// <param name="radius">Radius of the circle.</param>
+        /// <param name="fillColor">Fill color of the circle.</param>
+        /// <param name="outlineColor">Optional outline color. If null, uses white.</param>
+        /// <param name="outlineThickness">Thickness of the outline. Default 2.</param>
+        public void DrawCircle(Vector2 center, float radius, Color fillColor, Color? outlineColor = null, float outlineThickness = 2f)
+        {
+            Window.SetView(GameView);
 
-                    if (confidences[idx1] < confidenceThreshold || confidences[idx2] < confidenceThreshold)
-                        continue;
-
-                    var pt1 = keypoints[idx1];
-                    var pt2 = keypoints[idx2];
-
-                    // Choose color based on body part
-                    Color lineColor = GetConnectionColor(idx1, idx2, torsoColor, leftArmColor, rightArmColor, leftLegColor, rightLegColor, faceColor);
-
-                    DrawLine(pt1, pt2, lineColor, 3);
-                }
-
-                // Draw keypoint circles
-                for (int i = 0; i < keypoints.Length; i++)
-                {
-                    if (confidences[i] < confidenceThreshold)
-                        continue;
-
-                    var pt = keypoints[i];
-                    Color circleColor = GetKeypointColor(i);
-                    float radius = GetKeypointRadius(i);
-
-                    DrawCircleMarker(pt, radius, circleColor);
-                }
-            }
-
-            /// <summary>
-            /// Gets the color for a skeleton connection based on body part.
-            /// </summary>
-            private Color GetConnectionColor(int idx1, int idx2, Color torso, Color leftArm, Color rightArm, Color leftLeg, Color rightLeg, Color face)
+            var circle = new CircleShape(radius)
             {
-                // Face connections (0-4)
-                if (idx1 <= 4 && idx2 <= 4) return face;
+                Position = new Vector2f(center.X - radius, center.Y - radius),
+                FillColor = fillColor,
+                OutlineColor = outlineColor ?? Color.White,
+                OutlineThickness = outlineThickness
+            };
 
-                // Left arm (5, 7, 9)
-                if ((idx1 == 5 && idx2 == 7) || (idx1 == 7 && idx2 == 9)) return leftArm;
+            Window.Draw(circle);
+        }
 
-                // Right arm (6, 8, 10)
-                if ((idx1 == 6 && idx2 == 8) || (idx1 == 8 && idx2 == 10)) return rightArm;
+        /// <summary>
+        /// Draws a filled rectangle in game coordinates.
+        /// </summary>
+        /// <param name="position">Top-left corner position.</param>
+        /// <param name="size">Size of the rectangle (width, height).</param>
+        /// <param name="fillColor">Fill color.</param>
+        /// <param name="outlineColor">Optional outline color.</param>
+        /// <param name="outlineThickness">Outline thickness.</param>
+        public void DrawRectangle(Vector2 position, Vector2 size, Color fillColor, Color? outlineColor = null, float outlineThickness = 0f)
+        {
+            Window.SetView(GameView);
 
-                // Left leg (11, 13, 15)
-                if ((idx1 == 11 && idx2 == 13) || (idx1 == 13 && idx2 == 15)) return leftLeg;
-
-                // Right leg (12, 14, 16)
-                if ((idx1 == 12 && idx2 == 14) || (idx1 == 14 && idx2 == 16)) return rightLeg;
-
-                // Torso (shoulders, hips, shoulder-hip connections)
-                return torso;
-            }
-
-            /// <summary>
-            /// Gets the color for a keypoint based on its index.
-            /// </summary>
-            private Color GetKeypointColor(int idx)
+            var rect = new RectangleShape(new Vector2f(size.X, size.Y))
             {
-                return idx switch
-                {
-                    0 => new Color(255, 255, 0, 255),    // Nose - yellow
-                    1 or 2 => new Color(255, 200, 0, 255), // Eyes - orange-yellow
-                    3 or 4 => new Color(255, 150, 0, 255), // Ears - orange
-                    5 or 7 or 9 => new Color(0, 255, 0, 255),  // Left arm - green
-                    6 or 8 or 10 => new Color(255, 0, 0, 255), // Right arm - red
-                    11 or 13 or 15 => new Color(0, 200, 100, 255), // Left leg - teal
-                    12 or 14 or 16 => new Color(200, 100, 0, 255), // Right leg - orange
-                    _ => new Color(255, 255, 255, 255)    // Default - white
-                };
-            }
+                Position = new Vector2f(position.X, position.Y),
+                FillColor = fillColor,
+                OutlineColor = outlineColor ?? Color.Transparent,
+                OutlineThickness = outlineThickness
+            };
 
-            /// <summary>
-            /// Gets the radius for a keypoint based on its type.
-            /// </summary>
-            private float GetKeypointRadius(int idx)
-            {
-                return idx switch
-                {
-                    0 => 8f,      // Nose - larger
-                    1 or 2 => 5f, // Eyes - smaller
-                    3 or 4 => 5f, // Ears - smaller
-                    5 or 6 => 7f, // Shoulders - medium
-                    7 or 8 => 6f, // Elbows - medium
-                    9 or 10 => 8f, // Wrists - larger (hands)
-                    11 or 12 => 7f, // Hips - medium
-                    13 or 14 => 6f, // Knees - medium
-                    15 or 16 => 6f, // Ankles - medium
-                    _ => 5f
-                };
-            }
+            Window.Draw(rect);
+        }
 
-            /// <summary>
-            /// Draws a line between two points.
-            /// </summary>
-            private void DrawLine(Vector2 start, Vector2 end, Color color, float thickness)
+        /// <summary>
+        /// Draws a polygon (connected line segments) in game coordinates.
+        /// More efficient than multiple DrawLine calls for connected paths.
+        /// </summary>
+        /// <param name="points">Array of points defining the polygon vertices.</param>
+        /// <param name="color">Color of the lines.</param>
+        /// <param name="thickness">Thickness of the lines.</param>
+        /// <param name="closed">If true, connects the last point to the first.</param>
+        public void DrawPolygon(Vector2[] points, Color color, float thickness = 2f, bool closed = false)
+        {
+            if (points == null || points.Length < 2) return;
+
+            Window.SetView(GameView);
+
+            int count = closed ? points.Length : points.Length - 1;
+            for (int i = 0; i < count; i++)
             {
+                var start = points[i];
+                var end = points[(i + 1) % points.Length];
+
                 var direction = end - start;
                 var length = direction.Length();
                 var angle = MathF.Atan2(direction.Y, direction.X) * 180f / MathF.PI;
@@ -451,54 +367,131 @@ namespace physics.Engine.Rendering
 
                 Window.Draw(line);
             }
+        }
 
-            /// <summary>
-            /// Draws a circle marker at the specified position.
-            /// </summary>
-            private void DrawCircleMarker(Vector2 position, float radius, Color color)
+        /// <summary>
+        /// Draws a filled convex polygon in game coordinates.
+        /// </summary>
+        /// <param name="points">Array of points defining the polygon vertices (must be convex).</param>
+        /// <param name="fillColor">Fill color.</param>
+        /// <param name="outlineColor">Optional outline color.</param>
+        /// <param name="outlineThickness">Outline thickness.</param>
+        public void DrawFilledPolygon(Vector2[] points, Color fillColor, Color? outlineColor = null, float outlineThickness = 0f)
+        {
+            if (points == null || points.Length < 3) return;
+
+            Window.SetView(GameView);
+
+            var convex = new ConvexShape((uint)points.Length);
+            for (int i = 0; i < points.Length; i++)
             {
-                var circle = new CircleShape(radius)
+                convex.SetPoint((uint)i, new Vector2f(points[i].X, points[i].Y));
+            }
+
+            convex.FillColor = fillColor;
+            convex.OutlineColor = outlineColor ?? Color.Transparent;
+            convex.OutlineThickness = outlineThickness;
+
+            Window.Draw(convex);
+        }
+
+        /// <summary>
+        /// Draws multiple line segments efficiently (for skeleton rendering, etc.).
+        /// Each pair of points defines a line segment.
+        /// </summary>
+        /// <param name="segments">Array of line segments as (start, end) tuples.</param>
+        /// <param name="color">Color for all lines.</param>
+        /// <param name="thickness">Thickness of the lines.</param>
+        public void DrawLineSegments((Vector2 Start, Vector2 End)[] segments, Color color, float thickness = 2f)
+        {
+            if (segments == null || segments.Length == 0) return;
+
+            Window.SetView(GameView);
+
+            foreach (var (start, end) in segments)
+            {
+                var direction = end - start;
+                var length = direction.Length();
+                if (length < 0.001f) continue; // Skip zero-length lines
+
+                var angle = MathF.Atan2(direction.Y, direction.X) * 180f / MathF.PI;
+
+                var line = new RectangleShape(new Vector2f(length, thickness))
                 {
-                    Position = new Vector2f(position.X - radius, position.Y - radius),
+                    Position = new Vector2f(start.X, start.Y),
                     FillColor = color,
-                    OutlineColor = Color.White,
-                                        OutlineThickness = 2
-                                    };
+                    Rotation = angle,
+                    Origin = new Vector2f(0, thickness / 2)
+                };
 
-                                    Window.Draw(circle);
-                                }
+                Window.Draw(line);
+            }
+        }
 
-                            private void DrawUiView(long msPhysicsTime, long msDrawTime, long msFrameTime)
-                            {
-                                // Switch to UI window view
-                                Window.SetView(UiView);
+        /// <summary>
+        /// Draws multiple line segments with individual colors.
+        /// </summary>
+        /// <param name="segments">Array of line segments with colors.</param>
+        /// <param name="thickness">Thickness of the lines.</param>
+        public void DrawColoredLineSegments((Vector2 Start, Vector2 End, Color Color)[] segments, float thickness = 2f)
+        {
+            if (segments == null || segments.Length == 0) return;
 
-                                // Draw debug info only if enabled
-                                if (ShowDebugUI)
-                                {
-                                    debugText.DisplayedString =
-                                        $"ms physics time: {msPhysicsTime}\n" +
-                                        $"ms draw time: {msDrawTime}\n" +
-                                        $"frame rate: {1000 / Math.Max(msFrameTime, 1)}\n" +
-                                        $"num objects: {_physicsSystem.ListStaticObjects.Count}";
-                                    Window.Draw(debugText);
+            Window.SetView(GameView);
 
-                                    // Draw debug UI elements
-                                    foreach (var element in _debugUiElements)
-                                    {
-                                        element.Draw(Window);
-                                    }
-                                }
+            foreach (var (start, end, color) in segments)
+            {
+                var direction = end - start;
+                var length = direction.Length();
+                if (length < 0.001f) continue;
 
-                                // Draw all global UI elements (game-created elements)
-                                // Skip debug elements when drawing from global list
-                                foreach (var element in UiElement.GlobalUiElements)
-                                {
-                                    if (!_debugUiElements.Contains(element))
-                                    {
-                                        element.Draw(Window);
-                                    }
-                                }
-                            }
+                var angle = MathF.Atan2(direction.Y, direction.X) * 180f / MathF.PI;
+
+                var line = new RectangleShape(new Vector2f(length, thickness))
+                {
+                    Position = new Vector2f(start.X, start.Y),
+                    FillColor = color,
+                    Rotation = angle,
+                    Origin = new Vector2f(0, thickness / 2)
+                };
+
+                Window.Draw(line);
+            }
+        }
+
+        #endregion
+
+                private void DrawUiView(long msPhysicsTime, long msDrawTime, long msFrameTime)
+                {
+                    // Switch to UI window view
+                    Window.SetView(UiView);
+
+                    // Draw debug info only if enabled
+                    if (ShowDebugUI)
+                    {
+                        debugText.DisplayedString =
+                            $"ms physics time: {msPhysicsTime}\n" +
+                            $"ms draw time: {msDrawTime}\n" +
+                            $"frame rate: {1000 / Math.Max(msFrameTime, 1)}\n" +
+                            $"num objects: {_physicsSystem.ListStaticObjects.Count}";
+                        Window.Draw(debugText);
+
+                        // Draw debug UI elements
+                        foreach (var element in _debugUiElements)
+                        {
+                            element.Draw(Window);
                         }
                     }
+
+                    // Draw all global UI elements (game-created elements)
+                    // Skip debug elements when drawing from global list
+                    foreach (var element in UiElement.GlobalUiElements)
+                    {
+                        if (!_debugUiElements.Contains(element))
+                        {
+                            element.Draw(Window);
+                        }
+                    }
+                }
+            }
+        }

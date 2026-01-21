@@ -4,8 +4,9 @@ using physics.Engine;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Core;
 using physics.Engine.Input;
-using physics.Engine.Integration;
 using physics.Engine.Rendering;
+using SharpPhysics.Demo.Helpers;
+using SharpPhysics.Demo.Integration;
 using SharpPhysics.Engine.Player;
 
 namespace SharpPhysics.Demo;
@@ -82,54 +83,51 @@ public class DemoGame : IGame
                 Console.WriteLine($"Person Detection Error: {ex.Message}");
             };
 
-            _personColliderBridge.OnPersonBodyUpdated += (s, balls) =>
-            {
-                // Uncomment for debug output:
-                // Console.WriteLine($"Tracking balls updated: {balls.Count} active");
-            };
+                        _personColliderBridge.OnPersonBodyUpdated += (s, balls) =>
+                        {
+                            // Uncomment for debug output:
+                            // Console.WriteLine($"Tracking balls updated: {balls.Count} active");
+                        };
 
-            // Start detection using webcam or default camera
-            _personColliderBridge.Start(url: "http://192.168.1.161:8080", width: 640, height: 480, fps: 30);
+                        // Start detection using webcam or default camera
+                        _personColliderBridge.Start(url: "http://192.168.1.161:8080", width: 640, height: 480, fps: 30);
 
-            // Pass the bridge to the renderer for skeleton visualization
-            _engine.Renderer.SetPersonColliderBridge(_personColliderBridge);
+                        Console.WriteLine("Person detection initialized successfully.");
+                        Console.WriteLine($"Model expected at: {Path.GetFullPath(MODEL_PATH)}");
+                        Console.WriteLine("Tracking: Head, Left Hand, Right Hand (20 radius balls)");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to initialize person detection: {ex.Message}");
+                        Console.WriteLine("The application will continue without person detection.");
+                        _personColliderBridge = null;
+                    }
+                }
 
-            Console.WriteLine("Person detection initialized successfully.");
-            Console.WriteLine($"Model expected at: {Path.GetFullPath(MODEL_PATH)}");
-            Console.WriteLine("Tracking: Head, Left Hand, Right Hand (20 radius balls)");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to initialize person detection: {ex.Message}");
-            Console.WriteLine("The application will continue without person detection.");
-            _personColliderBridge = null;
-        }
-    }
+                public void Update(float deltaTime, KeyState keyState)
+                {
+                    // Check for ESC to return to menu
+                    if (keyState.Escape)
+                    {
+                        _engine.SwitchGame(new MenuGame());
+                        return;
+                    }
 
-    public void Update(float deltaTime, KeyState keyState)
-    {
-        // Check for ESC to return to menu
-        if (keyState.Escape)
-        {
-            _engine.SwitchGame(new MenuGame());
-            return;
-        }
+                    // Update player controller
+                    _playerController.Update(keyState);
 
-        // Update player controller
-        _playerController.Update(keyState);
+                    // Process person detection updates (thread-safe)
+                    _personColliderBridge?.ProcessPendingUpdates();
+                }
 
-        // Process person detection updates (thread-safe)
-        _personColliderBridge?.ProcessPendingUpdates();
-    }
+                public void Render(Renderer renderer)
+                {
+                    // Draw skeleton overlay
+                    SkeletonRenderer.DrawSkeleton(renderer, _personColliderBridge);
+                }
 
-    public void Render(Renderer renderer)
-    {
-        // Game-specific rendering can be added here
-        // The engine handles rendering physics objects
-    }
-
-    public void Shutdown()
-    {
-        _personColliderBridge?.Dispose();
-    }
-}
+                public void Shutdown()
+                {
+                    _personColliderBridge?.Dispose();
+                }
+            }

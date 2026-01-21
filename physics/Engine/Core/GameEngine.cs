@@ -93,9 +93,6 @@ namespace physics.Engine.Core
 
             Console.WriteLine("[GameEngine] Switching games...");
 
-            // Clear person collider bridge reference first (before shutdown)
-            _renderer.SetPersonColliderBridge(null);
-
             // Shutdown current game (this should dispose PersonColliderBridge, etc.)
             try
             {
@@ -106,7 +103,7 @@ namespace physics.Engine.Core
                 Console.WriteLine($"[GameEngine] Error during game shutdown: {ex.Message}");
             }
 
-            // Give time for HTTP connections to fully close and threads to terminate
+            // Give time for background threads to terminate (HTTP connections, detection threads)
             System.Threading.Thread.Sleep(300);
 
             // Clear all physics objects
@@ -191,14 +188,17 @@ namespace physics.Engine.Core
                 // Rendering
                 long renderStart = _stopwatch.ElapsedMilliseconds;
 
-                // Engine rendering (physics objects, UI)
+                // Engine rendering (physics objects, debug UI)
                 _renderer.Render(MsPhysicsTime, MsDrawTime, MsFrameTime,
                                  _inputManager.IsCreatingBox,
                                  _inputManager.BoxStartPoint,
                                  _inputManager.BoxEndPoint);
 
-                // Game-specific rendering
+                // Game-specific rendering (skeleton overlay, score display, etc.)
                 _currentGame.Render(_renderer);
+
+                // Present the frame to screen (after all rendering is complete)
+                _renderer.Display();
 
                 MsDrawTime = _stopwatch.ElapsedMilliseconds - renderStart;
                 MsFrameTime = _stopwatch.ElapsedMilliseconds - frameStartTime;
