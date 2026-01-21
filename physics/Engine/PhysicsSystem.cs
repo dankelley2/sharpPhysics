@@ -37,10 +37,10 @@ namespace physics.Engine
         private const int PHYSICS_ITERATIONS = 8;
         private double accumulator = 0;
 
-        public static PhysicsObject ActiveObject;
-        private static readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
-        public static readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
-        public static readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
+        public PhysicsObject? ActiveObject;
+        private readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
+        public readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
+        public readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
         private readonly ManifoldPool _manifoldPool = new ManifoldPool();
         public List<Constraint> Constraints = new List<Constraint>();
 
@@ -61,7 +61,7 @@ namespace physics.Engine
             physicsObject.Velocity = velocity;
         }
 
-        public static readonly Queue<PhysicsObject> RemovalQueue = new Queue<PhysicsObject>();
+        public readonly Queue<PhysicsObject> RemovalQueue = new Queue<PhysicsObject>();
 
         #endregion
 
@@ -85,7 +85,7 @@ namespace physics.Engine
 
         #region Public Methods
 
-        public static PhysicsObject CreateStaticCircle(Vector2 loc, int radius, float restitution, bool locked, SFMLShader shader)
+        public PhysicsObject CreateStaticCircle(Vector2 loc, int radius, float restitution, bool locked, SFMLShader shader)
         {
             // Create the circle shape using the given radius.
             IShape shape = new CirclePhysShape(radius);
@@ -95,7 +95,7 @@ namespace physics.Engine
             return obj;
         }
 
-        public static PhysicsObject CreateStaticBox(Vector2 start, Vector2 end, bool locked, SFMLShader shader, float mass)
+        public PhysicsObject CreateStaticBox(Vector2 start, Vector2 end, bool locked, SFMLShader shader, float mass)
         {
             // Ensure start and end define the correct bounds.
             var min = new Vector2(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y));
@@ -114,7 +114,7 @@ namespace physics.Engine
             return obj;
         }
 
-        public static PhysicsObject CreateStaticBox2(Vector2 start, Vector2 end, bool locked, SFMLShader shader, float mass)
+        public PhysicsObject CreateStaticBox2(Vector2 start, Vector2 end, bool locked, SFMLShader shader, float mass)
         {
             // Compute the corrected bounding box.
             var min = new Vector2(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y));
@@ -133,7 +133,7 @@ namespace physics.Engine
             return obj;
         }
 
-        public static PhysicsObject CreatePolygon(Vector2 origin, Vector2[] points, SFMLShader shader, bool locked = false, bool canRotate = true)
+        public PhysicsObject CreatePolygon(Vector2 origin, Vector2[] points, SFMLShader shader, bool locked = false, bool canRotate = true)
         {
             // Create the polygon shape.
             IShape shape = new PolygonPhysShape(points);

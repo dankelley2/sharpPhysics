@@ -5,34 +5,43 @@ using System.Numerics;
 
 namespace physics.Engine.Classes.ObjectTemplates
 {
-    public static class ActionTemplates
+    public class ActionTemplates
     {
-        public static void launch(PhysicsSystem physSystem, PhysicsObject physObj, Vector2 StartPointF, Vector2 EndPointF)
+        private readonly PhysicsSystem _physicsSystem;
+        private readonly ObjectTemplates _objectTemplates;
+
+        public ActionTemplates(PhysicsSystem physicsSystem, ObjectTemplates objectTemplates)
         {
-            physSystem.ActivateAtPoint(StartPointF);
-            Vector2 delta = (new Vector2 { X = EndPointF.X, Y = EndPointF.Y } -
-                          new Vector2 { X = StartPointF.X, Y = StartPointF.Y });
-            physSystem.AddVelocityToActive(delta * 2);
+            _physicsSystem = physicsSystem;
+            _objectTemplates = objectTemplates;
         }
 
-        public static void changeShader(PhysicsSystem physSystem, SFMLShader shader)
+        public void Launch(PhysicsObject physObj, Vector2 StartPointF, Vector2 EndPointF)
         {
-            foreach(PhysicsObject obj in physSystem.GetMoveableObjects())
+            _physicsSystem.ActivateAtPoint(StartPointF);
+            Vector2 delta = (new Vector2 { X = EndPointF.X, Y = EndPointF.Y } -
+                          new Vector2 { X = StartPointF.X, Y = StartPointF.Y });
+            _physicsSystem.AddVelocityToActive(delta * 2);
+        }
+
+        public void ChangeShader(SFMLShader shader)
+        {
+            foreach(PhysicsObject obj in _physicsSystem.GetMoveableObjects())
             {
                 obj.Shader = shader;
             }
         }
 
-        public static void PopAndMultiply(PhysicsSystem physSystem)
+        public void PopAndMultiply()
         {
-            foreach(PhysicsObject obj in PhysicsSystem.ListStaticObjects)
+            foreach(PhysicsObject obj in _physicsSystem.ListStaticObjects)
             {
-                physSystem.ActivateAtPoint(new Vector2(obj.Center.X, obj.Center.Y));
+                _physicsSystem.ActivateAtPoint(new Vector2(obj.Center.X, obj.Center.Y));
                 var velocity = obj.Velocity;
                 var origin = obj.Center;
-                physSystem.RemoveActiveObject();
-                physSystem.SetVelocity(ObjectTemplates.CreateSmallBall(origin.X, origin.Y), velocity);
-                physSystem.SetVelocity(ObjectTemplates.CreateSmallBall(origin.X, origin.Y), velocity);
+                _physicsSystem.RemoveActiveObject();
+                _physicsSystem.SetVelocity(_objectTemplates.CreateSmallBall(origin.X, origin.Y), velocity);
+                _physicsSystem.SetVelocity(_objectTemplates.CreateSmallBall(origin.X, origin.Y), velocity);
             }
         }
     }

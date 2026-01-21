@@ -20,6 +20,7 @@ namespace physics.Engine.Integration
     /// </summary>
     public sealed class PersonColliderBridge : IDisposable
     {
+        private readonly PhysicsSystem _physicsSystem;
         private readonly float _worldWidth;
         private readonly float _worldHeight;
         private readonly string _modelPath;
@@ -105,6 +106,7 @@ namespace physics.Engine.Integration
         /// <summary>
         /// Creates a new PersonColliderBridge for pose-based physics interaction.
         /// </summary>
+        /// <param name="physicsSystem">The physics system to create tracking balls in.</param>
         /// <param name="worldWidth">Physics world width (for coordinate scaling).</param>
         /// <param name="worldHeight">Physics world height (for coordinate scaling).</param>
         /// <param name="modelPath">Path to the YOLO Pose ONNX model.</param>
@@ -114,6 +116,7 @@ namespace physics.Engine.Integration
         /// <param name="ballRadius">Radius of the tracking balls (default 20).</param>
         /// <param name="smoothingFactor">Temporal smoothing factor (0 = no smoothing, 0.8 = very smooth). Default 0.5.</param>
         public PersonColliderBridge(
+            PhysicsSystem physicsSystem,
             float worldWidth,
             float worldHeight,
             string modelPath,
@@ -123,6 +126,7 @@ namespace physics.Engine.Integration
             int ballRadius = 20,
             float smoothingFactor = 0.75f)
         {
+            _physicsSystem = physicsSystem;
             _worldWidth = worldWidth;
             _worldHeight = worldHeight;
             _modelPath = modelPath;
@@ -289,7 +293,7 @@ namespace physics.Engine.Integration
 
                 // Head ball (slightly above center) - locked so gravity doesn't affect it
                 var headShader = new SFMLPolyShader();
-                _headBall = PhysicsSystem.CreateStaticCircle(
+                _headBall = _physicsSystem.CreateStaticCircle(
                     centerPos - new Vector2(0, 100),
                     _ballRadius,
                     0.8f,
@@ -299,7 +303,7 @@ namespace physics.Engine.Integration
 
                 // Left hand ball
                 var leftHandShader = new SFMLBallShader();
-                _leftHandBall = PhysicsSystem.CreateStaticCircle(
+                _leftHandBall = _physicsSystem.CreateStaticCircle(
                     centerPos - new Vector2(100, 0),
                     _ballRadius,
                     0.8f,
@@ -309,7 +313,7 @@ namespace physics.Engine.Integration
 
                 // Right hand ball
                 var rightHandShader = new SFMLBallShader();
-                _rightHandBall = PhysicsSystem.CreateStaticCircle(
+                _rightHandBall = _physicsSystem.CreateStaticCircle(
                     centerPos + new Vector2(100, 0),
                     _ballRadius,
                     0.8f,
@@ -472,17 +476,17 @@ namespace physics.Engine.Integration
             {
                 if (_headBall != null)
                 {
-                    PhysicsSystem.RemovalQueue.Enqueue(_headBall);
+                    _physicsSystem.RemovalQueue.Enqueue(_headBall);
                     _headBall = null;
                 }
                 if (_leftHandBall != null)
                 {
-                    PhysicsSystem.RemovalQueue.Enqueue(_leftHandBall);
+                    _physicsSystem.RemovalQueue.Enqueue(_leftHandBall);
                     _leftHandBall = null;
                 }
                 if (_rightHandBall != null)
                 {
-                    PhysicsSystem.RemovalQueue.Enqueue(_rightHandBall);
+                    _physicsSystem.RemovalQueue.Enqueue(_rightHandBall);
                     _rightHandBall = null;
                 }
             }

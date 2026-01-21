@@ -15,6 +15,8 @@ namespace physics.Engine.Input
         private RenderWindow window;
         private PhysicsSystem physicsSystem;
         private View view;
+        private ObjectTemplates objectTemplates;
+        private ActionTemplates actionTemplates;
 
         // Input state properties.
         public bool IsGrabbing { get; private set; } = false;
@@ -41,6 +43,8 @@ namespace physics.Engine.Input
             this.window = window;
             this.physicsSystem = physicsSystem;
             this.view = view;
+            this.objectTemplates = new ObjectTemplates(physicsSystem);
+            this.actionTemplates = new ActionTemplates(physicsSystem, objectTemplates);
 
             // Subscribe to window events.
             window.MouseButtonPressed += OnMouseButtonPressed;
@@ -63,9 +67,8 @@ namespace physics.Engine.Input
                 launchTimer += deltaTime;
                 if (launchTimer >= LaunchInterval)
                 {
-                    ActionTemplates.launch(
-                        physicsSystem,
-                        ObjectTemplates.CreateMedBall(StartPoint.X, StartPoint.Y),
+                    actionTemplates.Launch(
+                        objectTemplates.CreateMedBall(StartPoint.X, StartPoint.Y),
                         StartPoint,
                         MousePosition);
                     launchTimer = 0f;
@@ -100,8 +103,8 @@ namespace physics.Engine.Input
                 {
                     if (IsGrabbing)
                     {
-                        PhysicsSystem.ActiveObject.CanRotate = false;
-                        PhysicsSystem.ActiveObject.Locked = true;
+                        physicsSystem.ActiveObject.CanRotate = false;
+                        physicsSystem.ActiveObject.Locked = true;
                     }
                     else
                     {
@@ -150,7 +153,7 @@ namespace physics.Engine.Input
                     float minY = Math.Min(BoxStartPoint.Y, BoxEndPoint.Y);
                     float maxX = Math.Max(BoxStartPoint.X, BoxEndPoint.X);
                     float maxY = Math.Max(BoxStartPoint.Y, BoxEndPoint.Y);
-                    ObjectTemplates.CreateBox(new Vector2(minX, minY), (int)maxX - (int)minX, (int)maxY - (int)minY);
+                    objectTemplates.CreateBox(new Vector2(minX, minY), (int)maxX - (int)minX, (int)maxY - (int)minY);
                     IsCreatingBox = false;
                 }
                 IsMousePressedRight = false;
@@ -220,16 +223,16 @@ namespace physics.Engine.Input
                     physicsSystem.FreezeStaticObjects();
                     break;
                 case Keyboard.Key.P:
-                    ActionTemplates.changeShader(physicsSystem, new SFMLPolyShader());
+                    actionTemplates.ChangeShader(new SFMLPolyShader());
                     break;
                 case Keyboard.Key.V:
-                    ActionTemplates.changeShader(physicsSystem, new SFMLPolyRainbowShader());
+                    actionTemplates.ChangeShader(new SFMLPolyRainbowShader());
                     break;
                 case Keyboard.Key.G:
-                    ObjectTemplates.CreateAttractor(MousePosition.X, MousePosition.Y);
+                    objectTemplates.CreateAttractor(MousePosition.X, MousePosition.Y);
                     break;
                 case Keyboard.Key.Semicolon:
-                    ActionTemplates.PopAndMultiply(physicsSystem);
+                    actionTemplates.PopAndMultiply();
                     break;
                 case Keyboard.Key.Escape:
                     window.Close();

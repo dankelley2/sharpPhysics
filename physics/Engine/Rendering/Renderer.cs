@@ -238,7 +238,7 @@ namespace physics.Engine.Rendering
             }
 
                 // Draw all static objects with their shaders.
-                foreach (var obj in PhysicsSystem.ListStaticObjects)
+                foreach (var obj in _physicsSystem.ListStaticObjects)
                 {
                     var sfmlShader = obj.Shader;
                     if (sfmlShader != null)
@@ -474,7 +474,7 @@ namespace physics.Engine.Rendering
                 $"ms physics time: {msPhysicsTime}\n" +
                 $"ms draw time: {msDrawTime}\n" +
                 $"frame rate: {1000 / Math.Max(msFrameTime, 1)}\n" +
-                $"num objects: {PhysicsSystem.ListStaticObjects.Count}";
+                $"num objects: {_physicsSystem.ListStaticObjects.Count}";
             Window.Draw(debugText);
 
             // Draw all UI elements

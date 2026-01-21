@@ -18,6 +18,7 @@ namespace physics.Demo
     public class DemoGame : IGame
     {
         private GameEngine _engine = null!;
+        private ObjectTemplates _objectTemplates = null!;
         private PlayerController _playerController = null!;
         private PersonColliderBridge? _personColliderBridge;
 
@@ -27,6 +28,7 @@ namespace physics.Demo
         public void Initialize(GameEngine engine)
         {
             _engine = engine;
+            _objectTemplates = new ObjectTemplates(engine.PhysicsSystem);
 
             InitializeWorld(engine.WindowWidth, engine.WindowHeight);
             InitializePersonDetection(engine.WindowWidth, engine.WindowHeight);
@@ -35,10 +37,10 @@ namespace physics.Demo
         private void InitializeWorld(uint worldWidth, uint worldHeight)
         {
             // Create walls
-            ObjectTemplates.CreateWall(new Vector2(0, 0), 15, (int)worldHeight);
-            ObjectTemplates.CreateWall(new Vector2((int)worldWidth - 15, 0), 15, (int)worldHeight);
-            ObjectTemplates.CreateWall(new Vector2(0, 0), (int)worldWidth, 15);
-            ObjectTemplates.CreateWall(new Vector2(0, (int)worldHeight - 15), (int)worldWidth, 15);
+            _objectTemplates.CreateWall(new Vector2(0, 0), 15, (int)worldHeight);
+            _objectTemplates.CreateWall(new Vector2((int)worldWidth - 15, 0), 15, (int)worldHeight);
+            _objectTemplates.CreateWall(new Vector2(0, 0), (int)worldWidth, 15);
+            _objectTemplates.CreateWall(new Vector2(0, (int)worldHeight - 15), (int)worldWidth, 15);
 
             // Create a grid of medium balls
             for (int i = 0; i < 1000; i += 50)
@@ -46,14 +48,14 @@ namespace physics.Demo
                 for (int j = 0; j < 600; j += 50)
                 {
                     if (j % 80 == 0)
-                        ObjectTemplates.CreateMedBall(i + 210, j + 40);
+                        _objectTemplates.CreateMedBall(i + 210, j + 40);
                     else
-                        ObjectTemplates.CreateMedBall(i + 200, j + 40);
+                        _objectTemplates.CreateMedBall(i + 200, j + 40);
                 }
             }
 
             // Create player
-            var player = ObjectTemplates.CreatePolygonCapsule(new Vector2(50, 20));
+            var player = _objectTemplates.CreatePolygonCapsule(new Vector2(50, 20));
             _playerController = new PlayerController(player);
         }
 
@@ -62,6 +64,7 @@ namespace physics.Demo
             try
             {
                 _personColliderBridge = new PersonColliderBridge(
+                    physicsSystem: _engine.PhysicsSystem,
                     worldWidth: worldWidth,
                     worldHeight: worldHeight,
                     modelPath: MODEL_PATH,
