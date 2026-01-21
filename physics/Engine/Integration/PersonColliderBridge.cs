@@ -29,7 +29,7 @@ namespace physics.Engine.Integration
         private readonly int _ballRadius;
         private readonly float _smoothingFactor;
 
-        private YoloV8PoseDetector? _poseDetector;
+        private IPoseDetector? _poseDetector;
         private IFrameSource? _camera;
         private Thread? _detectionThread;
         private CancellationTokenSource? _cts;
@@ -61,9 +61,9 @@ namespace physics.Engine.Integration
         // Skeleton transform parameters (adjustable from game engine)
         private Vector2 _skeletonOffset = Vector2.Zero;
         private float _skeletonScale = 0.5f;
-        private Vector2 _skeletonOrigin = new Vector2(0.5f, 0.8f); // Normalized origin point for scaling
+        private Vector2 _skeletonOrigin = new Vector2(0.5f, 1f); // Normalized origin point for scaling
 
-        // Keypoint indices for YOLOv8 COCO format
+        // Keypoint indices for Yolo COCO format
         private const int NOSE_INDEX = 0;
         private const int LEFT_WRIST_INDEX = 9;
         private const int RIGHT_WRIST_INDEX = 10;
@@ -107,7 +107,7 @@ namespace physics.Engine.Integration
         /// </summary>
         /// <param name="worldWidth">Physics world width (for coordinate scaling).</param>
         /// <param name="worldHeight">Physics world height (for coordinate scaling).</param>
-        /// <param name="modelPath">Path to the YOLOv8-Pose ONNX model.</param>
+        /// <param name="modelPath">Path to the YOLO Pose ONNX model.</param>
         /// <param name="flipX">Flip X coordinates (mirror mode).</param>
         /// <param name="flipY">Flip Y coordinates.</param>
         /// <param name="trackingSpeed">How fast balls move toward target positions (higher = faster).</param>
@@ -205,8 +205,8 @@ namespace physics.Engine.Integration
                     throw new System.IO.FileNotFoundException($"Model file not found: {_modelPath}");
                 }
 
-                _poseDetector = new YoloV8PoseDetector(_modelPath, useGpu: true);
-                Console.WriteLine("[PersonBridge] YOLOv8 model loaded successfully");
+                _poseDetector = new YoloV26PoseDetector(_modelPath, useGpu: true);
+                Console.WriteLine("[PersonBridge] Yolo model loaded successfully");
 
                 _camera = new MjpegCameraFrameSource(url, 5, true);
                 Console.WriteLine($"[PersonBridge] Stream {url} opened at {width}x{height} @ {fps}fps");
@@ -248,8 +248,8 @@ namespace physics.Engine.Integration
                     throw new System.IO.FileNotFoundException($"Model file not found: {_modelPath}");
                 }
 
-                _poseDetector = new YoloV8PoseDetector(_modelPath, useGpu: true);
-                Console.WriteLine("[PersonBridge] YOLOv8 model loaded successfully");
+                _poseDetector = new YoloV26PoseDetector(_modelPath, useGpu: true);
+                Console.WriteLine("[PersonBridge] Yolo model loaded successfully");
 
                 _camera = new OpenCvCameraFrameSource(cameraIndex, width, height, fps);
                 Console.WriteLine($"[PersonBridge] Camera {cameraIndex} opened at {width}x{height} @ {fps}fps");
@@ -288,10 +288,10 @@ namespace physics.Engine.Integration
                 var centerPos = new Vector2(_worldWidth / 2, _worldHeight / 2);
 
                 // Head ball (slightly above center) - locked so gravity doesn't affect it
-                var headShader = new SFMLBallShader();
+                var headShader = new SFMLPolyShader();
                 _headBall = PhysicsSystem.CreateStaticCircle(
                     centerPos - new Vector2(0, 100),
-                    _ballRadius * 2,
+                    _ballRadius,
                     0.8f,
                     locked: true,  // Locked so gravity doesn't affect it
                     headShader
@@ -301,7 +301,7 @@ namespace physics.Engine.Integration
                 var leftHandShader = new SFMLBallShader();
                 _leftHandBall = PhysicsSystem.CreateStaticCircle(
                     centerPos - new Vector2(100, 0),
-                    _ballRadius * 2,
+                    _ballRadius,
                     0.8f,
                     locked: true,
                     leftHandShader
@@ -311,7 +311,7 @@ namespace physics.Engine.Integration
                 var rightHandShader = new SFMLBallShader();
                 _rightHandBall = PhysicsSystem.CreateStaticCircle(
                     centerPos + new Vector2(100, 0),
-                    _ballRadius * 2,
+                    _ballRadius,
                     0.8f,
                     locked: true,
                     rightHandShader

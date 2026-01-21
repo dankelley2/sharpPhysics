@@ -36,7 +36,7 @@ namespace physics.Engine
         private uint _windowHeight;
 
         // Path to the ONNX model - YOLOv8-Pose model for hand/head tracking
-        private const string MODEL_PATH = "models/pose_detection.onnx";
+        private const string MODEL_PATH = "models/yolo26s_pose.onnx";
 
         public GameWindow(uint width, uint height, string title)
         {
