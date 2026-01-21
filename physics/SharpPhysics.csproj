@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <TargetFramework>net9.0</TargetFramework>
-    <RootNamespace>physics</RootNamespace>
-    <AssemblyName>SharpPhysics</AssemblyName>
+    <RootNamespace>SharpPhysics.Engine</RootNamespace>
+    <AssemblyName>SharpPhysics.Engine</AssemblyName>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UseWindowsForms>false</UseWindowsForms>
     <Platforms>AnyCPU</Platforms>
     <PlatformTarget>AnyCPU</PlatformTarget>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="SFML.Net" />
@@ -26,9 +27,8 @@
     <None Update="Resources/good_timing_bd.otf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <!-- Copy models folder to output (ONNX model for person detection) -->
-    <None Update="models\**\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Demo\" />
   </ItemGroup>
 </Project>

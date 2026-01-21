@@ -585,7 +585,7 @@ namespace physics.Engine.Integration
 
             // Temporarily unlock to move
             ball.Locked = false;
-            ball.Velocity = delta * 5;
+            ball.Velocity = delta * 10;
             ball.Move(delta);
             ball.Locked = true;
 
