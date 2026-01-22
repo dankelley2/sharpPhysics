@@ -197,15 +197,11 @@ namespace physics.Engine.Rendering
         /// <param name="msPhysicsTime"></param>
         /// <param name="msDrawTime"></param>
         /// <param name="msFrameTime"></param>
-        /// <param name="isCreatingBox"></param>
-        /// <param name="boxStartPoint"></param>
-        /// <param name="boxEndPoint"></param>
-        public void Render(long msPhysicsTime, long msDrawTime, long msFrameTime,
-                           bool isCreatingBox, Vector2 boxStartPoint, Vector2 boxEndPoint)
+        public void Render(long msPhysicsTime, long msDrawTime, long msFrameTime)
         {
 
             // Draw Game View
-            DrawGameView(isCreatingBox, boxStartPoint, boxEndPoint);
+            DrawGameView();
 
             DrawUiView(msPhysicsTime, msDrawTime, msFrameTime);
 
@@ -221,30 +217,13 @@ namespace physics.Engine.Rendering
             Window.Display();
         }
 
-        private void DrawGameView(bool isCreatingBox, Vector2 boxStartPoint, Vector2 boxEndPoint)
+        private void DrawGameView()
         {
             // Switch to Game window view
             Window.SetView(GameView);
 
             // Clear with black color
             Window.Clear(Color.Black);
-
-            // Draw preview rectangle when creating a box.
-            if (isCreatingBox)
-            {
-                float minX = Math.Min(boxStartPoint.X, boxEndPoint.X);
-                float minY = Math.Min(boxStartPoint.Y, boxEndPoint.Y);
-                float width = Math.Abs(boxEndPoint.X - boxStartPoint.X);
-                float height = Math.Abs(boxEndPoint.Y - boxStartPoint.Y);
-                RectangleShape previewRect = new RectangleShape(new Vector2f(width, height))
-                {
-                    Position = new Vector2f(minX, minY),
-                    FillColor = new Color(0, 0, 0, 0),
-                    OutlineColor = Color.Red,
-                    OutlineThickness = 2
-                };
-                Window.Draw(previewRect);
-            }
 
             // Draw all static objects with their shaders.
             foreach (var obj in _physicsSystem.ListStaticObjects)

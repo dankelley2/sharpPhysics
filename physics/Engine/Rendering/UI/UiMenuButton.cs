@@ -14,7 +14,6 @@ namespace physics.Engine.Rendering.UI
         private RectangleShape _border;
         private Text _titleText;
         private Text _descriptionText;
-        private Text _iconText;
         private Color _baseColor;
         private Color _hoverColor;
         private Color _borderColor;
@@ -34,19 +33,12 @@ namespace physics.Engine.Rendering.UI
             set => _descriptionText.DisplayedString = value;
         }
 
-        public string Icon
-        {
-            get => _iconText.DisplayedString;
-            set => _iconText.DisplayedString = value;
-        }
-
         public UiMenuButton(
             string title,
             string description,
             Font font,
             Vector2 position,
             Vector2 size,
-            string icon = "",
             Color? baseColor = null,
             Color? hoverColor = null,
             Color? borderColor = null)
@@ -69,13 +61,6 @@ namespace physics.Engine.Rendering.UI
             _border = new RectangleShape(new Vector2f(6, size.Y))
             {
                 FillColor = _borderColor
-            };
-
-            // Icon text (emoji)
-            _iconText = new Text(icon, font)
-            {
-                FillColor = Color.White,
-                CharacterSize = 48
             };
 
             // Title text
@@ -114,16 +99,12 @@ namespace physics.Engine.Rendering.UI
             _border.Position = new Vector2f(x, y);
             target.Draw(_border);
 
-            // Draw icon
-            _iconText.Position = new Vector2f(x + 20, y + 15);
-            target.Draw(_iconText);
-
-            // Draw title
-            _titleText.Position = new Vector2f(x + 90, y + 18);
+            // Draw title - adjusted for better fit
+            _titleText.Position = new Vector2f(x + 20, y + 5);
             target.Draw(_titleText);
 
-            // Draw description
-            _descriptionText.Position = new Vector2f(x + 90, y + 55);
+            // Draw description - adjusted to fit within button
+            _descriptionText.Position = new Vector2f(x + 30, y + 40);
             target.Draw(_descriptionText);
         }
 

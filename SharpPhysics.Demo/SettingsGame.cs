@@ -49,9 +49,9 @@ public class SettingsGame : IGame
         LoadCategorySettings();
 
         Console.WriteLine("═══════════════════════════════════════");
-        Console.WriteLine("   ⚙️  SETTINGS  ⚙️");
+        Console.WriteLine("         SETTINGS");
         Console.WriteLine("═══════════════════════════════════════");
-        Console.WriteLine("Use ↑/↓ to navigate, Enter to edit, ESC to save and return.");
+        Console.WriteLine("Use Up/Down to navigate, Enter to edit, ESC to save and return.");
         Console.WriteLine("═══════════════════════════════════════");
     }
 
@@ -59,8 +59,8 @@ public class SettingsGame : IGame
     {
         var font = _engine.Renderer.DefaultFont;
         float centerX = _engine.WindowWidth / 2f;
-        float tabY = 70f;
-        float tabWidth = 140f;
+        float tabY = 80f;
+        float tabWidth = 180f;
         float tabSpacing = 10f;
         float tabStartX = centerX - ((_categories.Length * tabWidth + (_categories.Length - 1) * tabSpacing) / 2f);
 
@@ -73,7 +73,7 @@ public class SettingsGame : IGame
                 "",
                 font,
                 new Vector2(tabStartX + i * (tabWidth + tabSpacing), tabY),
-                new Vector2(tabWidth, 35f),
+                new Vector2(tabWidth, 40f),
                 baseColor: isActive ? new Color(80, 80, 120) : new Color(50, 50, 70),
                 hoverColor: new Color(100, 100, 140),
                 borderColor: isActive ? new Color(150, 150, 255) : new Color(80, 80, 100)
@@ -235,9 +235,9 @@ public class SettingsGame : IGame
         // Handle mouse click on settings rows
         if (keyState.LeftMousePressed && _editingIndex < 0)
         {
-            float startY = 130f;
-            float rowHeight = 35f;
-            float labelX = 100f;
+            float startY = 145f;
+            float rowHeight = 38f;
+            float labelX = 120f;
 
             for (int i = 0; i < _currentSettings.Count; i++)
             {
@@ -291,19 +291,19 @@ public class SettingsGame : IGame
     public void Render(Renderer renderer)
     {
         // Title
-        renderer.DrawText("⚙️ SETTINGS", _engine.WindowWidth / 2f - 80f, 20f, 32, new Color(200, 200, 255));
+        renderer.DrawText("SETTINGS", _engine.WindowWidth / 2f - 100f, 20f, 36, new Color(200, 200, 255));
 
         // Instructions
         string instructions = _editingIndex >= 0 
             ? "Type value, press ENTER to confirm, ESC to cancel"
-            : "↑/↓ Navigate  |  SPACE Edit  |  ESC Save & Return";
-        renderer.DrawText(instructions, _engine.WindowWidth / 2f - 200f, _engine.WindowHeight - 35f, 14, new Color(150, 150, 180));
+            : "Up/Down Navigate  |  SPACE Edit  |  ESC Save & Return";
+        renderer.DrawText(instructions, _engine.WindowWidth / 2f - 220f, _engine.WindowHeight - 35f, 14, new Color(150, 150, 180));
 
         // Settings list
-        float startY = 130f;
-        float rowHeight = 35f;
-        float labelX = 100f;
-        float valueX = 400f;
+        float startY = 145f;
+        float rowHeight = 38f;
+        float labelX = 120f;
+        float valueX = 420f;
         float hintX = 750f;
 
         for (int i = 0; i < _currentSettings.Count; i++)
@@ -316,7 +316,7 @@ public class SettingsGame : IGame
             // Selection indicator
             if (isSelected)
             {
-                renderer.DrawText("►", labelX - 25f, y, 18, new Color(100, 200, 255));
+                renderer.DrawText(">", labelX - 25f, y, 18, new Color(100, 200, 255));
             }
 
             // Label
@@ -334,23 +334,23 @@ public class SettingsGame : IGame
             renderer.DrawText(setting.Hint, hintX, y, 12, new Color(100, 100, 120));
         }
 
-        // Category-specific hints
-        float hintY = startY + _currentSettings.Count * rowHeight + 30f;
-        switch (_currentCategory)
-        {
-            case "Camera":
-                renderer.DrawText("💡 Common URL formats:", labelX, hintY, 14, new Color(180, 180, 200));
-                renderer.DrawText("• IP Webcam (Android): http://<ip>:8080/video", labelX + 20f, hintY + 22f, 12, new Color(140, 140, 160));
-                renderer.DrawText("• ESP32-CAM: http://<ip>:81/stream", labelX + 20f, hintY + 40f, 12, new Color(140, 140, 160));
-                break;
-            case "Detection":
-                renderer.DrawText("💡 Larger ball radius = easier tracking, smaller = more precise", labelX, hintY, 14, new Color(180, 180, 200));
-                break;
-            case "Display":
-                renderer.DrawText("⚠️ Display changes require application restart", labelX, hintY, 14, new Color(255, 200, 100));
-                break;
+            // Category-specific hints
+            float hintY = startY + _currentSettings.Count * rowHeight + 35f;
+            switch (_currentCategory)
+            {
+                case "Camera":
+                    renderer.DrawText("Common URL formats:", labelX, hintY, 14, new Color(180, 180, 200));
+                    renderer.DrawText("- IP Webcam (Android): http://<ip>:8080/video", labelX + 20f, hintY + 22f, 12, new Color(140, 140, 160));
+                    renderer.DrawText("- ESP32-CAM: http://<ip>:81/stream", labelX + 20f, hintY + 40f, 12, new Color(140, 140, 160));
+                    break;
+                case "Detection":
+                    renderer.DrawText("Larger ball radius = easier tracking, smaller = more precise", labelX, hintY, 14, new Color(180, 180, 200));
+                    break;
+                case "Display":
+                    renderer.DrawText("WARNING: Display changes require application restart", labelX, hintY, 14, new Color(255, 200, 100));
+                    break;
+            }
         }
-    }
 
     public void Shutdown()
     {

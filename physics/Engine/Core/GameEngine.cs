@@ -189,10 +189,7 @@ namespace physics.Engine.Core
                 long renderStart = _stopwatch.ElapsedMilliseconds;
 
                 // Engine rendering (physics objects, debug UI)
-                _renderer.Render(MsPhysicsTime, MsDrawTime, MsFrameTime,
-                                 _inputManager.IsCreatingBox,
-                                 _inputManager.BoxStartPoint,
-                                 _inputManager.BoxEndPoint);
+                _renderer.Render(MsPhysicsTime, MsDrawTime, MsFrameTime);
 
                 // Game-specific rendering (skeleton overlay, score display, etc.)
                 _currentGame.Render(_renderer);

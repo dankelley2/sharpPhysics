@@ -3,37 +3,20 @@ using SFML.System;
 using SFML.Window;
 using System;
 using System.Numerics;
-using physics.Engine.Classes.ObjectTemplates;
-using physics.Engine.Shaders;
 using physics.Engine.Helpers;
-using physics.Engine.Rendering.UI; // Added to access UI elements
+using physics.Engine.Rendering.UI;
 
 namespace physics.Engine.Input
 {
     public class InputManager
     {
         private RenderWindow window;
-        private PhysicsSystem physicsSystem;
         private View view;
-        private ObjectTemplates objectTemplates;
-        private ActionTemplates actionTemplates;
 
-        // Input state properties.
-        public bool IsGrabbing { get; private set; } = false;
-        public bool IsMousePressedLeft { get; private set; } = false;
-        public bool IsMousePressedRight { get; private set; } = false;
-        public bool IsCreatingBox { get; private set; } = false;
+        // Input state properties - now minimal, just for panning
         public bool IsPanning { get; private set; } = false;
-
-        public Vector2 StartPoint { get; private set; }
         public Vector2 MousePosition { get; private set; }
-        public Vector2 BoxStartPoint { get; private set; }
-        public Vector2 BoxEndPoint { get; private set; }
         public Vector2 PanStartPos { get; private set; }
-
-        private float launchTimer = 0f;
-        private const float LaunchInterval = 0.035f;
-        private const float playerMoveSpeed = 100f; // adjust speed as needed
 
         // Key state for polling important keys.
         private KeyState keyState = new KeyState();
@@ -41,16 +24,12 @@ namespace physics.Engine.Input
         public InputManager(RenderWindow window, PhysicsSystem physicsSystem, View view)
         {
             this.window = window;
-            this.physicsSystem = physicsSystem;
             this.view = view;
-            this.objectTemplates = new ObjectTemplates(physicsSystem);
-            this.actionTemplates = new ActionTemplates(physicsSystem, objectTemplates);
 
             // Subscribe to window events.
             window.MouseButtonPressed += OnMouseButtonPressed;
             window.MouseButtonReleased += OnMouseButtonReleased;
             window.MouseMoved += OnMouseMoved;
-            //window.MouseWheelScrolled += OnMouseWheelScrolled;
             window.KeyPressed += OnKeyPressed;
             window.KeyReleased += OnKeyReleased;
         }
@@ -58,68 +37,23 @@ namespace physics.Engine.Input
         // Called once per frame to handle continuous actions.
         public void Update(float deltaTime)
         {
-            if (IsGrabbing)
-            {
-                physicsSystem.HoldActiveAtPoint(MousePosition);
-            }
-            else if (IsMousePressedLeft)
-            {
-                launchTimer += deltaTime;
-                if (launchTimer >= LaunchInterval)
-                {
-                    actionTemplates.Launch(
-                        objectTemplates.CreateMedBall(StartPoint.X, StartPoint.Y),
-                        StartPoint,
-                        MousePosition);
-                    launchTimer = 0f;
-                }
-            }
+            // InputManager now only handles view panning
+            // Game-specific input is handled in each game's Update method
         }
 
         private void OnMouseButtonPressed(object sender, MouseButtonEventArgs e)
         {
             Vector2 worldPos = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view).ToSystemNumerics();
-            // New UI click handling priority:
+
+            // UI click handling priority:
             foreach (var ui in UiElement.GlobalUiElements)
             {
                 if (ui.HandleClick(worldPos))
                     return; // UI handled the click; do not proceed further.
             }
-            if (e.Button == Mouse.Button.Left)
-            {
-                if (physicsSystem.ActivateAtPoint(worldPos))
-                {
-                    IsGrabbing = true;
-                    return;
-                }
-                StartPoint = worldPos;
-                IsMousePressedLeft = true;
-                launchTimer = 0f;
-            }
-            else if (e.Button == Mouse.Button.Right)
-            {
-                bool objectFound = physicsSystem.ActivateAtPoint(worldPos);
-                if (objectFound)
-                {
-                    if (IsGrabbing)
-                    {
-                        physicsSystem.ActiveObject.CanRotate = false;
-                        physicsSystem.ActiveObject.Locked = true;
-                    }
-                    else
-                    {
-                        physicsSystem.RemoveActiveObject();
-                    }
-                }
-                else
-                {
-                    IsCreatingBox = true;
-                    BoxStartPoint = worldPos;
-                    BoxEndPoint = worldPos;
-                }
-                IsMousePressedRight = true;
-            }
-            else if (e.Button == Mouse.Button.Middle)
+
+            // Only handle middle mouse for panning - games handle their own input
+            if (e.Button == Mouse.Button.Middle)
             {
                 IsPanning = true;
                 PanStartPos = new Vector2(e.X, e.Y);
@@ -130,35 +64,9 @@ namespace physics.Engine.Input
         {
             // Stop any ongoing UI drag operations
             UiElement.StopDrag();
-            
-            if (e.Button == Mouse.Button.Left)
-            {
-                if (IsGrabbing)
-                {
-                    physicsSystem.ReleaseActiveObject();
-                    IsGrabbing = false;
-                    return;
-                }
-                if (IsMousePressedLeft)
-                {
-                    IsMousePressedLeft = false;
-                    launchTimer = 0f;
-                }
-            }
-            else if (e.Button == Mouse.Button.Right)
-            {
-                if (IsCreatingBox)
-                {
-                    float minX = Math.Min(BoxStartPoint.X, BoxEndPoint.X);
-                    float minY = Math.Min(BoxStartPoint.Y, BoxEndPoint.Y);
-                    float maxX = Math.Max(BoxStartPoint.X, BoxEndPoint.X);
-                    float maxY = Math.Max(BoxStartPoint.Y, BoxEndPoint.Y);
-                    objectTemplates.CreateBox(new Vector2(minX, minY), (int)maxX - (int)minX, (int)maxY - (int)minY);
-                    IsCreatingBox = false;
-                }
-                IsMousePressedRight = false;
-            }
-            else if (e.Button == Mouse.Button.Middle)
+
+            // Only handle middle mouse release for panning
+            if (e.Button == Mouse.Button.Middle)
             {
                 IsPanning = false;
             }
@@ -175,6 +83,7 @@ namespace physics.Engine.Input
                 return;
             }
 
+            // Handle view panning
             if (IsPanning)
             {
                 Vector2i prevPixelPos = new Vector2i((int)PanStartPos.X, (int)PanStartPos.Y);
@@ -185,58 +94,18 @@ namespace physics.Engine.Input
                 view.Center += delta.ToSfml();
                 PanStartPos = new Vector2(e.X, e.Y);
             }
-
-            if (IsCreatingBox)
-            {
-                BoxEndPoint = MousePosition;
-            }
-            else if (IsMousePressedRight)
-            {
-                Vector2 worldPos = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view).ToSystemNumerics();
-                if (physicsSystem.ActivateAtPoint(worldPos))
-                {
-                    physicsSystem.RemoveActiveObject();
-                }
-            }
-        }
-
-        private void OnMouseWheelScrolled(object sender, MouseWheelScrollEventArgs e)
-        {
-            Console.WriteLine("Scroll delta: " + e.Delta);
-            //Uncomment to enable zooming:
-             if (e.Delta > 0)
-            {
-                view.Zoom(0.9f);
-            }
-            else
-            {
-                view.Zoom(1.1f);
-            }
         }
 
         private void OnKeyPressed(object sender, KeyEventArgs e)
         {
+            // Track keyboard state for games to poll
             switch (e.Code)
             {
                 case Keyboard.Key.Space:
                     keyState.Space = true;
-                    physicsSystem.FreezeStaticObjects();
-                    break;
-                case Keyboard.Key.P:
-                    actionTemplates.ChangeShader(new SFMLPolyShader());
-                    break;
-                case Keyboard.Key.V:
-                    actionTemplates.ChangeShader(new SFMLPolyRainbowShader());
-                    break;
-                case Keyboard.Key.G:
-                    objectTemplates.CreateAttractor(MousePosition.X, MousePosition.Y);
-                    break;
-                case Keyboard.Key.Semicolon:
-                    actionTemplates.PopAndMultiply();
                     break;
                 case Keyboard.Key.Escape:
                     keyState.Escape = true;
-                    // Don't close window - let games handle ESC
                     break;
                 case Keyboard.Key.Left:
                     keyState.Left = true;
@@ -259,96 +128,73 @@ namespace physics.Engine.Input
                 case Keyboard.Key.Backspace:
                     keyState.Backspace = true;
                     break;
-                // New zoom key cases using Shift + '+' and Shift + '-'
-                case Keyboard.Key.Equal:
-                    if (Keyboard.IsKeyPressed(Keyboard.Key.LShift) || Keyboard.IsKeyPressed(Keyboard.Key.RShift))
-                    {
-                        view.Zoom(0.9f);
-                    }
-                    break;
-                case Keyboard.Key.Hyphen:
-                    if (Keyboard.IsKeyPressed(Keyboard.Key.LShift) || Keyboard.IsKeyPressed(Keyboard.Key.RShift))
-                    {
-                        view.Zoom(1.1f);
-                    }
-                    break;
             }
         }
 
-                        private void OnKeyReleased(object sender, KeyEventArgs e)
-                        {
-                            switch (e.Code)
-                            {
-                                case Keyboard.Key.Space:
-                                    keyState.Space = false;
-                                    break;
-                                case Keyboard.Key.Escape:
-                                    keyState.Escape = false;
-                                    break;
-                                case Keyboard.Key.Left:
-                                    keyState.Left = false;
-                                    break;
-                                case Keyboard.Key.Right:
-                                    keyState.Right = false;
-                                    break;
-                                case Keyboard.Key.Up:
-                                    keyState.Up = false;
-                                    break;
-                                case Keyboard.Key.Down:
-                                    keyState.Down = false;
-                                    break;
-                                case Keyboard.Key.Enter:
-                                    keyState.Enter = false;
-                                    break;
-                                case Keyboard.Key.Tab:
-                                    keyState.Tab = false;
-                                    break;
-                                case Keyboard.Key.Backspace:
-                                    keyState.Backspace = false;
-                                    break;
+                                private void OnKeyReleased(object sender, KeyEventArgs e)
+                                {
+                                    switch (e.Code)
+                                    {
+                                        case Keyboard.Key.Space:
+                                            keyState.Space = false;
+                                            break;
+                                        case Keyboard.Key.Escape:
+                                            keyState.Escape = false;
+                                            break;
+                                        case Keyboard.Key.Left:
+                                            keyState.Left = false;
+                                            break;
+                                        case Keyboard.Key.Right:
+                                            keyState.Right = false;
+                                            break;
+                                        case Keyboard.Key.Up:
+                                            keyState.Up = false;
+                                            break;
+                                        case Keyboard.Key.Down:
+                                            keyState.Down = false;
+                                            break;
+                                        case Keyboard.Key.Enter:
+                                            keyState.Enter = false;
+                                            break;
+                                        case Keyboard.Key.Tab:
+                                            keyState.Tab = false;
+                                            break;
+                                        case Keyboard.Key.Backspace:
+                                            keyState.Backspace = false;
+                                            break;
+                                    }
+                                }
+
+                                /// <summary>
+                                /// Returns the current mouse position in world coordinates.
+                                /// </summary>
+                                public Vector2 GetMousePosition() => MousePosition;
+
+                                /// <summary>
+                                /// Returns a snapshot of the current key states.
+                                /// The caller can poll this method each frame to determine which keys are pressed.
+                                /// </summary>
+                                public KeyState GetKeyState()
+                                {
+                                    // Return a copy so external systems cannot modify internal state.
+                                    return new KeyState
+                                    {
+                                        Left = keyState.Left,
+                                        Right = keyState.Right,
+                                        Up = keyState.Up,
+                                        Down = keyState.Down,
+                                        Space = keyState.Space,
+                                        Escape = keyState.Escape,
+                                        Enter = keyState.Enter,
+                                        Tab = keyState.Tab,
+                                        Backspace = keyState.Backspace,
+                                        LeftMouseDown = false, // Games now handle their own mouse state
+                                        RightMouseDown = false,
+                                        MiddleMouseDown = IsPanning,
+                                        LeftMousePressed = false,
+                                        RightMousePressed = false,
+                                        MousePosition = MousePosition
+                                    };
+                                }
                             }
                         }
-
-                        /// <summary>
-                        /// Returns the current mouse position in world coordinates.
-                        /// </summary>
-                        public Vector2 GetMousePosition() => MousePosition;
-
-                        /// <summary>
-                        /// Returns a snapshot of the current key states.
-                        /// The caller can poll this method each frame to determine which keys are pressed.
-                        /// </summary>
-                        public KeyState GetKeyState()
-                        {
-                            // Track edge detection for mouse buttons
-                            bool leftPressed = IsMousePressedLeft && !_prevLeftMouse;
-                            bool rightPressed = IsMousePressedRight && !_prevRightMouse;
-                            _prevLeftMouse = IsMousePressedLeft;
-                            _prevRightMouse = IsMousePressedRight;
-
-                            // Return a copy so external systems cannot modify internal state.
-                            return new KeyState
-                            {
-                                Left = keyState.Left,
-                                Right = keyState.Right,
-                                Up = keyState.Up,
-                                Down = keyState.Down,
-                                Space = keyState.Space,
-                                Escape = keyState.Escape,
-                                Enter = keyState.Enter,
-                                Tab = keyState.Tab,
-                                Backspace = keyState.Backspace,
-                                LeftMouseDown = IsMousePressedLeft,
-                                RightMouseDown = IsMousePressedRight,
-                                MiddleMouseDown = IsPanning,
-                                LeftMousePressed = leftPressed,
-                                RightMousePressed = rightPressed,
-                                MousePosition = MousePosition
-                            };
-                        }
-
-                        // Previous frame mouse state for edge detection
-                        private bool _prevLeftMouse = false;
-                        private bool _prevRightMouse = false;
-                    }
-                }

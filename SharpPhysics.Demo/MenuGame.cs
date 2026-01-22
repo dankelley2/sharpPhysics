@@ -61,9 +61,9 @@ public class MenuGame : IGame
     {
         var font = _engine.Renderer.DefaultFont;
         float centerX = _engine.WindowWidth / 2f;
-        float startY = 120f;
+        float startY = 145f;
         float buttonWidth = 450f;
-        float buttonHeight = 70f;
+        float buttonHeight = 60f;
         float spacing = 12f;
 
         // Rain Catcher button
@@ -124,7 +124,7 @@ public class MenuGame : IGame
 
         // Settings button
         var settingsButton = new UiMenuButton(
-            "⚙️ Settings",
+            "Settings",
             "Configure camera, detection, and display options",
             font,
             new Vector2(centerX - buttonWidth / 2, startY + (buttonHeight + spacing) * 4),
