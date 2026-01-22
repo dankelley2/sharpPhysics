@@ -71,62 +71,60 @@ public class DemoGame : IGame
                 worldWidth: worldWidth,
                 worldHeight: worldHeight,
                 modelPath: MODEL_PATH,
-                flipX: true,         // Mirror mode for natural interaction
-                flipY: false,        // SharpPhysics uses Y-down coordinate system
-                ballRadius: 20,      // Radius of head/hand tracking balls
+                flipX: true, // Mirror mode for natural interaction
+                flipY: false, // SharpPhysics uses Y-down coordinate system
+                ballRadius: 20, // Radius of head/hand tracking balls
                 smoothingFactor: 0.5f // Smoothing to reduce jitter
             );
 
-            _personColliderBridge.OnError += (s, ex) =>
+            _personColliderBridge.OnError += (s, ex) => { Console.WriteLine($"Person Detection Error: {ex.Message}"); };
+
+            _personColliderBridge.OnPersonBodyUpdated += (s, balls) =>
             {
-                Console.WriteLine($"Person Detection Error: {ex.Message}");
+                // Uncomment for debug output:
+                // Console.WriteLine($"Tracking balls updated: {balls.Count} active");
             };
 
-                        _personColliderBridge.OnPersonBodyUpdated += (s, balls) =>
-                        {
-                            // Uncomment for debug output:
-                            // Console.WriteLine($"Tracking balls updated: {balls.Count} active");
-                        };
+            // Start detection using webcam or default camera
+            _personColliderBridge.Start(url: "http://192.168.1.161:8080", width: 640, height: 480, fps: 30);
+            //_personColliderBridge.Start(0, width: 640, height: 480, fps: 30);
 
-                        // Start detection using webcam or default camera
-                        _personColliderBridge.Start(url: "http://192.168.1.161:8080", width: 640, height: 480, fps: 30);
+            Console.WriteLine("Person detection initialized successfully.");
+            Console.WriteLine($"Model expected at: {Path.GetFullPath(MODEL_PATH)}");
+            Console.WriteLine("Tracking: Head, Left Hand, Right Hand (20 radius balls)");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to initialize person detection: {ex.Message}");
+            Console.WriteLine("The application will continue without person detection.");
+            _personColliderBridge = null;
+        }
+    }
 
-                        Console.WriteLine("Person detection initialized successfully.");
-                        Console.WriteLine($"Model expected at: {Path.GetFullPath(MODEL_PATH)}");
-                        Console.WriteLine("Tracking: Head, Left Hand, Right Hand (20 radius balls)");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Failed to initialize person detection: {ex.Message}");
-                        Console.WriteLine("The application will continue without person detection.");
-                        _personColliderBridge = null;
-                    }
-                }
+    public void Update(float deltaTime, KeyState keyState)
+    {
+        // Check for ESC to return to menu
+        if (keyState.Escape)
+        {
+            _engine.SwitchGame(new MenuGame());
+            return;
+        }
 
-                public void Update(float deltaTime, KeyState keyState)
-                {
-                    // Check for ESC to return to menu
-                    if (keyState.Escape)
-                    {
-                        _engine.SwitchGame(new MenuGame());
-                        return;
-                    }
+        // Update player controller
+        _playerController.Update(keyState);
 
-                    // Update player controller
-                    _playerController.Update(keyState);
+        // Process person detection updates (thread-safe)
+        _personColliderBridge?.ProcessPendingUpdates();
+    }
 
-                    // Process person detection updates (thread-safe)
-                    _personColliderBridge?.ProcessPendingUpdates();
-                }
+    public void Render(Renderer renderer)
+    {
+        // Draw skeleton overlay
+        SkeletonRenderer.DrawSkeleton(renderer, _personColliderBridge);
+    }
 
-                public void Render(Renderer renderer)
-                {
-                    // Draw skeleton overlay
-                    SkeletonRenderer.DrawSkeleton(renderer, _personColliderBridge);
-                }
-
-                public void Shutdown()
-                {
-                    _personColliderBridge?.Dispose();
-                }
-            }
+    public void Shutdown()
+    {
+        _personColliderBridge?.Dispose();
+    }
+}
