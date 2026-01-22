@@ -36,6 +36,7 @@ public class MenuGame : IGame
         ["BubblePop"] = () => new BubblePopGame(),
         ["Platformer"] = () => new PlatformerGame(),
         ["Sandbox"] = () => new DemoGame(),
+        ["Settings"] = () => new SettingsGame(),
     };
 
     public void Initialize(GameEngine engine)
@@ -60,10 +61,10 @@ public class MenuGame : IGame
     {
         var font = _engine.Renderer.DefaultFont;
         float centerX = _engine.WindowWidth / 2f;
-        float startY = 140f;
+        float startY = 120f;
         float buttonWidth = 450f;
-        float buttonHeight = 80f;
-        float spacing = 15f;
+        float buttonHeight = 70f;
+        float spacing = 12f;
 
         // Rain Catcher button
         var rainButton = new UiMenuButton(
@@ -93,7 +94,7 @@ public class MenuGame : IGame
         bubbleButton.OnClick += _ => SwitchToGame("BubblePop");
         _menuButtons.Add(bubbleButton);
 
-        // Platformer button (NEW!)
+        // Platformer button
         var platformerButton = new UiMenuButton(
             "Platformer",
             "Action platformer - keyboard controls!",
@@ -121,7 +122,21 @@ public class MenuGame : IGame
         sandboxButton.OnClick += _ => SwitchToGame("Sandbox");
         _menuButtons.Add(sandboxButton);
 
-        // Back to Menu button (for reference, shown at bottom)
+        // Settings button
+        var settingsButton = new UiMenuButton(
+            "⚙️ Settings",
+            "Configure camera, detection, and display options",
+            font,
+            new Vector2(centerX - buttonWidth / 2, startY + (buttonHeight + spacing) * 4),
+            new Vector2(buttonWidth, buttonHeight),
+            baseColor: new Color(50, 50, 60),
+            hoverColor: new Color(70, 70, 90),
+            borderColor: new Color(150, 150, 180)
+        );
+        settingsButton.OnClick += _ => SwitchToGame("Settings");
+        _menuButtons.Add(settingsButton);
+
+        // Hint at bottom
         var exitHint = new UiTextLabel("Press ESC to return to menu from any game", font)
         {
             Position = new Vector2(centerX - 200, _engine.WindowHeight - 50),

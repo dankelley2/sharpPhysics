@@ -1,11 +1,19 @@
 ﻿using SharpPhysics.Demo;
+using SharpPhysics.Demo.Settings;
 using physics.Engine.Core;
 
-// Start with the Menu game - no console selection needed
+// Load settings
+var settings = GameSettings.Instance;
+
+// Start with the Menu game
 try
 {
     var game = new MenuGame();
-    var engine = new GameEngine(1280, 720, "🎮 SharpPhysics Demo Games", game);
+    var engine = new GameEngine(
+        settings.WindowWidth,
+        settings.WindowHeight,
+        "🎮 SharpPhysics Demo Games",
+        game);
     engine.Run();
 }
 catch (Exception ex)

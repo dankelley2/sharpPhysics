@@ -9,6 +9,7 @@ using physics.Engine.Rendering;
 using physics.Engine.Shaders;
 using SharpPhysics.Demo.Helpers;
 using SharpPhysics.Demo.Integration;
+using SharpPhysics.Demo.Settings;
 using SharpPhysics.Engine.Player;
 
 namespace SharpPhysics.Demo;
@@ -26,7 +27,6 @@ public class RainCatcherGame : IGame
     private Random _random = new();
 
     // Game configuration
-    private const string MODEL_PATH = "models/yolo26s_pose.onnx";
     private const float SPAWN_INTERVAL = 0.15f;      // Time between ball spawns
     private const float BALL_LIFETIME = 8f;          // Seconds before balls are removed
     private const int MAX_BALLS = 200;               // Maximum balls on screen
@@ -143,17 +143,20 @@ public class RainCatcherGame : IGame
 
     private void InitializePersonDetection(uint worldWidth, uint worldHeight)
     {
+        var settings = GameSettings.Instance;
+
         try
         {
             _personColliderBridge = new PersonColliderBridge(
                 physicsSystem: _physics,
                 worldWidth: worldWidth,
                 worldHeight: worldHeight,
-                modelPath: MODEL_PATH,
-                flipX: true,
-                flipY: false,
-                ballRadius: 35,        // Larger tracking balls for kids
-                smoothingFactor: 0.4f  // Less smoothing for more responsive feel
+                modelPath: settings.ModelPath,
+                flipX: settings.FlipX,
+                flipY: settings.FlipY,
+                ballRadius: settings.RainCatcherBallRadius,
+                smoothingFactor: settings.RainCatcherSmoothingFactor,
+                maxPeople: settings.MaxPeople
             );
 
             _personColliderBridge.OnError += (s, ex) =>
@@ -161,10 +164,26 @@ public class RainCatcherGame : IGame
                 Console.WriteLine($"Person Detection Error: {ex.Message}");
             };
 
-            // Start detection
-            _personColliderBridge.Start(url: "http://192.168.1.161:8080", width: 640, height: 480, fps: 30);
+            // Start detection using configured camera source
+            if (settings.CameraSourceType == "url")
+            {
+                _personColliderBridge.Start(
+                    url: settings.CameraUrl,
+                    width: settings.CameraWidth,
+                    height: settings.CameraHeight,
+                    fps: settings.CameraFps);
+            }
+            else
+            {
+                _personColliderBridge.Start(
+                    cameraIndex: settings.CameraDeviceIndex,
+                    width: settings.CameraWidth,
+                    height: settings.CameraHeight,
+                    fps: settings.CameraFps);
+            }
 
             Console.WriteLine("🎮 Body tracking initialized!");
+            Console.WriteLine($"Camera: {(settings.CameraSourceType == "url" ? settings.CameraUrl : $"Device {settings.CameraDeviceIndex}")}");
             Console.WriteLine("👋 Wave your hands to catch balls!");
         }
         catch (Exception ex)

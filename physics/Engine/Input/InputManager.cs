@@ -232,13 +232,13 @@ namespace physics.Engine.Input
                     objectTemplates.CreateAttractor(MousePosition.X, MousePosition.Y);
                     break;
                 case Keyboard.Key.Semicolon:
-                        actionTemplates.PopAndMultiply();
-                        break;
-                    case Keyboard.Key.Escape:
-                        keyState.Escape = true;
-                        // Don't close window - let games handle ESC
-                        break;
-                    case Keyboard.Key.Left:
+                    actionTemplates.PopAndMultiply();
+                    break;
+                case Keyboard.Key.Escape:
+                    keyState.Escape = true;
+                    // Don't close window - let games handle ESC
+                    break;
+                case Keyboard.Key.Left:
                     keyState.Left = true;
                     break;
                 case Keyboard.Key.Right:
@@ -249,6 +249,15 @@ namespace physics.Engine.Input
                     break;
                 case Keyboard.Key.Down:
                     keyState.Down = true;
+                    break;
+                case Keyboard.Key.Enter:
+                    keyState.Enter = true;
+                    break;
+                case Keyboard.Key.Tab:
+                    keyState.Tab = true;
+                    break;
+                case Keyboard.Key.Backspace:
+                    keyState.Backspace = true;
                     break;
                 // New zoom key cases using Shift + '+' and Shift + '-'
                 case Keyboard.Key.Equal:
@@ -266,48 +275,80 @@ namespace physics.Engine.Input
             }
         }
 
-                private void OnKeyReleased(object sender, KeyEventArgs e)
-                {
-                    switch (e.Code)
-                    {
-                        case Keyboard.Key.Space:
-                            keyState.Space = false;
-                            break;
-                        case Keyboard.Key.Escape:
-                            keyState.Escape = false;
-                            break;
-                        case Keyboard.Key.Left:
-                            keyState.Left = false;
-                            break;
-                        case Keyboard.Key.Right:
-                            keyState.Right = false;
-                            break;
-                        case Keyboard.Key.Up:
-                            keyState.Up = false;
-                            break;
-                        case Keyboard.Key.Down:
-                            keyState.Down = false;
-                            break;
-                        // Add other keys if necessary.
+                        private void OnKeyReleased(object sender, KeyEventArgs e)
+                        {
+                            switch (e.Code)
+                            {
+                                case Keyboard.Key.Space:
+                                    keyState.Space = false;
+                                    break;
+                                case Keyboard.Key.Escape:
+                                    keyState.Escape = false;
+                                    break;
+                                case Keyboard.Key.Left:
+                                    keyState.Left = false;
+                                    break;
+                                case Keyboard.Key.Right:
+                                    keyState.Right = false;
+                                    break;
+                                case Keyboard.Key.Up:
+                                    keyState.Up = false;
+                                    break;
+                                case Keyboard.Key.Down:
+                                    keyState.Down = false;
+                                    break;
+                                case Keyboard.Key.Enter:
+                                    keyState.Enter = false;
+                                    break;
+                                case Keyboard.Key.Tab:
+                                    keyState.Tab = false;
+                                    break;
+                                case Keyboard.Key.Backspace:
+                                    keyState.Backspace = false;
+                                    break;
+                            }
+                        }
+
+                        /// <summary>
+                        /// Returns the current mouse position in world coordinates.
+                        /// </summary>
+                        public Vector2 GetMousePosition() => MousePosition;
+
+                        /// <summary>
+                        /// Returns a snapshot of the current key states.
+                        /// The caller can poll this method each frame to determine which keys are pressed.
+                        /// </summary>
+                        public KeyState GetKeyState()
+                        {
+                            // Track edge detection for mouse buttons
+                            bool leftPressed = IsMousePressedLeft && !_prevLeftMouse;
+                            bool rightPressed = IsMousePressedRight && !_prevRightMouse;
+                            _prevLeftMouse = IsMousePressedLeft;
+                            _prevRightMouse = IsMousePressedRight;
+
+                            // Return a copy so external systems cannot modify internal state.
+                            return new KeyState
+                            {
+                                Left = keyState.Left,
+                                Right = keyState.Right,
+                                Up = keyState.Up,
+                                Down = keyState.Down,
+                                Space = keyState.Space,
+                                Escape = keyState.Escape,
+                                Enter = keyState.Enter,
+                                Tab = keyState.Tab,
+                                Backspace = keyState.Backspace,
+                                LeftMouseDown = IsMousePressedLeft,
+                                RightMouseDown = IsMousePressedRight,
+                                MiddleMouseDown = IsPanning,
+                                LeftMousePressed = leftPressed,
+                                RightMousePressed = rightPressed,
+                                MousePosition = MousePosition
+                            };
+                        }
+
+                        // Previous frame mouse state for edge detection
+                        private bool _prevLeftMouse = false;
+                        private bool _prevRightMouse = false;
                     }
                 }
-
-                /// <summary>
-                /// Returns a snapshot of the current key states.
-                /// The caller can poll this method each frame to determine which keys are pressed.
-                /// </summary>
-                public KeyState GetKeyState()
-                {
-                    // Return a copy so external systems cannot modify internal state.
-                    return new KeyState
-                    {
-                        Left = keyState.Left,
-                        Right = keyState.Right,
-                        Up = keyState.Up,
-                        Down = keyState.Down,
-                        Space = keyState.Space,
-                        Escape = keyState.Escape
-                    };
-                }
-            }
-        }

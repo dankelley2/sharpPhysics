@@ -7,6 +7,7 @@ using physics.Engine.Input;
 using physics.Engine.Rendering;
 using SharpPhysics.Demo.Helpers;
 using SharpPhysics.Demo.Integration;
+using SharpPhysics.Demo.Settings;
 using SharpPhysics.Engine.Player;
 
 namespace SharpPhysics.Demo;
@@ -21,9 +22,6 @@ public class DemoGame : IGame
     private ObjectTemplates _objectTemplates = null!;
     private PlayerController _playerController = null!;
     private PersonColliderBridge? _personColliderBridge;
-
-    // Path to the ONNX model - YOLOv8-Pose model for hand/head tracking
-    private const string MODEL_PATH = "models/yolo26s_pose.onnx";
 
     public void Initialize(GameEngine engine)
     {
@@ -64,17 +62,20 @@ public class DemoGame : IGame
 
     private void InitializePersonDetection(uint worldWidth, uint worldHeight)
     {
+        var settings = GameSettings.Instance;
+
         try
         {
             _personColliderBridge = new PersonColliderBridge(
                 physicsSystem: _engine.PhysicsSystem,
                 worldWidth: worldWidth,
                 worldHeight: worldHeight,
-                modelPath: MODEL_PATH,
-                flipX: true, // Mirror mode for natural interaction
-                flipY: false, // SharpPhysics uses Y-down coordinate system
-                ballRadius: 20, // Radius of head/hand tracking balls
-                smoothingFactor: 0.5f // Smoothing to reduce jitter
+                modelPath: settings.ModelPath,
+                flipX: settings.FlipX,
+                flipY: settings.FlipY,
+                ballRadius: settings.SandboxBallRadius,
+                smoothingFactor: settings.SandboxSmoothingFactor,
+                maxPeople: settings.MaxPeople
             );
 
             _personColliderBridge.OnError += (s, ex) => { Console.WriteLine($"Person Detection Error: {ex.Message}"); };
@@ -85,13 +86,28 @@ public class DemoGame : IGame
                 // Console.WriteLine($"Tracking balls updated: {balls.Count} active");
             };
 
-            // Start detection using webcam or default camera
-            _personColliderBridge.Start(url: "http://192.168.1.161:8080", width: 640, height: 480, fps: 30);
-            //_personColliderBridge.Start(0, width: 640, height: 480, fps: 30);
+            // Start detection using configured camera source
+            if (settings.CameraSourceType == "url")
+            {
+                _personColliderBridge.Start(
+                    url: settings.CameraUrl,
+                    width: settings.CameraWidth,
+                    height: settings.CameraHeight,
+                    fps: settings.CameraFps);
+            }
+            else
+            {
+                _personColliderBridge.Start(
+                    cameraIndex: settings.CameraDeviceIndex,
+                    width: settings.CameraWidth,
+                    height: settings.CameraHeight,
+                    fps: settings.CameraFps);
+            }
 
             Console.WriteLine("Person detection initialized successfully.");
-            Console.WriteLine($"Model expected at: {Path.GetFullPath(MODEL_PATH)}");
-            Console.WriteLine("Tracking: Head, Left Hand, Right Hand (20 radius balls)");
+            Console.WriteLine($"Model: {Path.GetFullPath(settings.ModelPath)}");
+            Console.WriteLine($"Camera: {(settings.CameraSourceType == "url" ? settings.CameraUrl : $"Device {settings.CameraDeviceIndex}")}");
+            Console.WriteLine($"Tracking balls: radius={settings.SandboxBallRadius}, smoothing={settings.SandboxSmoothingFactor:F2}");
         }
         catch (Exception ex)
         {

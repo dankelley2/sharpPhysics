@@ -9,6 +9,7 @@ using physics.Engine.Rendering;
 using physics.Engine.Shaders;
 using SharpPhysics.Demo.Helpers;
 using SharpPhysics.Demo.Integration;
+using SharpPhysics.Demo.Settings;
 
 namespace SharpPhysics.Demo;
 
@@ -23,7 +24,6 @@ public class BubblePopGame : IGame
     private PersonColliderBridge? _personColliderBridge;
     private readonly Random _random = new();
 
-    private const string MODEL_PATH = "models/yolo26s_pose.onnx";
     private const float SPAWN_INTERVAL = 0.3f;
     private const int MAX_BUBBLES = 100;
     private const float BUBBLE_LIFETIME = 12f;
@@ -92,24 +92,44 @@ public class BubblePopGame : IGame
 
     private void InitializePersonDetection(uint worldWidth, uint worldHeight)
     {
+        var settings = GameSettings.Instance;
+
         try
         {
             _personColliderBridge = new PersonColliderBridge(
                 physicsSystem: _physics,
                 worldWidth: worldWidth,
                 worldHeight: worldHeight,
-                modelPath: MODEL_PATH,
-                flipX: true,
-                flipY: false,
-                ballRadius: 30, // Medium size for popping
-                smoothingFactor: 0.3f // Less smoothing = more responsive
+                modelPath: settings.ModelPath,
+                flipX: settings.FlipX,
+                flipY: settings.FlipY,
+                ballRadius: settings.BubblePopBallRadius,
+                smoothingFactor: settings.BubblePopSmoothingFactor,
+                maxPeople: settings.MaxPeople
             );
 
             _personColliderBridge.OnError += (s, ex) => { Console.WriteLine($"Person Detection Error: {ex.Message}"); };
 
-            _personColliderBridge.Start(url: "http://192.168.1.161:8080", width: 640, height: 480, fps: 30);
+            // Start detection using configured camera source
+            if (settings.CameraSourceType == "url")
+            {
+                _personColliderBridge.Start(
+                    url: settings.CameraUrl,
+                    width: settings.CameraWidth,
+                    height: settings.CameraHeight,
+                    fps: settings.CameraFps);
+            }
+            else
+            {
+                _personColliderBridge.Start(
+                    cameraIndex: settings.CameraDeviceIndex,
+                    width: settings.CameraWidth,
+                    height: settings.CameraHeight,
+                    fps: settings.CameraFps);
+            }
 
             Console.WriteLine("🎮 Body tracking ready - use your hands to pop bubbles!");
+            Console.WriteLine($"Camera: {(settings.CameraSourceType == "url" ? settings.CameraUrl : $"Device {settings.CameraDeviceIndex}")}");
         }
         catch (Exception ex)
         {
@@ -156,7 +176,7 @@ public class BubblePopGame : IGame
         float roll = _random.NextFloat();
         float cumulative = 0f;
         BubbleType selectedType = BubbleTypes[2]; // Default medium
-        
+
         foreach (var type in BubbleTypes)
         {
             cumulative += type.SpawnWeight;
@@ -172,7 +192,7 @@ public class BubblePopGame : IGame
         bool isChain = !isGolden && _random.NextDouble() < CHAIN_BUBBLE_CHANCE;
 
         var shader = new SFMLPolyRainbowShader(); // Bubbles look nice with rainbow shader
-        
+
         var bubble = _physics.CreateStaticCircle(
             new Vector2(x, y),
             selectedType.Size,
@@ -326,7 +346,7 @@ public class BubblePopGame : IGame
         SkeletonRenderer.DrawSkeleton(renderer, _personColliderBridge);
 
         // Score display
-        renderer.DrawText($"SCORE: {_score:N0}", _engine.WindowWidth - 250, 30, 32, 
+        renderer.DrawText($"SCORE: {_score:N0}", _engine.WindowWidth - 250, 30, 32,
             SFML.Graphics.Color.White);
 
         // Streak display
@@ -343,10 +363,10 @@ public class BubblePopGame : IGame
         }
 
         // Stats (bottom)
-        renderer.DrawText($"Popped: {_popped}  |  Missed: {_missed}  |  Best Streak: {_bestStreak}", 
+        renderer.DrawText($"Popped: {_popped}  |  Missed: {_missed}  |  Best Streak: {_bestStreak}",
             20, _engine.WindowHeight - 40, 16, new SFML.Graphics.Color(150, 150, 150));
-        
-        renderer.DrawText($"Bubbles: {_activeBubbles.Count}", 
+
+        renderer.DrawText($"Bubbles: {_activeBubbles.Count}",
             20, _engine.WindowHeight - 65, 16, new SFML.Graphics.Color(150, 150, 150));
 
         // Accuracy percentage
@@ -359,7 +379,7 @@ public class BubblePopGame : IGame
                 >= 70 => new SFML.Graphics.Color(255, 255, 100),
                 _ => new SFML.Graphics.Color(255, 100, 100)
             };
-            renderer.DrawText($"Accuracy: {accuracy:F1}%", _engine.WindowWidth - 200, _engine.WindowHeight - 40, 
+            renderer.DrawText($"Accuracy: {accuracy:F1}%", _engine.WindowWidth - 200, _engine.WindowHeight - 40,
                 16, accColor);
         }
     }
@@ -374,7 +394,7 @@ public class BubblePopGame : IGame
     }
 
     private record BubbleType(string Name, int Size, int Points, float SpawnWeight);
-    
+
     private class BubbleInfo
     {
         public float SpawnTime { get; init; }
