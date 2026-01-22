@@ -15,17 +15,8 @@
     <PackageReference Include="SFML.Net" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="Resources\blackPoolBall_30px.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Resources\poolTable.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="Resources/good_timing_bd.otf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Demo\" />
   </ItemGroup>
 </Project>

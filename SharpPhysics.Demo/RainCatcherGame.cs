@@ -102,15 +102,15 @@ public class RainCatcherGame : IGame
         // Create walls (sides only - no floor so balls fall through)
         _objectTemplates.CreateWall(new Vector2(0, 0), 15, (int)worldHeight);
         _objectTemplates.CreateWall(new Vector2((int)worldWidth - 15, 0), 15, (int)worldHeight);
-        
+
         // Top wall to spawn balls from
         _objectTemplates.CreateWall(new Vector2(0, 0), (int)worldWidth, 15);
-        
+
         // Create some fun bouncy platforms at different heights
         CreatePlatform(worldWidth * 0.2f, worldHeight * 0.7f, 150, 20);
         CreatePlatform(worldWidth * 0.7f, worldHeight * 0.7f, 150, 20);
         CreatePlatform(worldWidth * 0.45f, worldHeight * 0.5f, 200, 20);
-        
+
         // Add some angled ramps for extra fun
         CreateAngledRamp(worldWidth * 0.1f, worldHeight * 0.4f, 120, 15, 0.3f);
         CreateAngledRamp(worldWidth * 0.8f, worldHeight * 0.4f, 120, 15, -0.3f);
@@ -157,31 +157,31 @@ public class RainCatcherGame : IGame
                 smoothingFactor: 0.4f  // Less smoothing for more responsive feel
             );
 
-                    _personColliderBridge.OnError += (s, ex) =>
-                    {
-                        Console.WriteLine($"Person Detection Error: {ex.Message}");
-                    };
-
-                    // Start detection
-                    _personColliderBridge.Start(url: "http://192.168.1.161:8080", width: 640, height: 480, fps: 30);
-
-                    Console.WriteLine("🎮 Body tracking initialized!");
-                    Console.WriteLine("👋 Wave your hands to catch balls!");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"⚠️ Body tracking not available: {ex.Message}");
-                    Console.WriteLine("Game will run without body tracking.");
-                    _personColliderBridge = null;
-                }
-            }
-
-            public void Update(float deltaTime, KeyState keyState)
+            _personColliderBridge.OnError += (s, ex) =>
             {
-                // Check for ESC to return to menu
-                if (keyState.Escape)
-                {
-                    _engine.SwitchGame(new MenuGame());
+                Console.WriteLine($"Person Detection Error: {ex.Message}");
+            };
+
+            // Start detection
+            _personColliderBridge.Start(url: "http://192.168.1.161:8080", width: 640, height: 480, fps: 30);
+
+            Console.WriteLine("🎮 Body tracking initialized!");
+            Console.WriteLine("👋 Wave your hands to catch balls!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Body tracking not available: {ex.Message}");
+            Console.WriteLine("Game will run without body tracking.");
+            _personColliderBridge = null;
+        }
+    }
+
+    public void Update(float deltaTime, KeyState keyState)
+    {
+        // Check for ESC to return to menu
+        if (keyState.Escape)
+        {
+            _engine.SwitchGame(new MenuGame());
             return;
         }
 
@@ -192,16 +192,16 @@ public class RainCatcherGame : IGame
 
         // Update timers
         UpdateTimers(deltaTime);
-        
+
         // Spawn new balls
         UpdateBallSpawning(deltaTime);
-        
+
         // Update and cleanup balls
         UpdateBalls(deltaTime);
-        
+
         // Check for scoring (balls hitting player)
         CheckScoring();
-        
+
         // Handle keyboard shortcuts for testing
         HandleDebugInput(keyState);
     }
@@ -247,10 +247,10 @@ public class RainCatcherGame : IGame
     private void UpdateBallSpawning(float deltaTime)
     {
         _spawnTimer += deltaTime;
-        
+
         // Dynamic spawn rate - gets faster as game progresses
         float dynamicInterval = SPAWN_INTERVAL * MathF.Max(0.5f, 1f - (_gameTime / 120f));
-        
+
         if (_spawnTimer >= dynamicInterval && _activeBalls.Count < MAX_BALLS)
         {
             _spawnTimer = 0f;
@@ -262,10 +262,10 @@ public class RainCatcherGame : IGame
     {
         float x = _random.Next(50, (int)_engine.WindowWidth - 50);
         float y = _isGravityReversed ? _engine.WindowHeight - 30 : 30;
-        
+
         // Determine if this is a power-up
         bool isPowerUp = _random.NextDouble() < POWERUP_CHANCE;
-        
+
         PhysicsObject ball;
         BallInfo info;
 
@@ -274,7 +274,7 @@ public class RainCatcherGame : IGame
             // Spawn power-up ball
             var powerUpType = PowerUpTypes[_random.Next(PowerUpTypes.Length)];
             int size = (int)(18 * _ballSizeMultiplier);
-            
+
             var shader = new SFMLBallShader();
             ball = _physics.CreateStaticCircle(
                 new Vector2(x, y),
@@ -283,7 +283,7 @@ public class RainCatcherGame : IGame
                 locked: false,
                 shader
             );
-            
+
             info = new BallInfo
             {
                 SpawnTime = _gameTime,
@@ -299,8 +299,8 @@ public class RainCatcherGame : IGame
             var ballType = BallTypes[_random.Next(BallTypes.Length)];
             int size = (int)(ballType.Size * _ballSizeMultiplier);
 
-            SFMLShader shader = _rainbowMode 
-                ? new SFMLPolyRainbowShader() 
+            SFMLShader shader = _rainbowMode
+                ? new SFMLPolyRainbowShader()
                 : new SFMLBallShader();
 
             ball = _physics.CreateStaticCircle(
@@ -319,36 +319,36 @@ public class RainCatcherGame : IGame
                 BaseColor = ballType.Color
             };
         }
-        
+
         // Add slight random horizontal velocity for variety
         ball.Velocity = new Vector2(
             (_random.NextFloat() - 0.5f) * 50f,
             _isGravityReversed ? -30f : 30f
         );
-        
+
         _activeBalls[ball] = info;
     }
 
     private void UpdateBalls(float deltaTime)
     {
         var ballsToRemove = new List<PhysicsObject>();
-        
+
         foreach (var (ball, info) in _activeBalls)
         {
             float age = _gameTime - info.SpawnTime;
-            
+
             // Remove old balls or balls that fell off screen
             bool tooOld = age > BALL_LIFETIME;
-            bool offScreen = _isGravityReversed 
-                ? ball.Center.Y < -50 
+            bool offScreen = _isGravityReversed
+                ? ball.Center.Y < -50
                 : ball.Center.Y > _engine.WindowHeight + 50;
-            
+
             if (tooOld || offScreen)
             {
                 ballsToRemove.Add(ball);
             }
         }
-        
+
         foreach (var ball in ballsToRemove)
         {
             _activeBalls.Remove(ball);
@@ -359,49 +359,49 @@ public class RainCatcherGame : IGame
     private void CheckScoring()
     {
         if (_personColliderBridge == null) return;
-        
+
         var trackingBalls = _personColliderBridge.TrackingBalls;
         var scoredBalls = new List<PhysicsObject>();
-        
+
         foreach (var (ball, info) in _activeBalls)
         {
             foreach (var tracker in trackingBalls)
             {
                 float distance = Vector2.Distance(ball.Center, tracker.Center);
                 float catchRadius = 50f; // Generous catch radius for kids
-                
+
                 if (distance < catchRadius)
                 {
                     if (info.IsPowerUp && info.PowerUpName != null)
                     {
                         ActivatePowerUp(info.PowerUpName);
                     }
-                    
+
                     // Score points
                     int points = info.Points * _scoreMultiplier;
                     _combo++;
                     _comboTimer = 2f;
-                    
+
                     // Combo bonus
                     if (_combo > 1)
                     {
                         points = (int)(points * (1f + _combo * 0.1f));
                     }
-                    
+
                     _score += points;
-                    
+
                     // Visual feedback - console for now
                     if (_combo > 3)
                     {
                         Console.WriteLine($"🔥 {_combo}x COMBO! +{points} (Total: {_score})");
                     }
-                    
+
                     scoredBalls.Add(ball);
                     break;
                 }
             }
         }
-        
+
         foreach (var ball in scoredBalls)
         {
             _activeBalls.Remove(ball);
@@ -413,12 +413,12 @@ public class RainCatcherGame : IGame
     {
         var powerUp = PowerUpTypes.FirstOrDefault(p => p.Name == powerUpName);
         if (powerUp == null) return;
-        
+
         Console.WriteLine($"⚡ {powerUp.Message}");
-        
+
         _activePowerUp = powerUpName;
         _powerUpTimer = powerUp.Duration;
-        
+
         switch (powerUpName)
         {
             case "Rainbow":
@@ -443,9 +443,9 @@ public class RainCatcherGame : IGame
     private void DeactivatePowerUp()
     {
         if (_activePowerUp == null) return;
-        
+
         Console.WriteLine($"Power-up ended: {_activePowerUp}");
-        
+
         switch (_activePowerUp)
         {
             case "Rainbow":
@@ -465,7 +465,7 @@ public class RainCatcherGame : IGame
                 _scoreMultiplier = 1;
                 break;
         }
-        
+
         _activePowerUp = null;
     }
 
@@ -477,25 +477,25 @@ public class RainCatcherGame : IGame
             for (int i = 0; i < 5; i++)
             {
                 SpawnBall();
-                    }
-                }
             }
+        }
+    }
 
-            public void Render(Renderer renderer)
+    public void Render(Renderer renderer)
+    {
+        // Draw skeleton overlay
+        SkeletonRenderer.DrawSkeleton(renderer, _personColliderBridge);
+
+        // Draw score (top right)
+        string scoreText = $"SCORE: {_score:N0}";
+        renderer.DrawText(scoreText, _engine.WindowWidth - 250, 30, 32, SFML.Graphics.Color.White);
+
+        // Draw combo if active
+        if (_combo > 1)
+        {
+            var comboColor = _combo switch
             {
-                // Draw skeleton overlay
-                SkeletonRenderer.DrawSkeleton(renderer, _personColliderBridge);
-
-                // Draw score (top right)
-                string scoreText = $"SCORE: {_score:N0}";
-                renderer.DrawText(scoreText, _engine.WindowWidth - 250, 30, 32, SFML.Graphics.Color.White);
-
-                // Draw combo if active
-                if (_combo > 1)
-                {
-                    var comboColor = _combo switch
-                    {
-                        >= 10 => new SFML.Graphics.Color(255, 50, 50),   // Red for high combo
+                >= 10 => new SFML.Graphics.Color(255, 50, 50),   // Red for high combo
                 >= 5 => new SFML.Graphics.Color(255, 200, 50),   // Gold
                 _ => new SFML.Graphics.Color(100, 255, 100)       // Green
             };
@@ -513,13 +513,13 @@ public class RainCatcherGame : IGame
 
                 // Power-up timer bar
                 float barWidth = 200f * (_powerUpTimer / powerUp.Duration);
-                renderer.DrawText($"[{"".PadRight((int)(barWidth / 10), '█')}]", 
+                renderer.DrawText($"[{"".PadRight((int)(barWidth / 10), '█')}]",
                     _engine.WindowWidth / 2 - 100, 65, 18, powerUp.Color);
             }
         }
 
         // Draw ball count (bottom left for debug)
-        renderer.DrawText($"Balls: {_activeBalls.Count}/{MAX_BALLS}", 20, _engine.WindowHeight - 40, 16, 
+        renderer.DrawText($"Balls: {_activeBalls.Count}/{MAX_BALLS}", 20, _engine.WindowHeight - 40, 16,
             new SFML.Graphics.Color(150, 150, 150));
 
         // Draw game time
@@ -538,7 +538,7 @@ public class RainCatcherGame : IGame
     // Helper records
     private record BallType(string Name, SFML.Graphics.Color Color, int Points, int Size);
     private record PowerUpType(string Name, SFML.Graphics.Color Color, string Message, float Duration);
-    
+
     private class BallInfo
     {
         public float SpawnTime { get; init; }

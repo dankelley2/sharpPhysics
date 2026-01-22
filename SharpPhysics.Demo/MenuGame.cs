@@ -34,6 +34,7 @@ public class MenuGame : IGame
     {
         ["RainCatcher"] = () => new RainCatcherGame(),
         ["BubblePop"] = () => new BubblePopGame(),
+        ["Platformer"] = () => new PlatformerGame(),
         ["Sandbox"] = () => new DemoGame(),
     };
 
@@ -59,10 +60,10 @@ public class MenuGame : IGame
     {
         var font = _engine.Renderer.DefaultFont;
         float centerX = _engine.WindowWidth / 2f;
-        float startY = 180f;
+        float startY = 140f;
         float buttonWidth = 450f;
-        float buttonHeight = 90f;
-        float spacing = 20f;
+        float buttonHeight = 80f;
+        float spacing = 15f;
 
         // Rain Catcher button
         var rainButton = new UiMenuButton(
@@ -94,13 +95,28 @@ public class MenuGame : IGame
         bubbleButton.OnClick += _ => SwitchToGame("BubblePop");
         _menuButtons.Add(bubbleButton);
 
+        // Platformer button (NEW!)
+        var platformerButton = new UiMenuButton(
+            "Platformer",
+            "Action platformer - keyboard controls!",
+            "🎮",
+            font,
+            new Vector2(centerX - buttonWidth / 2, startY + (buttonHeight + spacing) * 2),
+            new Vector2(buttonWidth, buttonHeight),
+            baseColor: new Color(90, 60, 60),
+            hoverColor: new Color(130, 80, 80),
+            borderColor: new Color(255, 180, 100)
+        );
+        platformerButton.OnClick += _ => SwitchToGame("Platformer");
+        _menuButtons.Add(platformerButton);
+
         // Physics Sandbox button
         var sandboxButton = new UiMenuButton(
             "Physics Sandbox",
             "Experiment with physics simulation",
             "🔬",
             font,
-            new Vector2(centerX - buttonWidth / 2, startY + (buttonHeight + spacing) * 2),
+            new Vector2(centerX - buttonWidth / 2, startY + (buttonHeight + spacing) * 3),
             new Vector2(buttonWidth, buttonHeight),
             baseColor: new Color(80, 60, 70),
             hoverColor: new Color(120, 80, 100),
