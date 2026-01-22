@@ -29,7 +29,6 @@ namespace SharpPhysics.Demo.Integration
         private readonly string _modelPath;
         private readonly bool _flipY;
         private readonly bool _flipX;
-        private readonly float _trackingSpeed;
         private readonly int _ballRadius;
         private readonly float _smoothingFactor;
         private readonly int _maxPeople;
@@ -94,7 +93,6 @@ namespace SharpPhysics.Demo.Integration
         /// <param name="modelPath">Path to the YOLO Pose ONNX model.</param>
         /// <param name="flipX">Flip X coordinates (mirror mode).</param>
         /// <param name="flipY">Flip Y coordinates.</param>
-        /// <param name="trackingSpeed">How fast balls move toward target positions (higher = faster).</param>
         /// <param name="ballRadius">Radius of the tracking balls (default 20).</param>
         /// <param name="smoothingFactor">Temporal smoothing factor (0 = no smoothing, 0.8 = very smooth). Default 0.75.</param>
         /// <param name="maxPeople">Maximum number of people to track simultaneously (default 5).</param>
@@ -105,7 +103,6 @@ namespace SharpPhysics.Demo.Integration
             string modelPath,
             bool flipX = true,  // Mirror by default for natural interaction
             bool flipY = false,
-            float trackingSpeed = 15f,
             int ballRadius = 20,
             float smoothingFactor = 0.75f,
             int maxPeople = 5)
@@ -116,7 +113,6 @@ namespace SharpPhysics.Demo.Integration
             _modelPath = modelPath;
             _flipX = flipX;
             _flipY = flipY;
-            _trackingSpeed = trackingSpeed;
             _ballRadius = ballRadius;
             _smoothingFactor = Math.Clamp(smoothingFactor, 0f, 0.95f);
             _maxPeople = Math.Max(1, maxPeople);
@@ -687,7 +683,7 @@ namespace SharpPhysics.Demo.Integration
             }
         }
 
-        private void MoveBallToPosition(PhysicsObject ball, Vector2 targetPos)
+        private static void MoveBallToPosition(PhysicsObject ball, Vector2 targetPos)
         {
             var currentPos = ball.Center;
             var delta = targetPos - currentPos;
@@ -721,29 +717,9 @@ namespace SharpPhysics.Demo.Integration
         }
 
         /// <summary>
-        /// Gets the full skeleton data for the first tracked person (backward compatibility).
-        /// </summary>
-        public (Vector2[] Keypoints, float[] Confidences, (int, int)[] Connections)? GetFullSkeleton()
-        {
-            lock (_syncLock)
-            {
-                var firstPerson = _trackedPeople.Values.FirstOrDefault();
-                if (firstPerson == null || !firstPerson.HasInitialPositions)
-                    return null;
-
-                var keypoints = new Vector2[17];
-                var confidences = new float[17];
-                Array.Copy(firstPerson.SmoothedKeypoints, keypoints, 17);
-                Array.Copy(firstPerson.KeypointConfidences, confidences, 17);
-
-                return (keypoints, confidences, SkeletonConnections);
-            }
-        }
-
-        /// <summary>
         /// Gets the full skeleton data for a specific tracked person by ID.
         /// </summary>
-        public (Vector2[] Keypoints, float[] Confidences, (int, int)[] Connections)? GetFullSkeleton(int personId)
+        public (Vector2[] Keypoints, float[] Confidences)? GetFullSkeleton(int personId)
         {
             lock (_syncLock)
             {
@@ -755,8 +731,18 @@ namespace SharpPhysics.Demo.Integration
                 Array.Copy(person.SmoothedKeypoints, keypoints, 17);
                 Array.Copy(person.KeypointConfidences, confidences, 17);
 
-                return (keypoints, confidences, SkeletonConnections);
+                return (keypoints, confidences);
             }
+        }
+
+        /// <summary>
+        /// Gets the array of skeleton connections represented as tuples of integers.
+        /// </summary>
+        /// <returns>An array of tuples, where each tuple contains two integers representing the indices of connected skeleton
+        /// points.</returns>
+        public (int,int)[] GetSkeletonConnections()
+        {
+            return SkeletonConnections;
         }
 
         /// <summary>

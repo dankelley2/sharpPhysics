@@ -35,55 +35,15 @@ public static class SkeletonRenderer
         if (bridge == null) return;
 
         // Try to get full skeleton first
-        var fullSkeleton = bridge.GetFullSkeleton();
-        if (fullSkeleton != null)
+        var allSkeletons = bridge.GetAllSkeletons();
+        if (!allSkeletons.Any()) return;
+        var connections = bridge.GetSkeletonConnections();
+        foreach (var s in allSkeletons)
         {
-            DrawFullSkeleton(renderer, fullSkeleton.Value.Keypoints, fullSkeleton.Value.Confidences, 
-                fullSkeleton.Value.Connections, lineThickness, confidenceThreshold);
-            return;
+            DrawFullSkeleton(renderer, s.Keypoints, s.Confidences,
+                connections, lineThickness, confidenceThreshold);
         }
 
-        // Fallback to simple keypoints if full skeleton not available
-        var keypoints = bridge.GetLatestKeypoints();
-        if (keypoints == null) return;
-
-        var (head, leftHand, rightHand, headConf, leftConf, rightConf) = keypoints.Value;
-
-        // Draw connections (skeleton lines)
-        var lineColor = new Color(0, 255, 255, 180); // Cyan with transparency
-
-        // Head to left hand
-        if (headConf > confidenceThreshold && leftConf > confidenceThreshold)
-        {
-            renderer.DrawLine(head, leftHand, lineColor, lineThickness);
-        }
-
-        // Head to right hand
-        if (headConf > confidenceThreshold && rightConf > confidenceThreshold)
-        {
-            renderer.DrawLine(head, rightHand, lineColor, lineThickness);
-        }
-
-        // Draw keypoint markers
-        var circleRadius = 8f;
-
-        // Head (green)
-        if (headConf > confidenceThreshold)
-        {
-            renderer.DrawCircle(head, circleRadius, new Color(0, 255, 0, 200));
-        }
-
-        // Left hand (blue)
-        if (leftConf > confidenceThreshold)
-        {
-            renderer.DrawCircle(leftHand, circleRadius, new Color(0, 100, 255, 200));
-        }
-
-        // Right hand (red)
-        if (rightConf > confidenceThreshold)
-        {
-            renderer.DrawCircle(rightHand, circleRadius, new Color(255, 100, 0, 200));
-        }
     }
 
     /// <summary>
@@ -116,28 +76,6 @@ public static class SkeletonRenderer
         }
 
         // Draw keypoint circles
-        for (int i = 0; i < keypoints.Length; i++)
-        {
-            if (confidences[i] < confidenceThreshold)
-                continue;
-
-            var pt = keypoints[i];
-            Color circleColor = GetKeypointColor(i);
-            float radius = GetKeypointRadius(i);
-
-            renderer.DrawCircle(pt, radius, circleColor);
-        }
-    }
-
-    /// <summary>
-    /// Draws keypoints only (no connections) for a simpler visualization.
-    /// </summary>
-    public static void DrawKeypoints(
-        Renderer renderer,
-        Vector2[] keypoints,
-        float[] confidences,
-        float confidenceThreshold = 0.3f)
-    {
         for (int i = 0; i < keypoints.Length; i++)
         {
             if (confidences[i] < confidenceThreshold)

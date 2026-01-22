@@ -152,7 +152,6 @@ public class RainCatcherGame : IGame
                 modelPath: MODEL_PATH,
                 flipX: true,
                 flipY: false,
-                trackingSpeed: 20f,    // Fast tracking for responsive gameplay
                 ballRadius: 35,        // Larger tracking balls for kids
                 smoothingFactor: 0.4f  // Less smoothing for more responsive feel
             );

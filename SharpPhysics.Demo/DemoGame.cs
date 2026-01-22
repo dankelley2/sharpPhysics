@@ -73,7 +73,6 @@ public class DemoGame : IGame
                 modelPath: MODEL_PATH,
                 flipX: true,         // Mirror mode for natural interaction
                 flipY: false,        // SharpPhysics uses Y-down coordinate system
-                trackingSpeed: 15f,  // How fast balls follow detected positions
                 ballRadius: 20,      // Radius of head/hand tracking balls
                 smoothingFactor: 0.5f // Smoothing to reduce jitter
             );

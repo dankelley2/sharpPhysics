@@ -21,7 +21,7 @@ public class BubblePopGame : IGame
     private GameEngine _engine = null!;
     private PhysicsSystem _physics = null!;
     private PersonColliderBridge? _personColliderBridge;
-    private Random _random = new();
+    private readonly Random _random = new();
 
     private const string MODEL_PATH = "models/yolo26s_pose.onnx";
     private const float SPAWN_INTERVAL = 0.3f;
@@ -101,32 +101,28 @@ public class BubblePopGame : IGame
                 modelPath: MODEL_PATH,
                 flipX: true,
                 flipY: false,
-                trackingSpeed: 25f,     // Very responsive
-                            ballRadius: 30,         // Medium size for popping
-                            smoothingFactor: 0.3f   // Less smoothing = more responsive
-                        );
+                ballRadius: 30, // Medium size for popping
+                smoothingFactor: 0.3f // Less smoothing = more responsive
+            );
 
-                        _personColliderBridge.OnError += (s, ex) =>
-                        {
-                            Console.WriteLine($"Person Detection Error: {ex.Message}");
-                        };
+            _personColliderBridge.OnError += (s, ex) => { Console.WriteLine($"Person Detection Error: {ex.Message}"); };
 
-                        _personColliderBridge.Start(url: "http://192.168.1.161:8080", width: 640, height: 480, fps: 30);
+            _personColliderBridge.Start(url: "http://192.168.1.161:8080", width: 640, height: 480, fps: 30);
 
-                        Console.WriteLine("🎮 Body tracking ready - use your hands to pop bubbles!");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"⚠️ Body tracking not available: {ex.Message}");
-                        _personColliderBridge = null;
-                    }
-                }
+            Console.WriteLine("🎮 Body tracking ready - use your hands to pop bubbles!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Body tracking not available: {ex.Message}");
+            _personColliderBridge = null;
+        }
+    }
 
-                public void Update(float deltaTime, KeyState keyState)
-                {
-                    // Check for ESC to return to menu
-                    if (keyState.Escape)
-                    {
+    public void Update(float deltaTime, KeyState keyState)
+    {
+        // Check for ESC to return to menu
+        if (keyState.Escape)
+        {
             _engine.SwitchGame(new MenuGame());
             return;
         }
@@ -145,7 +141,7 @@ public class BubblePopGame : IGame
         }
 
         // Update bubbles
-        UpdateBubbles(deltaTime);
+        UpdateBubbles();
 
         // Check for pops
         CheckBubblePops();
@@ -205,7 +201,7 @@ public class BubblePopGame : IGame
         };
     }
 
-    private void UpdateBubbles(float deltaTime)
+    private void UpdateBubbles()
     {
         var toRemove = new List<PhysicsObject>();
 
@@ -272,11 +268,11 @@ public class BubblePopGame : IGame
                     // Console feedback for special pops
                     if (info.IsGolden)
                     {
-                        Console.WriteLine($"🌟 GOLDEN BUBBLE! +{info.Points}");
+                        Console.WriteLine($"GOLDEN BUBBLE! +{info.Points}");
                     }
                     else if (info.IsChain)
                     {
-                        Console.WriteLine($"💥 CHAIN REACTION!");
+                        Console.WriteLine($"CHAIN REACTION!");
                     }
 
                     poppedBubbles.Add(bubble);
