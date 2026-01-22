@@ -16,8 +16,48 @@ using ProjectorSegmentation.Vision.Abstractions;
 namespace SharpPhysics.Demo.Integration
 {
     /// <summary>
+    /// Represents tracking data for a single detected person.
+    /// </summary>
+    public sealed class TrackedPerson
+    {
+        public int PersonId { get; }
+        public PhysicsObject? HeadBall { get; set; }
+        public PhysicsObject? LeftHandBall { get; set; }
+        public PhysicsObject? RightHandBall { get; set; }
+
+        // Smoothed positions
+        public Vector2 SmoothedHeadPos { get; set; }
+        public Vector2 SmoothedLeftHandPos { get; set; }
+        public Vector2 SmoothedRightHandPos { get; set; }
+
+        // Full skeleton data (17 COCO keypoints)
+        public Vector2[] RawKeypoints { get; } = new Vector2[17];
+        public Vector2[] SmoothedKeypoints { get; } = new Vector2[17];
+        public float[] KeypointConfidences { get; } = new float[17];
+
+        public bool HasInitialPositions { get; set; } = false;
+        public long LastSeenTimestamp { get; set; }
+        public float Confidence { get; set; }
+
+        public TrackedPerson(int personId)
+        {
+            PersonId = personId;
+        }
+
+        public IReadOnlyList<PhysicsObject> GetTrackingBalls()
+        {
+            var balls = new List<PhysicsObject>();
+            if (HeadBall != null) balls.Add(HeadBall);
+            if (LeftHandBall != null) balls.Add(LeftHandBall);
+            if (RightHandBall != null) balls.Add(RightHandBall);
+            return balls;
+        }
+    }
+
+    /// <summary>
     /// Bridges ProjectorSegmentation pose detection with the SharpPhysics engine.
     /// Creates physics balls for hands and head that track detected keypoints.
+    /// Supports multiple simultaneous people detection.
     /// </summary>
     public sealed class PersonColliderBridge : IDisposable
     {
@@ -30,6 +70,7 @@ namespace SharpPhysics.Demo.Integration
         private readonly float _trackingSpeed;
         private readonly int _ballRadius;
         private readonly float _smoothingFactor;
+        private readonly int _maxPeople;
 
         private IPoseDetector? _poseDetector;
         private IFrameSource? _camera;
@@ -37,33 +78,20 @@ namespace SharpPhysics.Demo.Integration
         private CancellationTokenSource? _cts;
         private volatile bool _isRunning;
 
-        // Physics balls for head and hands
-        private PhysicsObject? _headBall;
-        private PhysicsObject? _leftHandBall;
-        private PhysicsObject? _rightHandBall;
+        // Multi-person tracking
+        private readonly Dictionary<int, TrackedPerson> _trackedPeople = new();
         private readonly object _syncLock = new();
 
-        // Queue for thread-safe keypoint updates (detection runs on background thread)
-        private readonly ConcurrentQueue<PoseKeypoints> _pendingKeypoints = new();
+        // Queue for thread-safe detection updates (detection runs on background thread)
+        private readonly ConcurrentQueue<PoseDetectionResult> _pendingResults = new();
 
-        // Smoothed keypoint positions (for temporal smoothing)
-        private Vector2 _smoothedHeadPos;
-        private Vector2 _smoothedLeftHandPos;
-        private Vector2 _smoothedRightHandPos;
-        private bool _hasInitialPositions = false;
-
-        // Full skeleton keypoints (all 17 COCO keypoints)
-        // Raw positions from detection
-        private Vector2[] _rawKeypoints = new Vector2[17];
-        // Smoothed positions for rendering
-        private Vector2[] _smoothedKeypoints = new Vector2[17];
-        private float[] _keypointConfidences = new float[17];
-        private bool _hasFullSkeleton = false;
+        // Timeout for removing stale tracked people (ms)
+        private const long TRACKING_TIMEOUT_MS = 500;
 
         // Skeleton transform parameters (adjustable from game engine)
         private Vector2 _skeletonOffset = Vector2.Zero;
         private float _skeletonScale = 0.5f;
-        private Vector2 _skeletonOrigin = new Vector2(0.5f, 1f); // Normalized origin point for scaling
+        private Vector2 _skeletonOrigin = new Vector2(0.5f, 1f);
 
         // Keypoint indices for Yolo COCO format
         private const int NOSE_INDEX = 0;
@@ -96,15 +124,6 @@ namespace SharpPhysics.Demo.Integration
         };
 
         /// <summary>
-        /// Stores the relevant keypoints for physics tracking.
-        /// </summary>
-        private record PoseKeypoints(
-            Vector2 HeadPos, float HeadConf,
-            Vector2 LeftHandPos, float LeftHandConf,
-            Vector2 RightHandPos, float RightHandConf
-        );
-
-        /// <summary>
         /// Creates a new PersonColliderBridge for pose-based physics interaction.
         /// </summary>
         /// <param name="physicsSystem">The physics system to create tracking balls in.</param>
@@ -115,7 +134,8 @@ namespace SharpPhysics.Demo.Integration
         /// <param name="flipY">Flip Y coordinates.</param>
         /// <param name="trackingSpeed">How fast balls move toward target positions (higher = faster).</param>
         /// <param name="ballRadius">Radius of the tracking balls (default 20).</param>
-        /// <param name="smoothingFactor">Temporal smoothing factor (0 = no smoothing, 0.8 = very smooth). Default 0.5.</param>
+        /// <param name="smoothingFactor">Temporal smoothing factor (0 = no smoothing, 0.8 = very smooth). Default 0.75.</param>
+        /// <param name="maxPeople">Maximum number of people to track simultaneously (default 5).</param>
         public PersonColliderBridge(
             PhysicsSystem physicsSystem,
             float worldWidth,
@@ -125,7 +145,8 @@ namespace SharpPhysics.Demo.Integration
             bool flipY = false,
             float trackingSpeed = 15f,
             int ballRadius = 20,
-            float smoothingFactor = 0.75f)
+            float smoothingFactor = 0.75f,
+            int maxPeople = 5)
         {
             _physicsSystem = physicsSystem;
             _worldWidth = worldWidth;
@@ -136,11 +157,11 @@ namespace SharpPhysics.Demo.Integration
             _trackingSpeed = trackingSpeed;
             _ballRadius = ballRadius;
             _smoothingFactor = Math.Clamp(smoothingFactor, 0f, 0.95f);
+            _maxPeople = Math.Max(1, maxPeople);
         }
 
         /// <summary>
         /// Gets or sets the skeleton offset in world coordinates.
-        /// Use this to move the entire skeleton around the screen.
         /// </summary>
         public Vector2 SkeletonOffset
         {
@@ -150,7 +171,6 @@ namespace SharpPhysics.Demo.Integration
 
         /// <summary>
         /// Gets or sets the skeleton scale factor.
-        /// 1.0 = full screen, 0.5 = half size, 2.0 = double size.
         /// </summary>
         public float SkeletonScale
         {
@@ -160,7 +180,6 @@ namespace SharpPhysics.Demo.Integration
 
         /// <summary>
         /// Gets or sets the origin point for scaling (in normalized 0-1 coordinates).
-        /// Default is (0.5, 0.5) = center of screen.
         /// </summary>
         public Vector2 SkeletonOrigin
         {
@@ -174,12 +193,26 @@ namespace SharpPhysics.Demo.Integration
         public event EventHandler<Exception>? OnError;
 
         /// <summary>
-        /// Fired after the tracking balls are updated.
+        /// Fired after tracking balls are updated for any person.
         /// </summary>
         public event EventHandler<IReadOnlyList<PhysicsObject>>? OnPersonBodyUpdated;
 
         /// <summary>
-        /// The current tracking balls (head, left hand, right hand).
+        /// Number of currently tracked people.
+        /// </summary>
+        public int TrackedPersonCount
+        {
+            get
+            {
+                lock (_syncLock)
+                {
+                    return _trackedPeople.Count;
+                }
+            }
+        }
+
+        /// <summary>
+        /// All current tracking balls across all tracked people.
         /// </summary>
         public IReadOnlyList<PhysicsObject> TrackingBalls
         {
@@ -187,12 +220,21 @@ namespace SharpPhysics.Demo.Integration
             {
                 lock (_syncLock)
                 {
-                    var balls = new List<PhysicsObject>();
-                    if (_headBall != null) balls.Add(_headBall);
-                    if (_leftHandBall != null) balls.Add(_leftHandBall);
-                    if (_rightHandBall != null) balls.Add(_rightHandBall);
-                    return balls;
+                    return _trackedPeople.Values
+                        .SelectMany(p => p.GetTrackingBalls())
+                        .ToList();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Gets all currently tracked people.
+        /// </summary>
+        public IReadOnlyList<TrackedPerson> GetTrackedPeople()
+        {
+            lock (_syncLock)
+            {
+                return _trackedPeople.Values.ToList();
             }
         }
 
@@ -210,14 +252,12 @@ namespace SharpPhysics.Demo.Integration
                     throw new System.IO.FileNotFoundException($"Model file not found: {_modelPath}");
                 }
 
-                _poseDetector = new YoloV26PoseDetector(_modelPath, useGpu: true);
+                _poseDetector = new YoloV26PoseDetector(_modelPath, useGpu: true, maxPeople: _maxPeople);
                 Console.WriteLine("[PersonBridge] Yolo model loaded successfully");
 
                 _camera = new MjpegCameraFrameSource(url, 5, true);
                 Console.WriteLine($"[PersonBridge] Stream {url} opened at {width}x{height} @ {fps}fps");
-
-                // Create the tracking balls
-                CreateTrackingBalls();
+                Console.WriteLine($"[PersonBridge] Multi-person tracking enabled (max {_maxPeople} people)");
 
                 _cts = new CancellationTokenSource();
                 _isRunning = true;
@@ -253,14 +293,12 @@ namespace SharpPhysics.Demo.Integration
                     throw new System.IO.FileNotFoundException($"Model file not found: {_modelPath}");
                 }
 
-                _poseDetector = new YoloV26PoseDetector(_modelPath, useGpu: true);
+                _poseDetector = new YoloV26PoseDetector(_modelPath, useGpu: true, maxPeople: _maxPeople);
                 Console.WriteLine("[PersonBridge] Yolo model loaded successfully");
 
                 _camera = new OpenCvCameraFrameSource(cameraIndex, width, height, fps);
                 Console.WriteLine($"[PersonBridge] Camera {cameraIndex} opened at {width}x{height} @ {fps}fps");
-
-                // Create the tracking balls
-                CreateTrackingBalls();
+                Console.WriteLine($"[PersonBridge] Multi-person tracking enabled (max {_maxPeople} people)");
 
                 _cts = new CancellationTokenSource();
                 _isRunning = true;
@@ -283,44 +321,61 @@ namespace SharpPhysics.Demo.Integration
         }
 
         /// <summary>
-        /// Creates the initial tracking balls for head and hands.
+        /// Creates tracking balls for a newly detected person.
         /// </summary>
-        private void CreateTrackingBalls()
+        private TrackedPerson CreateTrackedPerson(int personId, Vector2 initialPos)
         {
-            lock (_syncLock)
+            var person = new TrackedPerson(personId);
+
+            // Head ball
+            var headShader = new SFMLPolyShader();
+            person.HeadBall = _physicsSystem.CreateStaticCircle(
+                initialPos - new Vector2(0, 50),
+                _ballRadius,
+                0.8f,
+                locked: true,
+                headShader
+            );
+
+            // Left hand ball
+            var leftHandShader = new SFMLBallShader();
+            person.LeftHandBall = _physicsSystem.CreateStaticCircle(
+                initialPos - new Vector2(50, 0),
+                _ballRadius,
+                0.8f,
+                locked: true,
+                leftHandShader
+            );
+
+            // Right hand ball
+            var rightHandShader = new SFMLBallShader();
+            person.RightHandBall = _physicsSystem.CreateStaticCircle(
+                initialPos + new Vector2(50, 0),
+                _ballRadius,
+                0.8f,
+                locked: true,
+                rightHandShader
+            );
+
+            return person;
+        }
+
+        /// <summary>
+        /// Removes a tracked person and their physics balls.
+        /// </summary>
+        private void RemoveTrackedPerson(TrackedPerson person)
+        {
+            if (person.HeadBall != null)
             {
-                // Create balls at center of screen initially
-                var centerPos = new Vector2(_worldWidth / 2, _worldHeight / 2);
-
-                // Head ball (slightly above center) - locked so gravity doesn't affect it
-                var headShader = new SFMLPolyShader();
-                _headBall = _physicsSystem.CreateStaticCircle(
-                    centerPos - new Vector2(0, 100),
-                    _ballRadius,
-                    0.8f,
-                    locked: true,  // Locked so gravity doesn't affect it
-                    headShader
-                );
-
-                // Left hand ball
-                var leftHandShader = new SFMLBallShader();
-                _leftHandBall = _physicsSystem.CreateStaticCircle(
-                    centerPos - new Vector2(100, 0),
-                    _ballRadius,
-                    0.8f,
-                    locked: true,
-                    leftHandShader
-                );
-
-                // Right hand ball
-                var rightHandShader = new SFMLBallShader();
-                _rightHandBall = _physicsSystem.CreateStaticCircle(
-                    centerPos + new Vector2(100, 0),
-                    _ballRadius,
-                    0.8f,
-                    locked: true,
-                    rightHandShader
-                );
+                _physicsSystem.RemovalQueue.Enqueue(person.HeadBall);
+            }
+            if (person.LeftHandBall != null)
+            {
+                _physicsSystem.RemovalQueue.Enqueue(person.LeftHandBall);
+            }
+            if (person.RightHandBall != null)
+            {
+                _physicsSystem.RemovalQueue.Enqueue(person.RightHandBall);
             }
         }
 
@@ -333,10 +388,9 @@ namespace SharpPhysics.Demo.Integration
             {
                 try
                 {
-                    // Capture local references to avoid race conditions during disposal
                     var camera = _camera;
                     var poseDetector = _poseDetector;
-                    
+
                     if (camera == null || poseDetector == null || !_isRunning)
                         break;
 
@@ -348,7 +402,6 @@ namespace SharpPhysics.Demo.Integration
 
                     try
                     {
-                        // Double-check we're still running before expensive detection
                         if (!_isRunning || ct.IsCancellationRequested)
                         {
                             frame.Dispose();
@@ -357,13 +410,9 @@ namespace SharpPhysics.Demo.Integration
 
                         var poseResult = poseDetector.Detect(frame, timestamp);
 
-                        if (poseResult.PersonDetected && poseResult.Keypoints.Count >= 17)
+                        if (poseResult.PersonDetected && _isRunning)
                         {
-                            var keypoints = ExtractRelevantKeypoints(poseResult.Keypoints);
-                            if (keypoints != null && _isRunning)
-                            {
-                                _pendingKeypoints.Enqueue(keypoints);
-                            }
+                            _pendingResults.Enqueue(poseResult);
                         }
                     }
                     finally
@@ -373,12 +422,10 @@ namespace SharpPhysics.Demo.Integration
                 }
                 catch (OperationCanceledException)
                 {
-                    // Normal cancellation
                     break;
                 }
                 catch (ObjectDisposedException)
                 {
-                    // Resources disposed during shutdown
                     break;
                 }
                 catch (Exception ex)
@@ -391,80 +438,32 @@ namespace SharpPhysics.Demo.Integration
                     Thread.Sleep(100);
                 }
             }
-            
+
             Console.WriteLine("[PersonBridge] Detection loop exited");
         }
 
         /// <summary>
-        /// Extracts head and hand keypoints from the pose result.
-        /// Also stores all keypoints for full skeleton rendering.
-        /// </summary>
-        private PoseKeypoints? ExtractRelevantKeypoints(IReadOnlyList<Keypoint> keypoints)
-        {
-            if (keypoints.Count < 17)
-                return null;
-
-            var nose = keypoints[NOSE_INDEX];
-            var leftWrist = keypoints[LEFT_WRIST_INDEX];
-            var rightWrist = keypoints[RIGHT_WRIST_INDEX];
-
-            // Convert normalized coordinates (0-1) to physics world coordinates
-            var headPos = ConvertToPhysicsCoords(nose.X, nose.Y);
-            var leftHandPos = ConvertToPhysicsCoords(leftWrist.X, leftWrist.Y);
-            var rightHandPos = ConvertToPhysicsCoords(rightWrist.X, rightWrist.Y);
-
-            // Store all 17 RAW keypoints for smoothing later
-            lock (_syncLock)
-            {
-                for (int i = 0; i < 17 && i < keypoints.Count; i++)
-                {
-                    var kp = keypoints[i];
-                    _rawKeypoints[i] = ConvertToPhysicsCoords(kp.X, kp.Y);
-                    _keypointConfidences[i] = kp.Confidence;
-                }
-                _hasFullSkeleton = true;
-            }
-
-            return new PoseKeypoints(
-                headPos, nose.Confidence,
-                leftHandPos, leftWrist.Confidence,
-                rightHandPos, rightWrist.Confidence
-            );
-        }
-
-        /// <summary>
         /// Converts normalized coordinates (0-1) to physics world coordinates.
-        /// Applies skeleton transform (scale and offset).
         /// </summary>
         private Vector2 ConvertToPhysicsCoords(float normX, float normY)
         {
-            // Flip coordinates if needed
             float x = _flipX ? (1 - normX) : normX;
             float y = _flipY ? (1 - normY) : normY;
 
-            // Apply scale around the origin point
             float scaledX = _skeletonOrigin.X + (x - _skeletonOrigin.X) * _skeletonScale;
             float scaledY = _skeletonOrigin.Y + (y - _skeletonOrigin.Y) * _skeletonScale;
 
-            // Convert to world coordinates and apply offset
             return new Vector2(
                 scaledX * _worldWidth + _skeletonOffset.X,
                 scaledY * _worldHeight + _skeletonOffset.Y
             );
         }
 
-        /// <summary>
-        /// Lerp (linear interpolation) between two vectors.
-        /// </summary>
         private static Vector2 Lerp(Vector2 from, Vector2 to, float t)
         {
             return from + (to - from) * t;
         }
 
-        /// <summary>
-        /// Applies temporal smoothing using lerp toward target position.
-        /// Higher smoothing factor = slower movement toward target.
-        /// </summary>
         private Vector2 SmoothPosition(Vector2 target, Vector2 current, bool hasInitial)
         {
             if (!hasInitial || _smoothingFactor <= 0)
@@ -472,36 +471,28 @@ namespace SharpPhysics.Demo.Integration
                 return target;
             }
 
-            // Lerp factor: lower smoothingFactor = faster response
-            // smoothingFactor of 0.75 means we move 25% of the way each frame
             float lerpSpeed = 1f - _smoothingFactor;
-
             return Lerp(current, target, lerpSpeed);
         }
 
         /// <summary>
-        /// Stop detection and remove tracking balls from world.
+        /// Stop detection and remove all tracking balls from world.
         /// </summary>
         public void Stop()
         {
             if (!_isRunning && _detectionThread == null)
-                return; // Already stopped
-                
+                return;
+
             Console.WriteLine("[PersonBridge] Stopping...");
-            
-            // Signal thread to stop first
+
             _isRunning = false;
-            
+
             try
             {
                 _cts?.Cancel();
             }
-            catch (ObjectDisposedException)
-            {
-                // Already disposed
-            }
+            catch (ObjectDisposedException) { }
 
-            // Wait for thread to finish
             var thread = _detectionThread;
             if (thread != null && thread.IsAlive)
             {
@@ -512,7 +503,6 @@ namespace SharpPhysics.Demo.Integration
             }
             _detectionThread = null;
 
-            // Now safe to dispose resources
             try
             {
                 _cts?.Dispose();
@@ -540,166 +530,296 @@ namespace SharpPhysics.Demo.Integration
             }
             _poseDetector = null;
 
-            // Clear tracking balls
+            // Clear all tracked people
             lock (_syncLock)
             {
-                if (_headBall != null)
+                foreach (var person in _trackedPeople.Values)
                 {
-                    _physicsSystem.RemovalQueue.Enqueue(_headBall);
-                    _headBall = null;
+                    RemoveTrackedPerson(person);
                 }
-                if (_leftHandBall != null)
-                {
-                    _physicsSystem.RemovalQueue.Enqueue(_leftHandBall);
-                    _leftHandBall = null;
-                }
-                if (_rightHandBall != null)
-                {
-                    _physicsSystem.RemovalQueue.Enqueue(_rightHandBall);
-                    _rightHandBall = null;
-                }
-                
-                _hasFullSkeleton = false;
+                _trackedPeople.Clear();
             }
 
-            // Clear pending keypoints queue
-            while (_pendingKeypoints.TryDequeue(out _)) { }
+            while (_pendingResults.TryDequeue(out _)) { }
 
             Console.WriteLine("[PersonBridge] Stopped");
         }
 
         /// <summary>
-        /// Call this from the main game loop to process any pending keypoint updates.
-        /// This ensures physics objects are updated on the main thread.
+        /// Call this from the main game loop to process any pending detection updates.
         /// </summary>
         public void ProcessPendingUpdates()
         {
-            // Early exit if not running
             if (!_isRunning) return;
-            
-            // Only process the most recent keypoints (discard older ones)
-            PoseKeypoints? latestKeypoints = null;
-            int discardCount = 0;
 
-            while (_pendingKeypoints.TryDequeue(out var keypoints))
+            // Only process the most recent result
+            PoseDetectionResult? latestResult = null;
+            while (_pendingResults.TryDequeue(out var result))
             {
-                if (latestKeypoints != null) discardCount++;
-                latestKeypoints = keypoints;
+                latestResult = result;
             }
 
-            if (latestKeypoints != null && _isRunning)
+            if (latestResult != null && _isRunning)
             {
-                UpdateTrackingBalls(latestKeypoints);
+                UpdateAllTrackedPeople(latestResult);
             }
         }
 
         /// <summary>
-        /// Updates the tracking balls to move toward the detected keypoint positions.
-        /// Applies smoothing and transforms before moving balls.
+        /// Updates all tracked people based on the detection result.
+        /// Handles creating new tracked people and removing stale ones.
         /// </summary>
-        private void UpdateTrackingBalls(PoseKeypoints keypoints)
+        private void UpdateAllTrackedPeople(PoseDetectionResult result)
         {
             lock (_syncLock)
             {
-                // Initialize positions on first detection
-                if (!_hasInitialPositions)
-                {
-                    _smoothedHeadPos = keypoints.HeadPos;
-                    _smoothedLeftHandPos = keypoints.LeftHandPos;
-                    _smoothedRightHandPos = keypoints.RightHandPos;
+                var currentTimestamp = result.TimestampMs;
+                var detectedPersonIds = new HashSet<int>();
 
-                    // Initialize all skeleton keypoints
-                    Array.Copy(_rawKeypoints, _smoothedKeypoints, 17);
-                    _hasInitialPositions = true;
+                // Update or create tracked people for each detected person
+                foreach (var detectedPerson in result.People)
+                {
+                    // Match detected person to existing tracked person by spatial proximity
+                    int matchedId = FindBestMatch(detectedPerson);
+
+                    if (matchedId == -1)
+                    {
+                        // New person detected - create tracking
+                        matchedId = GetNextAvailablePersonId();
+                        if (_trackedPeople.Count >= _maxPeople)
+                        {
+                            // Skip if at max capacity
+                            continue;
+                        }
+
+                        var initialPos = new Vector2(_worldWidth / 2, _worldHeight / 2);
+                        _trackedPeople[matchedId] = CreateTrackedPerson(matchedId, initialPos);
+                        Console.WriteLine($"[PersonBridge] New person detected, ID: {matchedId}");
+                    }
+
+                    detectedPersonIds.Add(matchedId);
+                    UpdateTrackedPerson(_trackedPeople[matchedId], detectedPerson, currentTimestamp);
                 }
 
-                // Apply lerp smoothing to head and hands
-                _smoothedHeadPos = SmoothPosition(keypoints.HeadPos, _smoothedHeadPos, true);
-                _smoothedLeftHandPos = SmoothPosition(keypoints.LeftHandPos, _smoothedLeftHandPos, true);
-                _smoothedRightHandPos = SmoothPosition(keypoints.RightHandPos, _smoothedRightHandPos, true);
+                // Remove stale tracked people (not seen recently)
+                var staleIds = _trackedPeople.Keys
+                    .Where(id => !detectedPersonIds.Contains(id) &&
+                                 (currentTimestamp - _trackedPeople[id].LastSeenTimestamp) > TRACKING_TIMEOUT_MS)
+                    .ToList();
 
-                // Apply lerp smoothing to all skeleton keypoints
-                for (int i = 0; i < 17; i++)
+                foreach (var staleId in staleIds)
                 {
-                    _smoothedKeypoints[i] = SmoothPosition(_rawKeypoints[i], _smoothedKeypoints[i], true);
+                    Console.WriteLine($"[PersonBridge] Removing stale person, ID: {staleId}");
+                    RemoveTrackedPerson(_trackedPeople[staleId]);
+                    _trackedPeople.Remove(staleId);
                 }
-
-                // Update head ball
-                if (_headBall != null && keypoints.HeadConf > 0.5f)
-                {
-                    MoveBallToPosition(_headBall, _smoothedHeadPos);
-                }
-
-                // Update left hand ball
-                if (_leftHandBall != null && keypoints.LeftHandConf > 0.5f)
-                {
-                    MoveBallToPosition(_leftHandBall, _smoothedLeftHandPos);
-                }
-
-                // Update right hand ball
-                if (_rightHandBall != null && keypoints.RightHandConf > 0.5f)
-                {
-                    MoveBallToPosition(_rightHandBall, _smoothedRightHandPos);
-                }
-
-                // Store smoothed keypoints for skeleton rendering
-                _latestKeypoints = new PoseKeypoints(
-                    _smoothedHeadPos, keypoints.HeadConf,
-                    _smoothedLeftHandPos, keypoints.LeftHandConf,
-                    _smoothedRightHandPos, keypoints.RightHandConf
-                );
             }
 
             OnPersonBodyUpdated?.Invoke(this, TrackingBalls);
         }
 
         /// <summary>
-        /// Directly moves a ball to the target position (already smoothed).
-        /// Temporarily unlocks to allow movement, then re-locks.
+        /// Finds the best matching tracked person for a detected person based on spatial proximity.
+        /// Returns -1 if no good match is found.
         /// </summary>
+        private int FindBestMatch(DetectedPerson detectedPerson)
+        {
+            // Get the detected person's center (use bbox center or nose position)
+
+            var nose = detectedPerson.Keypoints[NOSE_INDEX];
+
+            var headPos = ConvertToPhysicsCoords(nose.X, nose.Y);
+
+            int bestMatchId = -1;
+            float bestDistance = float.MaxValue;
+            const float MAX_MATCH_DISTANCE = 200f; // Max pixels to consider a match
+
+            foreach (var (id, tracked) in _trackedPeople)
+            {
+                if (!tracked.HasInitialPositions)
+                    continue;
+
+                // Use head position as the tracking reference
+                var trackedCenter = tracked.SmoothedHeadPos;
+                var distance = Vector2.Distance(headPos, trackedCenter);
+
+                if (distance < bestDistance && distance < MAX_MATCH_DISTANCE)
+                {
+                    bestDistance = distance;
+                    bestMatchId = id;
+                }
+            }
+
+            return bestMatchId;
+        }
+
+        private int _nextPersonId = 0;
+        private int GetNextAvailablePersonId()
+        {
+            return _nextPersonId++;
+        }
+
+        /// <summary>
+        /// Updates a single tracked person with new detection data.
+        /// </summary>
+        private void UpdateTrackedPerson(TrackedPerson tracked, DetectedPerson detected, long timestamp)
+        {
+            tracked.LastSeenTimestamp = timestamp;
+            tracked.Confidence = detected.Confidence;
+
+            var keypoints = detected.Keypoints;
+            if (keypoints.Count < 17)
+                return;
+
+            var nose = keypoints[NOSE_INDEX];
+            var leftWrist = keypoints[LEFT_WRIST_INDEX];
+            var rightWrist = keypoints[RIGHT_WRIST_INDEX];
+
+            var headPos = ConvertToPhysicsCoords(nose.X, nose.Y);
+            var leftHandPos = ConvertToPhysicsCoords(leftWrist.X, leftWrist.Y);
+            var rightHandPos = ConvertToPhysicsCoords(rightWrist.X, rightWrist.Y);
+
+            // Store raw keypoints
+            for (int i = 0; i < 17 && i < keypoints.Count; i++)
+            {
+                var kp = keypoints[i];
+                tracked.RawKeypoints[i] = ConvertToPhysicsCoords(kp.X, kp.Y);
+                tracked.KeypointConfidences[i] = kp.Confidence;
+            }
+
+            // Initialize or smooth positions
+            if (!tracked.HasInitialPositions)
+            {
+                tracked.SmoothedHeadPos = headPos;
+                tracked.SmoothedLeftHandPos = leftHandPos;
+                tracked.SmoothedRightHandPos = rightHandPos;
+                Array.Copy(tracked.RawKeypoints, tracked.SmoothedKeypoints, 17);
+                tracked.HasInitialPositions = true;
+            }
+            else
+            {
+                tracked.SmoothedHeadPos = SmoothPosition(headPos, tracked.SmoothedHeadPos, true);
+                tracked.SmoothedLeftHandPos = SmoothPosition(leftHandPos, tracked.SmoothedLeftHandPos, true);
+                tracked.SmoothedRightHandPos = SmoothPosition(rightHandPos, tracked.SmoothedRightHandPos, true);
+
+                for (int i = 0; i < 17; i++)
+                {
+                    tracked.SmoothedKeypoints[i] = SmoothPosition(tracked.RawKeypoints[i], tracked.SmoothedKeypoints[i], true);
+                }
+            }
+
+            // Update physics balls
+            if (tracked.HeadBall != null && nose.Confidence > 0.5f)
+            {
+                MoveBallToPosition(tracked.HeadBall, tracked.SmoothedHeadPos);
+            }
+
+            if (tracked.LeftHandBall != null && leftWrist.Confidence > 0.5f)
+            {
+                MoveBallToPosition(tracked.LeftHandBall, tracked.SmoothedLeftHandPos);
+            }
+
+            if (tracked.RightHandBall != null && rightWrist.Confidence > 0.5f)
+            {
+                MoveBallToPosition(tracked.RightHandBall, tracked.SmoothedRightHandPos);
+            }
+        }
+
         private void MoveBallToPosition(PhysicsObject ball, Vector2 targetPos)
         {
             var currentPos = ball.Center;
             var delta = targetPos - currentPos;
 
-            // Temporarily unlock to move
             ball.Locked = false;
             ball.Velocity = delta * 10;
             ball.Move(delta);
             ball.Locked = true;
         }
 
-        // Store latest keypoints for external access (e.g., skeleton rendering)
-        private PoseKeypoints? _latestKeypoints;
-
         /// <summary>
-        /// Gets the latest detected keypoints for rendering (head and hands only).
-        /// Returns null if no keypoints have been detected yet.
+        /// Gets the latest keypoints for the first tracked person (backward compatibility).
         /// </summary>
         public (Vector2 Head, Vector2 LeftHand, Vector2 RightHand, float HeadConf, float LeftConf, float RightConf)? GetLatestKeypoints()
         {
-            var kp = _latestKeypoints;
-            if (kp == null) return null;
-            return (kp.HeadPos, kp.LeftHandPos, kp.RightHandPos, kp.HeadConf, kp.LeftHandConf, kp.RightHandConf);
+            lock (_syncLock)
+            {
+                var firstPerson = _trackedPeople.Values.FirstOrDefault();
+                if (firstPerson == null || !firstPerson.HasInitialPositions)
+                    return null;
+
+                return (
+                    firstPerson.SmoothedHeadPos,
+                    firstPerson.SmoothedLeftHandPos,
+                    firstPerson.SmoothedRightHandPos,
+                    firstPerson.KeypointConfidences[NOSE_INDEX],
+                    firstPerson.KeypointConfidences[LEFT_WRIST_INDEX],
+                    firstPerson.KeypointConfidences[RIGHT_WRIST_INDEX]
+                );
+            }
         }
 
         /// <summary>
-        /// Gets the full skeleton data for rendering (all 17 COCO keypoints).
-        /// Returns null if no skeleton has been detected yet.
+        /// Gets the full skeleton data for the first tracked person (backward compatibility).
         /// </summary>
         public (Vector2[] Keypoints, float[] Confidences, (int, int)[] Connections)? GetFullSkeleton()
         {
             lock (_syncLock)
             {
-                if (!_hasFullSkeleton) return null;
+                var firstPerson = _trackedPeople.Values.FirstOrDefault();
+                if (firstPerson == null || !firstPerson.HasInitialPositions)
+                    return null;
 
-                // Return copies to avoid threading issues
                 var keypoints = new Vector2[17];
                 var confidences = new float[17];
-                Array.Copy(_smoothedKeypoints, keypoints, 17);
-                Array.Copy(_keypointConfidences, confidences, 17);
+                Array.Copy(firstPerson.SmoothedKeypoints, keypoints, 17);
+                Array.Copy(firstPerson.KeypointConfidences, confidences, 17);
 
                 return (keypoints, confidences, SkeletonConnections);
+            }
+        }
+
+        /// <summary>
+        /// Gets the full skeleton data for a specific tracked person by ID.
+        /// </summary>
+        public (Vector2[] Keypoints, float[] Confidences, (int, int)[] Connections)? GetFullSkeleton(int personId)
+        {
+            lock (_syncLock)
+            {
+                if (!_trackedPeople.TryGetValue(personId, out var person) || !person.HasInitialPositions)
+                    return null;
+
+                var keypoints = new Vector2[17];
+                var confidences = new float[17];
+                Array.Copy(person.SmoothedKeypoints, keypoints, 17);
+                Array.Copy(person.KeypointConfidences, confidences, 17);
+
+                return (keypoints, confidences, SkeletonConnections);
+            }
+        }
+
+        /// <summary>
+        /// Gets skeleton data for all tracked people.
+        /// </summary>
+        public IReadOnlyList<(int PersonId, Vector2[] Keypoints, float[] Confidences)> GetAllSkeletons()
+        {
+            lock (_syncLock)
+            {
+                var skeletons = new List<(int, Vector2[], float[])>();
+
+                foreach (var person in _trackedPeople.Values)
+                {
+                    if (!person.HasInitialPositions)
+                        continue;
+
+                    var keypoints = new Vector2[17];
+                    var confidences = new float[17];
+                    Array.Copy(person.SmoothedKeypoints, keypoints, 17);
+                    Array.Copy(person.KeypointConfidences, confidences, 17);
+
+                    skeletons.Add((person.PersonId, keypoints, confidences));
+                }
+
+                return skeletons;
             }
         }
 
