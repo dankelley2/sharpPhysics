@@ -43,10 +43,10 @@ namespace physics.Engine.Rendering.UI
         public UiMenuButton(
             string title,
             string description,
-            string icon,
             Font font,
             Vector2 position,
             Vector2 size,
+            string icon = "",
             Color? baseColor = null,
             Color? hoverColor = null,
             Color? borderColor = null)

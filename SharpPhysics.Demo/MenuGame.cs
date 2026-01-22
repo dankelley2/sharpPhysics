@@ -69,7 +69,6 @@ public class MenuGame : IGame
         var rainButton = new UiMenuButton(
             "Rain Catcher",
             "Catch falling balls with your body!",
-            "☔",
             font,
             new Vector2(centerX - buttonWidth / 2, startY),
             new Vector2(buttonWidth, buttonHeight),
@@ -84,7 +83,6 @@ public class MenuGame : IGame
         var bubbleButton = new UiMenuButton(
             "Bubble Pop",
             "Pop floating bubbles with your hands!",
-            "🫧",
             font,
             new Vector2(centerX - buttonWidth / 2, startY + buttonHeight + spacing),
             new Vector2(buttonWidth, buttonHeight),
@@ -99,7 +97,6 @@ public class MenuGame : IGame
         var platformerButton = new UiMenuButton(
             "Platformer",
             "Action platformer - keyboard controls!",
-            "🎮",
             font,
             new Vector2(centerX - buttonWidth / 2, startY + (buttonHeight + spacing) * 2),
             new Vector2(buttonWidth, buttonHeight),
@@ -114,7 +111,6 @@ public class MenuGame : IGame
         var sandboxButton = new UiMenuButton(
             "Physics Sandbox",
             "Experiment with physics simulation",
-            "🔬",
             font,
             new Vector2(centerX - buttonWidth / 2, startY + (buttonHeight + spacing) * 3),
             new Vector2(buttonWidth, buttonHeight),
@@ -205,13 +201,13 @@ public class MenuGame : IGame
     public void Render(Renderer renderer)
     {
         // Draw animated title
-        float titleY = 60 + MathF.Sin(_animationTime * 2f) * 5f;
-        renderer.DrawText("🎮 SharpPhysics Demo Games 🎮", 
-            _engine.WindowWidth / 2f - 280, titleY, 42, Color.White);
+        float titleY = 50 + MathF.Sin(_animationTime * 2f) * 5f;
+        renderer.DrawText("SharpPhysics Demo Games", 
+            _engine.WindowWidth / 2f - 300, titleY, 42, Color.White);
 
         // Draw subtitle
         renderer.DrawText("Select a game to play", 
-            _engine.WindowWidth / 2f - 100, 120, 20, new Color(180, 180, 200));
+            _engine.WindowWidth / 2f - 100, 100, 20, new Color(180, 180, 200));
 
         // Draw animated background particles
         DrawParticles(renderer);
