@@ -172,13 +172,15 @@ public class SettingsGame : IGame
         if (c == '\r' || c == '\n')
         {
             ConfirmEdit();
+            // Consume Enter so it doesn't immediately re-enter edit mode
+            _engine.InputManager.ConsumePress("Enter");
             return;
         }
 
-        // Handle escape (cancel edit)
+        // ESC is handled in Update() for proper edge detection
+        // (skip ESC handling here to avoid double-processing)
         if (c == 27) // ESC
         {
-            _editingIndex = -1;
             return;
         }
 
@@ -218,17 +220,21 @@ public class SettingsGame : IGame
     {
         _keyRepeatTimer -= deltaTime;
 
-        // ESC to save and return (only when not editing)
-        if (keyState.Escape && _editingIndex < 0)
+        // ESC behavior: First press exits editing, second press exits settings
+        // Using edge-detected EscapePressed from InputManager
+        if (keyState.EscapePressed)
         {
-            SaveAndReturn();
-            return;
-        }
-
-        // Cancel editing with escape
-        if (keyState.Escape && _editingIndex >= 0)
-        {
-            _editingIndex = -1;
+            _engine.InputManager.ConsumePress("Escape");
+            if (_editingIndex >= 0)
+            {
+                // Currently editing - exit editing mode
+                _editingIndex = -1;
+            }
+            else
+            {
+                // Not editing - save and return to menu
+                SaveAndReturn();
+            }
             return;
         }
 
@@ -249,7 +255,7 @@ public class SettingsGame : IGame
                     keyState.MousePosition.Y <= y + rowHeight)
                 {
                     _selectedIndex = i;
-                    // Double-click or single click starts editing
+                    // Single click starts editing
                     _editingIndex = i;
                     _editBuffer = _currentSettings[i].Value;
                     break;
@@ -270,8 +276,11 @@ public class SettingsGame : IGame
                 _selectedIndex++;
                 _keyRepeatTimer = KEY_REPEAT_DELAY;
             }
-            if (keyState.Space || keyState.Enter)
+            // Use edge-detected EnterPressed from InputManager
+            if (keyState.SpacePressed || keyState.EnterPressed)
             {
+                _engine.InputManager.ConsumePress("Space");
+                _engine.InputManager.ConsumePress("Enter");
                 // Start editing
                 _editingIndex = _selectedIndex;
                 _editBuffer = _currentSettings[_selectedIndex].Value;
