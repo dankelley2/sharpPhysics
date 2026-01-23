@@ -88,56 +88,114 @@ public class DemoGame : IGame
             CreateCarDemo(worldWidth, worldHeight);
         }
 
-        private void CreateCarDemo(uint worldWidth, uint worldHeight)
-        {
-            // Car body dimensions
-            float bodyWidth = 120f;
-            float bodyHeight = 30f;
-            float wheelRadius = 15f;
-            float wheelInset = 10f; // Distance from body edge to wheel center
+    private void CreateCarDemo(uint worldWidth, uint worldHeight)
+    {
+        // Car body dimensions
+        float bodyWidth = 120f;
+        float bodyHeight = 30f;
+        float wheelRadius = 15f;
+        float wheelInset = 10f; // Distance from body edge to wheel center
 
-            // Position car in center-ish area
-            float carX = worldWidth / 2f - bodyWidth / 2f;
-            float carY = worldHeight - 200f; // Near bottom but above floor
+        // Position car in center-ish area
+        float carX = worldWidth / 2f - bodyWidth / 2f;
+        float carY = worldHeight - 200f; // Near bottom but above floor
 
-            // Create the car body (box)
-            var carBody = _objectTemplates.CreateBox(new Vector2(carX, carY), (int)bodyWidth, (int)bodyHeight);
+        // Create the car body (box)
+        var carBody = _objectTemplates.CreateBox(new Vector2(carX, carY), (int)bodyWidth, (int)bodyHeight);
 
-            // Wheel X positions (in local body coordinates, where 0 = body center)
-            float frontWheelLocalX = bodyWidth / 2f - wheelInset;   // Right side: +50
-            float rearWheelLocalX = -bodyWidth / 2f + wheelInset;   // Left side: -50
+        // Wheel X positions (in local body coordinates, where 0 = body center)
+        float frontWheelLocalX = bodyWidth / 2f - wheelInset;   // Right side: +50
+        float rearWheelLocalX = -bodyWidth / 2f + wheelInset;   // Left side: -50
 
-            // Wheel world positions for spawning
-            float frontWheelWorldX = carX + bodyWidth / 2f + frontWheelLocalX; // carX + 60 + 50 = carX + 110
-            float rearWheelWorldX = carX + bodyWidth / 2f + rearWheelLocalX;   // carX + 60 - 50 = carX + 10
-            float wheelWorldY = carY + bodyHeight + wheelRadius;
+        // Wheel world positions for spawning
+        float frontWheelWorldX = carX + bodyWidth / 2f + frontWheelLocalX; // carX + 60 + 50 = carX + 110
+        float rearWheelWorldX = carX + bodyWidth / 2f + rearWheelLocalX;   // carX + 60 - 50 = carX + 10
+        float wheelWorldY = carY + bodyHeight + wheelRadius;
 
-            // Create wheels (CreateMedBall takes top-left corner, ball radius is ~10)
-            var frontWheel = _objectTemplates.CreateMedBall(frontWheelWorldX - 10, wheelWorldY - 10);
-            var rearWheel = _objectTemplates.CreateMedBall(rearWheelWorldX - 10, wheelWorldY - 10);
+        // Create wheels (CreateMedBall takes top-left corner, ball radius is ~10)
+        var frontWheel = _objectTemplates.CreateMedBall(frontWheelWorldX - 10, wheelWorldY - 10);
+        var rearWheel = _objectTemplates.CreateMedBall(rearWheelWorldX - 10, wheelWorldY - 10);
 
-            // Local anchors on body (relative to body center)
-            Vector2 frontAttachOnBody = new Vector2(frontWheelLocalX, bodyHeight / 2f + wheelRadius);
-            Vector2 rearAttachOnBody = new Vector2(rearWheelLocalX, bodyHeight / 2f + wheelRadius);
+        // Local anchors on body (relative to body center)
+        Vector2 frontAttachOnBody = new Vector2(frontWheelLocalX, bodyHeight / 2f + wheelRadius);
+        Vector2 rearAttachOnBody = new Vector2(rearWheelLocalX, bodyHeight / 2f + wheelRadius);
 
-            // Connect wheels to body with AxisConstraints
-            var frontWheelConstraint = new AxisConstraint(
-                carBody,
-                frontWheel,
-                frontAttachOnBody,  // Local anchor on body
-                Vector2.Zero        // Local anchor on wheel (its center)
-            );
+        // Connect wheels to body with AxisConstraints
+        var frontWheelConstraint = new AxisConstraint(
+            carBody,
+            frontWheel,
+            frontAttachOnBody,  // Local anchor on body
+            Vector2.Zero        // Local anchor on wheel (its center)
+        );
 
-            var rearWheelConstraint = new AxisConstraint(
-                carBody,
-                rearWheel,
-                rearAttachOnBody,   // Local anchor on body
-                Vector2.Zero        // Local anchor on wheel (its center)
-            );
+        var rearWheelConstraint = new AxisConstraint(
+            carBody,
+            rearWheel,
+            rearAttachOnBody,   // Local anchor on body
+            Vector2.Zero        // Local anchor on wheel (its center)
+        );
 
-            _engine.PhysicsSystem.Constraints.Add(frontWheelConstraint);
-            _engine.PhysicsSystem.Constraints.Add(rearWheelConstraint);
-        }
+        _engine.PhysicsSystem.Constraints.Add(frontWheelConstraint);
+        _engine.PhysicsSystem.Constraints.Add(rearWheelConstraint);
+
+        // === WELDED PARTS (rigid attachments) ===
+
+        // Spoiler on top-rear of car
+        float spoilerWidth = 40f;
+        float spoilerHeight = 8f;
+        // Position spoiler so its center aligns with where we want to attach
+        float spoilerLocalX = -bodyWidth / 2f + 25f;  // X offset from body center
+        float spoilerLocalY = -bodyHeight / 2f - spoilerHeight / 2f - 2f;  // Just above body
+        float spoilerWorldX = carX + bodyWidth / 2f + spoilerLocalX - spoilerWidth / 2f;
+        float spoilerWorldY = carY + bodyHeight / 2f + spoilerLocalY - spoilerHeight / 2f;
+        var spoiler = _objectTemplates.CreateBox(new Vector2(spoilerWorldX, spoilerWorldY), (int)spoilerWidth, (int)spoilerHeight);
+
+        // Weld spoiler to body - use CENTER of spoiler (0,0) to minimize rotational coupling
+        Vector2 spoilerAttachOnBody = new Vector2(spoilerLocalX, spoilerLocalY);
+        Vector2 spoilerAttachOnSpoiler = Vector2.Zero;  // Center of spoiler
+        var spoilerWeld = new WeldConstraint(
+            carBody,
+            spoiler,
+            spoilerAttachOnBody,
+            spoilerAttachOnSpoiler
+        );
+        _engine.PhysicsSystem.Constraints.Add(spoilerWeld);
+
+        // Front bumper
+        float bumperWidth = 10f;
+        float bumperHeight = 20f;
+        float bumperWorldX = carX + bodyWidth; // At front (right side)
+        float bumperWorldY = carY + 5f;
+        var frontBumper = _objectTemplates.CreateBox(new Vector2(bumperWorldX, bumperWorldY), (int)bumperWidth, (int)bumperHeight);
+
+        // Weld bumper to body
+        // Local anchor on body: front-center edge
+        Vector2 bumperAttachOnBody = new Vector2(bodyWidth / 2f, 0f);
+        // Local anchor on bumper: left-center edge
+        Vector2 bumperAttachOnBumper = new Vector2(-bumperWidth / 2f, 0f);
+        var bumperWeld = new WeldConstraint(
+            carBody,
+            frontBumper,
+            bumperAttachOnBody,
+            bumperAttachOnBumper
+        );
+        _engine.PhysicsSystem.Constraints.Add(bumperWeld);
+
+        // Rear bumper
+        float rearBumperWorldX = carX - bumperWidth;
+        var rearBumper = _objectTemplates.CreateBox(new Vector2(rearBumperWorldX, bumperWorldY), (int)bumperWidth, (int)bumperHeight);
+
+        // Weld rear bumper to body
+        Vector2 rearBumperAttachOnBody = new Vector2(-bodyWidth / 2f, 0f);
+        Vector2 rearBumperAttachOnBumper = new Vector2(bumperWidth / 2f, 0f);
+        var rearBumperWeld = new WeldConstraint(
+            carBody,
+            rearBumper,
+            rearBumperAttachOnBody,
+            rearBumperAttachOnBumper
+        );
+        _engine.PhysicsSystem.Constraints.Add(rearBumperWeld);
+    }
 
     private void InitializePersonDetection(uint worldWidth, uint worldHeight)
     {
