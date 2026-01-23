@@ -9,7 +9,7 @@ namespace physics.Engine.Objects
 {
     public class PhysicsObject
     {
-        public static float SupportObjectNormalThreshold = 0.2f;
+        private static float SupportObjectNormalThreshold = 0.2f;
         public IShape Shape { get; protected set; }
         public AABB Aabb { get; protected set; }
         public Vector2 Center { get; protected set; }
@@ -44,6 +44,7 @@ namespace physics.Engine.Objects
         private readonly Dictionary<PhysicsObject, (Vector2, Vector2)> _previousContactPoints = new Dictionary<PhysicsObject, (Vector2, Vector2)>();
 
         // --- Sleep/Wake state management ---
+        public bool CanSleep = true;
         public bool Sleeping { get; private set; } = false;
         private float sleepTimer = 0f;
 
@@ -56,8 +57,6 @@ namespace physics.Engine.Objects
         private readonly HashSet<PhysicsObject> _supportedObjects = new HashSet<PhysicsObject>();
         // Persistent contact points for sleeping objects
         private readonly Dictionary<PhysicsObject, (Vector2, Vector2)> _sleepingContactPoints = new Dictionary<PhysicsObject, (Vector2, Vector2)>();
-        // Position when going to sleep, to detect if supporting objects have moved
-        private Vector2 _sleepPosition;
         // Whether to validate supports next frame
         private bool _validateSupportsNextFrame = false;
 
@@ -201,12 +200,10 @@ namespace physics.Engine.Objects
         public void Sleep()
         {
             if (Sleeping) return;
+            if (!CanSleep) return;
             Sleeping = true;
             Velocity = new Vector2(0, 0);
             AngularVelocity = 0;
-            
-            // Store the sleep position
-            _sleepPosition = Center;
             
             // Preserve current contacts for sleeping state
             _sleepingContactPoints.Clear();
@@ -246,10 +243,8 @@ namespace physics.Engine.Objects
         /// <param name="normal"></param>
         public void AddContact(PhysicsObject obj, Vector2 point, Vector2 normal)
         {
-            if (!_contactPoints.ContainsKey(obj))
+            if (_contactPoints.TryAdd(obj, (point, normal)))
             {
-                _contactPoints[obj] = (point, normal);
-                
                 // If normal points upward, this object might be supporting us
                 if (normal.Y > SupportObjectNormalThreshold) // Y is negative when pointing up in many engines
                 {
@@ -297,11 +292,11 @@ namespace physics.Engine.Objects
                 if (!_contactPoints.ContainsKey(kv.Key))
                 {
                     removedHandler?.Invoke(kv.Key, kv.Value);
-                    
+
                     // Update support networks when contacts are lost
-                    if (_supportingObjects.Contains(kv.Key))
+                    // HashSet.Remove returns true if item was found and removed - single lookup
+                    if (_supportingObjects.Remove(kv.Key))
                     {
-                        _supportingObjects.Remove(kv.Key);
                         kv.Key._supportedObjects.Remove(this);
                     }
                 }

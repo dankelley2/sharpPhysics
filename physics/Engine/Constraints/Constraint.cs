@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Numerics;
 using physics.Engine.Objects;
 using physics.Engine.Helpers;
@@ -33,21 +33,16 @@ namespace physics.Engine.Constraints
     /// <summary>
     /// A weld constraint holds two objects together so that the world-space positions
     /// of their respective local anchors remain coincident, and their relative angle remains constant.
+    /// Uses proper impulse-based constraint solving with Baumgarte stabilization.
     /// </summary>
     public class WeldConstraint : Constraint
     {
-        /// <summary>
-        /// Local anchor on object A (relative to its center).
-        /// </summary>
         public Vector2 AnchorA { get; private set; }
-        /// <summary>
-        /// Local anchor on object B (relative to its center).
-        /// </summary>
         public Vector2 AnchorB { get; private set; }
-        /// <summary>
-        /// The initial relative angle between the objects.
-        /// </summary>
         public float InitialRelativeAngle { get; private set; }
+
+        private const float BaumgarteBias = 0.2f;
+        private const float AngularBias = 0.3f;
 
         public WeldConstraint(PhysicsObject a, PhysicsObject b, Vector2 anchorA, Vector2 anchorB)
             : base(a, b)
@@ -55,111 +50,178 @@ namespace physics.Engine.Constraints
             AnchorA = anchorA;
             AnchorB = anchorB;
             InitialRelativeAngle = b.Angle - a.Angle;
+            A.CanSleep = false;
+            B.CanSleep = false;
         }
 
         public override void ApplyConstraint(float dt)
         {
-            // Compute world-space positions of the anchor points.
-            Vector2 worldAnchorA = A.Center + PhysMath.RotateVector(AnchorA, A.Angle);
-            Vector2 worldAnchorB = B.Center + PhysMath.RotateVector(AnchorB, B.Angle);
+            // Get lever arms in world space
+            Vector2 rA = PhysMath.RotateVector(AnchorA, A.Angle);
+            Vector2 rB = PhysMath.RotateVector(AnchorB, B.Angle);
+            Vector2 worldAnchorA = A.Center + rA;
+            Vector2 worldAnchorB = B.Center + rB;
 
-            // Compute the error vector between the two anchors.
-            Vector2 error = worldAnchorB - worldAnchorA;
+            // Position error
+            Vector2 posError = worldAnchorB - worldAnchorA;
+            float posErrorLengthSq = posError.LengthSquared();
 
-            // Use a simple spring-damper model to compute a corrective impulse.
-            float stiffness = 0.8f; // tune as needed
-            float damping = 0.2f;   // tune as needed
-            Vector2 correctiveImpulse = error * stiffness - (B.Velocity - A.Velocity) * damping;
-
-            if (!A.Locked)
-                A.Velocity += correctiveImpulse * A.IMass;
-            if (!B.Locked)
-                B.Velocity -= correctiveImpulse * B.IMass;
-
-            // Angular correction: maintain the initial relative orientation.
+            // Angular error
             float angleError = (B.Angle - A.Angle) - InitialRelativeAngle;
-            float angularStiffness = 0.8f; // tune as needed
-            float angularImpulse = angleError * angularStiffness;
-            if (!A.Locked && A.CanRotate)
-                A.AngularVelocity += angularImpulse * A.IInertia;
-            if (!B.Locked && B.CanRotate)
-                B.AngularVelocity -= angularImpulse * B.IInertia;
+            // Normalize angle to [-PI, PI]
+            while (angleError > MathF.PI) angleError -= 2 * MathF.PI;
+            while (angleError < -MathF.PI) angleError += 2 * MathF.PI;
+
+            // Get effective inverse masses
+            float invMassA = A.Locked ? 0f : A.IMass;
+            float invMassB = B.Locked ? 0f : B.IMass;
+            float invInertiaA = (A.Locked || !A.CanRotate) ? 0f : A.IInertia;
+            float invInertiaB = (B.Locked || !B.CanRotate) ? 0f : B.IInertia;
+
+            // === LINEAR CONSTRAINT ===
+            if (posErrorLengthSq > 0.0001f)
+            {
+                float rAxP = PhysMath.Cross(rA, posError);
+                float rBxP = PhysMath.Cross(rB, posError);
+                float effectiveMass = invMassA + invMassB +
+                                      (rAxP * rAxP) * invInertiaA +
+                                      (rBxP * rBxP) * invInertiaB;
+
+                if (effectiveMass > 0.0001f)
+                {
+                    Vector2 vA = A.Velocity + PhysMath.Perpendicular(rA) * A.AngularVelocity;
+                    Vector2 vB = B.Velocity + PhysMath.Perpendicular(rB) * B.AngularVelocity;
+                    Vector2 relVel = vB - vA;
+                    Vector2 bias = (BaumgarteBias / dt) * posError;
+                    Vector2 impulse = -(relVel + bias) / effectiveMass;
+
+                    if (!A.Locked)
+                    {
+                        A.Velocity -= impulse * invMassA;
+                        if (A.CanRotate)
+                            A.AngularVelocity -= PhysMath.Cross(rA, impulse) * invInertiaA;
+                    }
+                    if (!B.Locked)
+                    {
+                        B.Velocity += impulse * invMassB;
+                        if (B.CanRotate)
+                            B.AngularVelocity += PhysMath.Cross(rB, impulse) * invInertiaB;
+                    }
+                }
+            }
+
+            // === ANGULAR CONSTRAINT ===
+            if (MathF.Abs(angleError) > 0.001f)
+            {
+                float angularEffectiveMass = invInertiaA + invInertiaB;
+                if (angularEffectiveMass > 0.0001f)
+                {
+                    float relAngVel = B.AngularVelocity - A.AngularVelocity;
+                    float angularBias = (AngularBias / dt) * angleError;
+                    float angularImpulse = -(relAngVel + angularBias) / angularEffectiveMass;
+
+                    if (!A.Locked && A.CanRotate)
+                        A.AngularVelocity -= angularImpulse * invInertiaA;
+                    if (!B.Locked && B.CanRotate)
+                        B.AngularVelocity += angularImpulse * invInertiaB;
+                }
+            }
         }
     }
 
     /// <summary>
-    /// An AxisConstraint pins two objects together at specified local anchor points,
-    /// allowing only rotation around the anchor.
+    /// An AxisConstraint (revolute joint) pins two objects together at specified local anchor points,
+    /// allowing free rotation around the anchor point.
+    /// Uses Sequential Impulse with Baumgarte stabilization.
+    /// Solves X and Y constraints independently for proper 2D point-to-point behavior.
     /// </summary>
     public class AxisConstraint : Constraint
     {
-        /// <summary>
-        /// The local anchor point on object A (relative to its center).
-        /// </summary>
         public Vector2 AnchorA { get; private set; }
-        /// <summary>
-        /// The local anchor point on object B (relative to its center).
-        /// </summary>
         public Vector2 AnchorB { get; private set; }
 
-        /// <summary>
-        /// Creates an axis constraint (a revolute joint) that ensures the two objects’ anchor points remain coincident.
-        /// Only translation is corrected, so the objects may freely rotate around the anchor.
-        /// </summary>
-        /// <param name="a">Object A (e.g., the chassis)</param>
-        /// <param name="b">Object B (e.g., a wheel)</param>
-        /// <param name="anchorA">The local anchor on object A.</param>
-        /// <param name="anchorB">The local anchor on object B.</param>
+        // Baumgarte stabilization factor - keep low to avoid over-correction
+        private const float BaumgarteFactor = 0.05f;
+        // Maximum bias velocity to prevent explosive corrections
+        private const float MaxBiasVelocity = 300f;
+        // Slop - ignore errors smaller than this (prevents jitter)
+        private const float LinearSlop = 0.15f;
+
         public AxisConstraint(PhysicsObject a, PhysicsObject b, Vector2 anchorA, Vector2 anchorB)
             : base(a, b)
         {
             AnchorA = anchorA;
             AnchorB = anchorB;
+            A.CanSleep = false;
+            B.CanSleep = false;
         }
 
         public override void ApplyConstraint(float dt)
         {
-            // Compute world-space positions of the anchors.
-            Vector2 worldAnchorA = A.Center + PhysMath.RotateVector(AnchorA, A.Angle);
-            Vector2 worldAnchorB = B.Center + PhysMath.RotateVector(AnchorB, B.Angle);
+            // Compute world-space anchor positions using lever arms
+            Vector2 rA = PhysMath.RotateVector(AnchorA, A.Angle);
+            Vector2 rB = PhysMath.RotateVector(AnchorB, B.Angle);
+            Vector2 worldAnchorA = A.Center + rA;
+            Vector2 worldAnchorB = B.Center + rB;
 
-            // Compute the error (the difference between the anchor positions).
+            // Compute position error
             Vector2 error = worldAnchorB - worldAnchorA;
 
-            // If the error is negligible, nothing to do.
-            if (error.LengthSquared() < 0.001f)
-                return;
+            // Get effective inverse masses (0 if locked)
+            float invMassA = A.Locked ? 0f : A.IMass;
+            float invMassB = B.Locked ? 0f : B.IMass;
+            float invInertiaA = (A.Locked || !A.CanRotate) ? 0f : A.IInertia;
+            float invInertiaB = (B.Locked || !B.CanRotate) ? 0f : B.IInertia;
 
-            // Instead of gradually correcting the error with impulses,
-            // we want to almost instantaneously remove it.
-            // If both objects are free, split the correction between them.
-            if (!A.Locked && !B.Locked)
-            {
-                A.Move(error * 0.5f);
-                B.Move(-error * 0.5f);
-            }
-            else if (!B.Locked)
-            {
-                B.Move(-error * 0.5f);
-            }
-            else if (!A.Locked)
-            {
-                A.Move(error * 0.5f);
-            }
+            // Compute velocity at anchor points: v_anchor = v_center + ω × r
+            Vector2 vA = A.Velocity + PhysMath.Perpendicular(rA) * A.AngularVelocity;
+            Vector2 vB = B.Velocity + PhysMath.Perpendicular(rB) * B.AngularVelocity;
+            Vector2 relVel = vB - vA;
 
-            // Now remove any relative velocity along the constraint direction.
-            // Compute the unit error vector.
-            Vector2 unitError = Vector2.Normalize(error);
-            Vector2 relativeVelocity = B.Velocity - A.Velocity;
-            float relVelAlongError = Vector2.Dot(relativeVelocity, unitError);
-            Vector2 velCorrection = unitError * relVelAlongError;
-            // Subtract the velocity component that would move the anchors apart.
-            if (!B.Locked)
-                B.Velocity -= velCorrection;
-            if (!A.Locked)
-                A.Velocity += velCorrection;
+            // Solve constraint in X and Y directions separately
+            // This properly constrains both degrees of freedom for a point-to-point joint
+            ApplyAxisImpulse(Vector2.UnitX, rA, rB, relVel.X, error.X, invMassA, invMassB, invInertiaA, invInertiaB, dt);
+            ApplyAxisImpulse(Vector2.UnitY, rA, rB, relVel.Y, error.Y, invMassA, invMassB, invInertiaA, invInertiaB, dt);
         }
 
+        private void ApplyAxisImpulse(Vector2 axis, Vector2 rA, Vector2 rB, float velError, float posError,
+            float invMassA, float invMassB, float invInertiaA, float invInertiaB, float dt)
+        {
+            // Skip tiny errors to prevent jitter
+            if (MathF.Abs(posError) < LinearSlop)
+                return;
 
+            // Effective mass for this axis: K = mA^-1 + mB^-1 + (rA × axis)² * IA^-1 + (rB × axis)² * IB^-1
+            float rAxN = PhysMath.Cross(rA, axis);
+            float rBxN = PhysMath.Cross(rB, axis);
+            float effectiveMass = invMassA + invMassB +
+                                  (rAxN * rAxN) * invInertiaA +
+                                  (rBxN * rBxN) * invInertiaB;
+
+            if (effectiveMass < 0.0001f)
+                return;
+
+            // Baumgarte bias - clamped to prevent explosion with small dt
+            float bias = BaumgarteFactor * posError / dt;
+            bias = Math.Clamp(bias, -MaxBiasVelocity, MaxBiasVelocity);
+
+            // Impulse magnitude along this axis
+            float impulseMag = -(velError + bias) / effectiveMass;
+            Vector2 impulse = axis * impulseMag;
+
+            // Apply impulse
+            if (!A.Locked)
+            {
+                A.Velocity -= impulse * invMassA;
+                if (A.CanRotate)
+                    A.AngularVelocity -= PhysMath.Cross(rA, impulse) * invInertiaA;
+            }
+            if (!B.Locked)
+            {
+                B.Velocity += impulse * invMassB;
+                if (B.CanRotate)
+                    B.AngularVelocity += PhysMath.Cross(rB, impulse) * invInertiaB;
+            }
+        }
     }
 }

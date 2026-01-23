@@ -2,6 +2,7 @@
 using System.Numerics;
 using physics.Engine;
 using physics.Engine.Classes.ObjectTemplates;
+using physics.Engine.Constraints;
 using physics.Engine.Core;
 using physics.Engine.Helpers;
 using physics.Engine.Input;
@@ -68,21 +69,75 @@ public class DemoGame : IGame
         _objectTemplates.CreateWall(new Vector2(0, (int)worldHeight - 15), (int)worldWidth, 15);
 
         // Create a grid of medium balls
-        for (int i = 0; i < 1000; i += 50)
-        {
-            for (int j = 0; j < 600; j += 50)
-            {
-                if (j % 80 == 0)
-                    _objectTemplates.CreateMedBall(i + 210, j + 40);
-                else
-                    _objectTemplates.CreateMedBall(i + 200, j + 40);
-            }
+        //for (int i = 0; i < 1000; i += 50)
+        //{
+        //    for (int j = 0; j < 600; j += 50)
+        //    {
+        //        if (j % 80 == 0)
+        //            _objectTemplates.CreateMedBall(i + 210, j + 40);
+        //        else
+        //            _objectTemplates.CreateMedBall(i + 200, j + 40);
+        //    }
+        //}
+
+            // Create player
+            var player = _objectTemplates.CreatePolygonCapsule(new Vector2(50, 20));
+            _playerController = new PlayerController(player);
+
+            // Create a car demo using AxisConstraints for wheels
+            CreateCarDemo(worldWidth, worldHeight);
         }
 
-        // Create player
-        var player = _objectTemplates.CreatePolygonCapsule(new Vector2(50, 20));
-        _playerController = new PlayerController(player);
-    }
+        private void CreateCarDemo(uint worldWidth, uint worldHeight)
+        {
+            // Car body dimensions
+            float bodyWidth = 120f;
+            float bodyHeight = 30f;
+            float wheelRadius = 15f;
+            float wheelInset = 10f; // Distance from body edge to wheel center
+
+            // Position car in center-ish area
+            float carX = worldWidth / 2f - bodyWidth / 2f;
+            float carY = worldHeight - 200f; // Near bottom but above floor
+
+            // Create the car body (box)
+            var carBody = _objectTemplates.CreateBox(new Vector2(carX, carY), (int)bodyWidth, (int)bodyHeight);
+
+            // Wheel X positions (in local body coordinates, where 0 = body center)
+            float frontWheelLocalX = bodyWidth / 2f - wheelInset;   // Right side: +50
+            float rearWheelLocalX = -bodyWidth / 2f + wheelInset;   // Left side: -50
+
+            // Wheel world positions for spawning
+            float frontWheelWorldX = carX + bodyWidth / 2f + frontWheelLocalX; // carX + 60 + 50 = carX + 110
+            float rearWheelWorldX = carX + bodyWidth / 2f + rearWheelLocalX;   // carX + 60 - 50 = carX + 10
+            float wheelWorldY = carY + bodyHeight + wheelRadius;
+
+            // Create wheels (CreateMedBall takes top-left corner, ball radius is ~10)
+            var frontWheel = _objectTemplates.CreateMedBall(frontWheelWorldX - 10, wheelWorldY - 10);
+            var rearWheel = _objectTemplates.CreateMedBall(rearWheelWorldX - 10, wheelWorldY - 10);
+
+            // Local anchors on body (relative to body center)
+            Vector2 frontAttachOnBody = new Vector2(frontWheelLocalX, bodyHeight / 2f + wheelRadius);
+            Vector2 rearAttachOnBody = new Vector2(rearWheelLocalX, bodyHeight / 2f + wheelRadius);
+
+            // Connect wheels to body with AxisConstraints
+            var frontWheelConstraint = new AxisConstraint(
+                carBody,
+                frontWheel,
+                frontAttachOnBody,  // Local anchor on body
+                Vector2.Zero        // Local anchor on wheel (its center)
+            );
+
+            var rearWheelConstraint = new AxisConstraint(
+                carBody,
+                rearWheel,
+                rearAttachOnBody,   // Local anchor on body
+                Vector2.Zero        // Local anchor on wheel (its center)
+            );
+
+            _engine.PhysicsSystem.Constraints.Add(frontWheelConstraint);
+            _engine.PhysicsSystem.Constraints.Add(rearWheelConstraint);
+        }
 
     private void InitializePersonDetection(uint worldWidth, uint worldHeight)
     {

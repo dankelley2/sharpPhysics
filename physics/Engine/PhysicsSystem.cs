@@ -25,8 +25,8 @@ namespace physics.Engine
 
         // Sleep / Wake thresholds
         public static float WakeImpulseThreshold { get; private set; } = 4.0f;
-        public static float LinearSleepThreshold { get; set; } = 0.05f;
-        public static float AngularSleepThreshold { get; set; } = 0.1f;
+        public static float LinearSleepThreshold { get; set; } = 0.06f;
+        public static float AngularSleepThreshold { get; set; } = 0.11f;
         public static float SleepTimeThreshold { get; set; } = 0.9f;
 
         #endregion
@@ -374,9 +374,6 @@ namespace physics.Engine
             // Loop over physics iterations.
             for (int iter = 0; iter < PHYSICS_ITERATIONS; iter++)
             {
-                //TODO: Constraints
-                //HandleConstraints(dt);
-                
                 // Use a for-loop to iterate over collision pairs.
                 for (int i = 0; i < ListCollisionPairs.Count; i++)
                 {
@@ -466,6 +463,9 @@ namespace physics.Engine
                     }
                 }
 
+                // Apply constraints after collision resolution (uses substep dt)
+                HandleConstraints(dt_substep);
+
                 // Process static objects.
                 // Apply a portion of DT to static objects.
                 for (int i = 0; i < ListStaticObjects.Count; i++)
@@ -535,7 +535,11 @@ namespace physics.Engine
 
                             // Skip pairs where both objects are sleeping.
                             if (objA.Sleeping && objB.Sleeping)
-                            continue;
+                                continue;
+
+                            // Skip connected objects (constraints link them, collisions should be ignored)
+                            if (objA.ConnectedObjects.Contains(objB))
+                                continue;
 
                             // Add the pair if it has not already been processed.
                             if (_pairSet.Add((objA, objB)))
