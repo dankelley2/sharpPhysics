@@ -63,6 +63,13 @@ namespace physics.Engine.Classes.ObjectTemplates
             return _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.8F, false, shader);
         }
 
+        public PhysicsObject CreateLargeBall(float originX, float originY)
+        {
+            int diameter = 20;
+            SFMLShader shader = GetShader<SFMLPolyShader>(diameter);
+            return _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.8F, false, shader);
+        }
+
         public PhysicsObject CreateAttractor(float originX, float originY)
         {
             int diameter = 50;

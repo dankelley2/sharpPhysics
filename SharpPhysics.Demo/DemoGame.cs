@@ -93,7 +93,7 @@ public class DemoGame : IGame
         // Car body dimensions
         float bodyWidth = 120f;
         float bodyHeight = 30f;
-        float wheelRadius = 15f;
+        float wheelRadius = 20f;
         float wheelInset = 10f; // Distance from body edge to wheel center
 
         // Position car in center-ish area
@@ -113,8 +113,8 @@ public class DemoGame : IGame
         float wheelWorldY = carY + bodyHeight + wheelRadius;
 
         // Create wheels (CreateMedBall takes top-left corner, ball radius is ~10)
-        var frontWheel = _objectTemplates.CreateMedBall(frontWheelWorldX - 10, wheelWorldY - 10);
-        var rearWheel = _objectTemplates.CreateMedBall(rearWheelWorldX - 10, wheelWorldY - 10);
+        var frontWheel = _objectTemplates.CreateLargeBall(frontWheelWorldX - 10, wheelWorldY - 10);
+        var rearWheel = _objectTemplates.CreateLargeBall(rearWheelWorldX - 10, wheelWorldY - 10);
 
         // Local anchors on body (relative to body center)
         Vector2 frontAttachOnBody = new Vector2(frontWheelLocalX, bodyHeight / 2f + wheelRadius);
@@ -149,7 +149,7 @@ public class DemoGame : IGame
         float spoilerWorldX = carX + bodyWidth / 2f + spoilerLocalX - spoilerWidth / 2f;
         float spoilerWorldY = carY + bodyHeight / 2f + spoilerLocalY - spoilerHeight / 2f;
         var spoiler = _objectTemplates.CreateBox(new Vector2(spoilerWorldX, spoilerWorldY), (int)spoilerWidth, (int)spoilerHeight);
-
+        spoiler.Angle = 10f; // Tilted angle
         // Weld spoiler to body - use CENTER of spoiler (0,0) to minimize rotational coupling
         Vector2 spoilerAttachOnBody = new Vector2(spoilerLocalX, spoilerLocalY);
         Vector2 spoilerAttachOnSpoiler = Vector2.Zero;  // Center of spoiler
