@@ -27,6 +27,7 @@ namespace physics.Engine.Input
 
         // Press time tracking for input buffering (keys stay "pressed" for a short duration)
         private Dictionary<string, float> _pressTimers = new Dictionary<string, float>();
+        private readonly List<string> _keysToRemove = new List<string>(); // Reusable list for removal
         private const float PRESS_BUFFER_TIME = 0.15f; // Keys stay "pressed" for 150ms
 
         // Mouse button state tracking
@@ -54,15 +55,27 @@ namespace physics.Engine.Input
             // InputManager now only handles view panning
             // Game-specific input is handled in each game's Update method
 
-            // Decay press timers
-            var keys = _pressTimers.Keys.ToList();
+            // Decay press timers using reusable list to avoid allocations
+            _keysToRemove.Clear();
+            foreach (var kvp in _pressTimers)
+            {
+                if (kvp.Value - deltaTime <= 0)
+                {
+                    _keysToRemove.Add(kvp.Key);
+                }
+            }
+
+            // Update remaining timers and remove expired ones
+            for (int i = 0; i < _keysToRemove.Count; i++)
+            {
+                _pressTimers.Remove(_keysToRemove[i]);
+            }
+
+            // Decay remaining timers
+            var keys = _pressTimers.Keys;
             foreach (var key in keys)
             {
                 _pressTimers[key] -= deltaTime;
-                if (_pressTimers[key] <= 0)
-                {
-                    _pressTimers.Remove(key);
-                }
             }
         }
 
@@ -218,57 +231,53 @@ namespace physics.Engine.Input
                 /// </summary>
                 public KeyState GetKeyState()
                 {
-                    // Calculate buffered pressed states (check timers for 150ms buffer)
-                    var currentState = new KeyState
-                    {
-                        // Held states
-                        Left = keyState.Left,
-                        Right = keyState.Right,
-                        Up = keyState.Up,
-                        Down = keyState.Down,
-                        Space = keyState.Space,
-                        Escape = keyState.Escape,
-                        Enter = keyState.Enter,
-                        Tab = keyState.Tab,
-                        Backspace = keyState.Backspace,
+                    // Build state directly - KeyState is now a struct, so no heap allocation
+                    KeyState currentState;
 
-                        // Buffered pressed states (active for 150ms after initial press)
-                        LeftPressed = _pressTimers.ContainsKey("Left") && _pressTimers["Left"] > 0,
-                        RightPressed = _pressTimers.ContainsKey("Right") && _pressTimers["Right"] > 0,
-                        UpPressed = _pressTimers.ContainsKey("Up") && _pressTimers["Up"] > 0,
-                        DownPressed = _pressTimers.ContainsKey("Down") && _pressTimers["Down"] > 0,
-                        SpacePressed = _pressTimers.ContainsKey("Space") && _pressTimers["Space"] > 0,
-                        EscapePressed = _pressTimers.ContainsKey("Escape") && _pressTimers["Escape"] > 0,
-                        EnterPressed = _pressTimers.ContainsKey("Enter") && _pressTimers["Enter"] > 0,
-                        TabPressed = _pressTimers.ContainsKey("Tab") && _pressTimers["Tab"] > 0,
-                        BackspacePressed = _pressTimers.ContainsKey("Backspace") && _pressTimers["Backspace"] > 0,
+                    // Held states
+                    currentState.Left = keyState.Left;
+                    currentState.Right = keyState.Right;
+                    currentState.Up = keyState.Up;
+                    currentState.Down = keyState.Down;
+                    currentState.Space = keyState.Space;
+                    currentState.Escape = keyState.Escape;
+                    currentState.Enter = keyState.Enter;
+                    currentState.Tab = keyState.Tab;
+                    currentState.Backspace = keyState.Backspace;
 
-                        // Mouse button states
-                        LeftMouseDown = _leftMouseDown,
-                        RightMouseDown = _rightMouseDown,
-                        MiddleMouseDown = IsPanning,
-                        LeftMousePressed = _leftMouseDown && !_prevLeftMouseDown,
-                        RightMousePressed = _rightMouseDown && !_prevRightMouseDown,
-                        MousePosition = MousePosition
-                    };
+                    // Buffered pressed states (active for 150ms after initial press)
+                    currentState.LeftPressed = _pressTimers.TryGetValue("Left", out var leftTime) && leftTime > 0;
+                    currentState.RightPressed = _pressTimers.TryGetValue("Right", out var rightTime) && rightTime > 0;
+                    currentState.UpPressed = _pressTimers.TryGetValue("Up", out var upTime) && upTime > 0;
+                    currentState.DownPressed = _pressTimers.TryGetValue("Down", out var downTime) && downTime > 0;
+                    currentState.SpacePressed = _pressTimers.TryGetValue("Space", out var spaceTime) && spaceTime > 0;
+                    currentState.EscapePressed = _pressTimers.TryGetValue("Escape", out var escapeTime) && escapeTime > 0;
+                    currentState.EnterPressed = _pressTimers.TryGetValue("Enter", out var enterTime) && enterTime > 0;
+                    currentState.TabPressed = _pressTimers.TryGetValue("Tab", out var tabTime) && tabTime > 0;
+                    currentState.BackspacePressed = _pressTimers.TryGetValue("Backspace", out var backspaceTime) && backspaceTime > 0;
+
+                    // Mouse button states
+                    currentState.LeftMouseDown = _leftMouseDown;
+                    currentState.RightMouseDown = _rightMouseDown;
+                    currentState.MiddleMouseDown = IsPanning;
+                    currentState.LeftMousePressed = _leftMouseDown && !_prevLeftMouseDown;
+                    currentState.RightMousePressed = _rightMouseDown && !_prevRightMouseDown;
+                    currentState.MousePosition = MousePosition;
 
                     // Store current mouse state as previous for next frame
                     _prevLeftMouseDown = _leftMouseDown;
                     _prevRightMouseDown = _rightMouseDown;
 
-                    // Store current key state as previous for next frame
-                    prevKeyState = new KeyState
-                    {
-                        Left = keyState.Left,
-                        Right = keyState.Right,
-                        Up = keyState.Up,
-                        Down = keyState.Down,
-                        Space = keyState.Space,
-                        Escape = keyState.Escape,
-                        Enter = keyState.Enter,
-                        Tab = keyState.Tab,
-                        Backspace = keyState.Backspace
-                    };
+                    // Store current key state as previous for next frame (struct copy, no allocation)
+                    prevKeyState.Left = keyState.Left;
+                    prevKeyState.Right = keyState.Right;
+                    prevKeyState.Up = keyState.Up;
+                    prevKeyState.Down = keyState.Down;
+                    prevKeyState.Space = keyState.Space;
+                    prevKeyState.Escape = keyState.Escape;
+                    prevKeyState.Enter = keyState.Enter;
+                    prevKeyState.Tab = keyState.Tab;
+                    prevKeyState.Backspace = keyState.Backspace;
 
                     return currentState;
                 }

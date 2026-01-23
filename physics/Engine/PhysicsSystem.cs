@@ -42,6 +42,7 @@ namespace physics.Engine
         public readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
         public readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
         private readonly ManifoldPool _manifoldPool = new ManifoldPool();
+        private readonly CollisionPairPool _collisionPairPool = new CollisionPairPool();
         public List<Constraint> Constraints = new List<Constraint>();
 
         internal IEnumerable<PhysicsObject> GetMoveableObjects()
@@ -484,7 +485,8 @@ namespace physics.Engine
 
         private void BroadPhase_GeneratePairs()
         {
-            // Reuse the ListCollisionPairs (clear it first)
+            // Return all pairs to the pool before clearing
+            _collisionPairPool.ReturnAll(ListCollisionPairs);
             ListCollisionPairs.Clear();
 
             // Clear reusable structures to avoid allocations
@@ -538,7 +540,7 @@ namespace physics.Engine
                             // Add the pair if it has not already been processed.
                             if (_pairSet.Add((objA, objB)))
                             {
-                                ListCollisionPairs.Add(new CollisionPair(objA, objB));
+                                ListCollisionPairs.Add(_collisionPairPool.Get(objA, objB));
                             }
                         }
                     }

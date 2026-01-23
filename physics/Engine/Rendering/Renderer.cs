@@ -17,6 +17,7 @@ namespace physics.Engine.Rendering
         public View UiView { get; private set; }
 
         private Text debugText;
+        private Text _reusableText; // Reusable text object for DrawText calls
         private Font debugFont;
         private UiManager _debugUiManager = new UiManager();
         private PhysicsSystem _physicsSystem;
@@ -43,12 +44,11 @@ namespace physics.Engine.Rendering
         public void DrawText(string text, float x, float y, uint size = 24, Color? color = null)
         {
             Window.SetView(UiView);
-            var textObj = new Text(text, debugFont, size)
-            {
-                Position = new Vector2f(x, y),
-                FillColor = color ?? Color.White
-            };
-            Window.Draw(textObj);
+            _reusableText.DisplayedString = text;
+            _reusableText.CharacterSize = size;
+            _reusableText.Position = new Vector2f(x, y);
+            _reusableText.FillColor = color ?? Color.White;
+            Window.Draw(_reusableText);
         }
 
         public Renderer(uint windowWidth, uint windowHeight, string windowTitle, PhysicsSystem physicsSystem)
@@ -82,6 +82,7 @@ namespace physics.Engine.Rendering
                 FillColor = Color.White,
                 Position = new Vector2f(40, 40)
             };
+            _reusableText = new Text("", debugFont, 24); // Reusable text for DrawText calls
 
                 // Note: Debug UI elements are managed by _debugUiManager
 
