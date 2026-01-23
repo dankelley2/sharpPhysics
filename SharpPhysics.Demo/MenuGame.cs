@@ -19,6 +19,7 @@ public class MenuGame : IGame
 {
     private GameEngine _engine = null!;
     private PhysicsSystem _physics = null!;
+    private UiManager _uiManager = new();
     private Random _random = new();
 
     // Menu buttons
@@ -79,6 +80,7 @@ public class MenuGame : IGame
         );
         rainButton.OnClick += _ => SwitchToGame("RainCatcher");
         _menuButtons.Add(rainButton);
+        _uiManager.Add(rainButton);
 
         // Bubble Pop button
         var bubbleButton = new UiMenuButton(
@@ -93,6 +95,7 @@ public class MenuGame : IGame
         );
         bubbleButton.OnClick += _ => SwitchToGame("BubblePop");
         _menuButtons.Add(bubbleButton);
+        _uiManager.Add(bubbleButton);
 
         // Platformer button
         var platformerButton = new UiMenuButton(
@@ -107,6 +110,7 @@ public class MenuGame : IGame
         );
         platformerButton.OnClick += _ => SwitchToGame("Platformer");
         _menuButtons.Add(platformerButton);
+        _uiManager.Add(platformerButton);
 
         // Physics Sandbox button
         var sandboxButton = new UiMenuButton(
@@ -121,6 +125,7 @@ public class MenuGame : IGame
         );
         sandboxButton.OnClick += _ => SwitchToGame("Sandbox");
         _menuButtons.Add(sandboxButton);
+        _uiManager.Add(sandboxButton);
 
         // Settings button
         var settingsButton = new UiMenuButton(
@@ -135,6 +140,7 @@ public class MenuGame : IGame
         );
         settingsButton.OnClick += _ => SwitchToGame("Settings");
         _menuButtons.Add(settingsButton);
+        _uiManager.Add(settingsButton);
 
         // Hint at bottom
         var exitHint = new UiTextLabel("Press ESC to return to menu from any game", font)
@@ -182,16 +188,16 @@ public class MenuGame : IGame
         // Update particle animation
         UpdateParticles(deltaTime);
 
-        // Check for button hover (using mouse position from renderer window)
-        var mousePos = _engine.Renderer.Window.MapPixelToCoords(
-            SFML.Window.Mouse.GetPosition(_engine.Renderer.Window),
-            _engine.Renderer.UiView
-        );
-        var mouseVec = new Vector2(mousePos.X, mousePos.Y);
+        // Handle UI clicks
+        if (keyState.LeftMousePressed)
+        {
+            _uiManager.HandleClick(keyState.MousePosition);
+        }
 
+        // Check for button hover
         foreach (var button in _menuButtons)
         {
-            button.SetHovered(button.ContainsPoint(mouseVec));
+            button.SetHovered(button.ContainsPoint(keyState.MousePosition));
         }
     }
 
@@ -227,12 +233,16 @@ public class MenuGame : IGame
         // Draw animated background particles
         DrawParticles(renderer);
 
-        // Draw version/info at bottom
-        renderer.DrawText("Use your body to interact! • Body tracking powered by YOLO Pose", 
-            _engine.WindowWidth / 2f - 250, _engine.WindowHeight - 30, 14, new Color(120, 120, 140));
-    }
+            // Draw version/info at bottom
+            renderer.DrawText("Use your body to interact! • Body tracking powered by YOLO Pose", 
+                _engine.WindowWidth / 2f - 250, _engine.WindowHeight - 30, 14, new Color(120, 120, 140));
 
-    private void DrawParticles(Renderer renderer)
+            // Draw UI elements (menu buttons)
+            renderer.Window.SetView(renderer.UiView);
+            _uiManager.Draw(renderer.Window);
+        }
+
+        private void DrawParticles(Renderer renderer)
     {
         foreach (var p in _particles)
         {
@@ -272,6 +282,7 @@ public class MenuGame : IGame
 
     public void Shutdown()
     {
+        _uiManager.Clear();
         _particles.Clear();
         _menuButtons.Clear();
     }

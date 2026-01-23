@@ -1,7 +1,6 @@
 #nullable enable
 using System;
 using System.Diagnostics;
-using SFML.System;
 using physics.Engine.Input;
 using physics.Engine.Rendering;
 using physics.Engine.Rendering.UI;
@@ -21,8 +20,8 @@ namespace physics.Engine.Core
         private IGame _currentGame;
         private IGame? _pendingGame;
 
-        private readonly Clock _clock = new Clock();
         private readonly Stopwatch _stopwatch = new Stopwatch();
+        private long _lastFrameTicks;
 
         // Cap maximum delta time to avoid spiral of death.
         private const float MAX_DELTA_TIME = 0.033f;
@@ -120,9 +119,6 @@ namespace physics.Engine.Core
                 _physicsSystem.ListStaticObjects.Remove(obj);
             }
 
-            // Clear all UI elements
-            UiElement.GlobalUiElements.Clear();
-
             // Reset physics properties
             _physicsSystem.Gravity = new System.Numerics.Vector2(0, 9.8f);
             _physicsSystem.GravityScale = 30f;
@@ -156,6 +152,7 @@ namespace physics.Engine.Core
             _currentGame.Initialize(this);
 
             _stopwatch.Start();
+            _lastFrameTicks = _stopwatch.ElapsedTicks;
 
             while (_renderer.Window.IsOpen)
             {
@@ -170,8 +167,10 @@ namespace physics.Engine.Core
 
                 long frameStartTime = _stopwatch.ElapsedMilliseconds;
 
-                // Get delta time and cap it
-                float deltaTime = _clock.Restart().AsSeconds();
+                // Get delta time using Stopwatch ticks for sub-ms precision
+                long currentTicks = _stopwatch.ElapsedTicks;
+                float deltaTime = (currentTicks - _lastFrameTicks) / (float)Stopwatch.Frequency;
+                _lastFrameTicks = currentTicks;
                 deltaTime = Math.Min(deltaTime, MAX_DELTA_TIME);
 
                 // Update input

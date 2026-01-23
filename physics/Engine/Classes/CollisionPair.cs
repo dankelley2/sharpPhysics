@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace physics.Engine.Classes
 {
-    public class CollisionPair : IEquatable<CollisionPair>
+    public sealed class CollisionPair : IEquatable<CollisionPair>
     {
         public readonly PhysicsObject A;
         public readonly PhysicsObject B;

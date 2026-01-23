@@ -19,6 +19,7 @@ public class SettingsGame : IGame
 {
     private GameEngine _engine = null!;
     private GameSettings _settings = null!;
+    private UiManager _uiManager = new();
     private readonly List<UiMenuButton> _menuButtons = new();
 
     // Settings state
@@ -81,6 +82,7 @@ public class SettingsGame : IGame
             var cat = category;
             button.OnClick += _ => SwitchCategory(cat);
             _menuButtons.Add(button);
+            _uiManager.Add(button);
         }
     }
 
@@ -93,7 +95,7 @@ public class SettingsGame : IGame
         // Clear and rebuild buttons
         foreach (var btn in _menuButtons)
         {
-            UiElement.GlobalUiElements.Remove(btn);
+            _uiManager.Remove(btn);
         }
         _menuButtons.Clear();
 
@@ -238,6 +240,16 @@ public class SettingsGame : IGame
             return;
         }
 
+        // Handle UI clicks (category buttons)
+        if (keyState.LeftMousePressed)
+        {
+            if (_uiManager.HandleClick(keyState.MousePosition))
+            {
+                // UI handled the click
+                return;
+            }
+        }
+
         // Handle mouse click on settings rows
         if (keyState.LeftMousePressed && _editingIndex < 0)
         {
@@ -355,21 +367,28 @@ public class SettingsGame : IGame
                 case "Detection":
                     renderer.DrawText("Larger ball radius = easier tracking, smaller = more precise", labelX, hintY, 14, new Color(180, 180, 200));
                     break;
-                case "Display":
-                    renderer.DrawText("WARNING: Display changes require application restart", labelX, hintY, 14, new Color(255, 200, 100));
-                    break;
-            }
-        }
+                        case "Display":
+                                renderer.DrawText("WARNING: Display changes require application restart", labelX, hintY, 14, new Color(255, 200, 100));
+                                break;
+                        }
 
-    public void Shutdown()
-    {
-        // Ensure text event is unsubscribed
-        try
-        {
-            _engine.Renderer.Window.TextEntered -= OnTextEntered;
-        }
-        catch { }
-    }
+                    // Draw UI elements (category buttons)
+                    renderer.Window.SetView(renderer.UiView);
+                    _uiManager.Draw(renderer.Window);
+                    }
+
+                public void Shutdown()
+                {
+                    // Clear UI
+                    _uiManager.Clear();
+
+                    // Ensure text event is unsubscribed
+                    try
+                    {
+                        _engine.Renderer.Window.TextEntered -= OnTextEntered;
+                    }
+                    catch { }
+                }
 
     private class SettingItem
     {

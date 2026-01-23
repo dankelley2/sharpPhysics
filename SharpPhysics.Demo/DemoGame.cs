@@ -217,6 +217,20 @@ public class DemoGame : IGame
                 new SFML.System.Vector2i(e.X, e.Y),
                 _engine.Renderer.GameView).ToSystemNumerics();
 
+            // Check if debug UI handles the click first
+            if (e.Button == Mouse.Button.Left && _engine.Renderer.ShowDebugUI)
+            {
+                // Get UI position for debug UI
+                Vector2 uiPos = _engine.Renderer.Window.MapPixelToCoords(
+                    new SFML.System.Vector2i(e.X, e.Y),
+                    _engine.Renderer.UiView).ToSystemNumerics();
+
+                if (_engine.Renderer.DebugUiManager.HandleClick(uiPos))
+                {
+                    return; // UI handled the click
+                }
+            }
+
             if (e.Button == Mouse.Button.Left)
             {
                 if (_engine.PhysicsSystem.ActivateAtPoint(worldPos))
@@ -255,6 +269,12 @@ public class DemoGame : IGame
 
         private void OnMouseButtonReleased(object? sender, MouseButtonEventArgs e)
         {
+            // Stop debug UI drag operations
+            if (e.Button == Mouse.Button.Left)
+            {
+                _engine.Renderer.DebugUiManager.StopDrag();
+            }
+
             if (e.Button == Mouse.Button.Left)
             {
                 if (_isGrabbing)
@@ -289,6 +309,15 @@ public class DemoGame : IGame
             _mousePosition = _engine.Renderer.Window.MapPixelToCoords(
                 new SFML.System.Vector2i(e.X, e.Y),
                 _engine.Renderer.GameView).ToSystemNumerics();
+
+            // Handle debug UI drag
+            if (_engine.Renderer.DebugUiManager.DraggedElement != null)
+            {
+                Vector2 uiPos = _engine.Renderer.Window.MapPixelToCoords(
+                    new SFML.System.Vector2i(e.X, e.Y),
+                    _engine.Renderer.UiView).ToSystemNumerics();
+                _engine.Renderer.DebugUiManager.HandleDrag(uiPos);
+            }
 
             if (_isCreatingBox)
             {
