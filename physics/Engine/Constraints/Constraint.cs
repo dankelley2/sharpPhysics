@@ -88,8 +88,8 @@ namespace physics.Engine.Constraints
 
                 // === ANGULAR CONSTRAINT ===
                 float angularEffectiveMass = invInertiaA + invInertiaB;
-                if (angularEffectiveMass > 0.0001f)
-                {
+                //if (angularEffectiveMass > 0.0001f)
+                //{
                     float relAngVel = B.AngularVelocity - A.AngularVelocity;
                     float angularBias = (AngularBias / dt) * angleError;
                     float angularImpulse = -(relAngVel + angularBias) / angularEffectiveMass;
@@ -98,7 +98,7 @@ namespace physics.Engine.Constraints
                         A.AngularVelocity -= angularImpulse * invInertiaA;
                     if (!B.Locked && B.CanRotate)
                         B.AngularVelocity += angularImpulse * invInertiaB;
-                }
+                //}
             }
 
             private void ApplyLinearImpulse(Vector2 axis, Vector2 rA, Vector2 rB, float velError, float posError,
