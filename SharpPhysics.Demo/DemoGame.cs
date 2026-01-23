@@ -69,24 +69,24 @@ public class DemoGame : IGame
         _objectTemplates.CreateWall(new Vector2(0, (int)worldHeight - 15), (int)worldWidth, 15);
 
         // Create a grid of medium balls
-        //for (int i = 0; i < 1000; i += 50)
-        //{
-        //    for (int j = 0; j < 600; j += 50)
-        //    {
-        //        if (j % 80 == 0)
-        //            _objectTemplates.CreateMedBall(i + 210, j + 40);
-        //        else
-        //            _objectTemplates.CreateMedBall(i + 200, j + 40);
-        //    }
-        //}
-
-            // Create player
-            var player = _objectTemplates.CreatePolygonCapsule(new Vector2(50, 20));
-            _playerController = new PlayerController(player);
-
-            // Create a car demo using AxisConstraints for wheels
-            CreateCarDemo(worldWidth, worldHeight);
+        for (int i = 500; i < 1000; i += 50)
+        {
+            for (int j = 0; j < 600; j += 50)
+            {
+                if (j % 80 == 0)
+                    _objectTemplates.CreateMedBall(i + 210, j + 40);
+                else
+                    _objectTemplates.CreateMedBall(i + 200, j + 40);
+            }
         }
+
+        // Create player
+        var player = _objectTemplates.CreatePolygonCapsule(new Vector2(50, 20));
+        _playerController = new PlayerController(player);
+
+        // Create a car demo using AxisConstraints for wheels
+        CreateCarDemo(worldWidth, worldHeight);
+    }
 
     private void CreateCarDemo(uint worldWidth, uint worldHeight)
     {
