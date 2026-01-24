@@ -224,63 +224,156 @@ namespace physics.Engine
             }
         }
 
-    public static bool PolygonVsCircle(ref Manifold m)
-    {
-        // m.A is assumed to be the polygon; m.B must be the circle.
-        PhysicsObject polyObj = m.A;
-        PhysicsObject circleObj = m.B;
-
-        // Cast to the correct shape types.
-        var circleShape = (CirclePhysShape)circleObj.Shape;
-
-        // Get polygon vertices in world space.
-        Vector2[] poly = GetWorldVertices(polyObj);
-        Vector2 circleCenter = circleObj.Center;
-        float radius = circleShape.Radius;
-
-        // Find the closest point on the polygon's perimeter to the circle's center.
-        float minDistSq = float.MaxValue;
-        Vector2 closestPoint = new Vector2();
-
-        for (int i = 0; i < poly.Length; i++)
+        public static bool PolygonVsCircle(ref Manifold m)
         {
-            int j = (i + 1) % poly.Length;
-            Vector2 a = poly[i];
-            Vector2 b = poly[j];
-            Vector2 pt = ClosestPointOnSegment(a, b, circleCenter);
-            float distSq = (circleCenter - pt).LengthSquared();
-            if (distSq < minDistSq)
+            // m.A is assumed to be the polygon; m.B must be the circle.
+            PhysicsObject polyObj = m.A;
+            PhysicsObject circleObj = m.B;
+
+            // Cast to the correct shape types.
+            var circleShape = (CirclePhysShape)circleObj.Shape;
+
+            // Get polygon vertices in world space.
+            Vector2[] poly = GetWorldVertices(polyObj);
+            Vector2 circleCenter = circleObj.Center;
+            float radius = circleShape.Radius;
+
+            // Find closest feature (vertex or edge) on the polygon to the circle
+            float minDistSq = float.MaxValue;
+            Vector2 closestPoint = Vector2.Zero;
+            int closestIndex = 0;
+            
+            // First, find the closest vertex
+            for (int i = 0; i < poly.Length; i++)
             {
-                minDistSq = distSq;
-                closestPoint = pt;
+                float distSq = Vector2.DistanceSquared(poly[i], circleCenter);
+                if (distSq < minDistSq)
+                {
+                    minDistSq = distSq;
+                    closestPoint = poly[i];
+                    closestIndex = i;
+                }
             }
+            
+            // Check if closest point is a vertex or an edge
+            int prevIndex = (closestIndex > 0) ? closestIndex - 1 : poly.Length - 1;
+            int nextIndex = (closestIndex + 1) % poly.Length;
+            
+            Vector2 va = poly[prevIndex];
+            Vector2 vb = poly[closestIndex];
+            Vector2 vc = poly[nextIndex];
+            
+            // Check if circle center is in the Voronoi region of the closest vertex
+            Vector2 ab = vb - va;
+            Vector2 bc = vc - vb;
+            Vector2 toCircle = circleCenter - vb;
+            
+            bool inVoronoiRegionForVertex = 
+                Vector2.Dot(ab, toCircle) <= 0 && 
+                Vector2.Dot(bc, toCircle) >= 0;
+            
+            // If not in vertex Voronoi region, check the edges
+            if (!inVoronoiRegionForVertex)
+            {
+                float distToEdge1Sq = DistancePointToSegmentSquared(va, vb, circleCenter);
+                float distToEdge2Sq = DistancePointToSegmentSquared(vb, vc, circleCenter);
+                
+                if (distToEdge1Sq < minDistSq)
+                {
+                    minDistSq = distToEdge1Sq;
+                    closestPoint = ClosestPointOnSegment(va, vb, circleCenter);
+                }
+                
+                if (distToEdge2Sq < minDistSq)
+                {
+                    minDistSq = distToEdge2Sq;
+                    closestPoint = ClosestPointOnSegment(vb, vc, circleCenter);
+                }
+            }
+            
+            // Check all other edges
+            for (int i = 0; i < poly.Length; i++)
+            {
+                if (i == prevIndex || i == closestIndex)
+                    continue; // Already checked these edges
+                    
+                int nextI = (i + 1) % poly.Length;
+                if (nextI == prevIndex || nextI == closestIndex)
+                    continue;
+                    
+                float distSq = DistancePointToSegmentSquared(poly[i], poly[nextI], circleCenter);
+                if (distSq < minDistSq)
+                {
+                    minDistSq = distSq;
+                    closestPoint = ClosestPointOnSegment(poly[i], poly[nextI], circleCenter);
+                }
+            }
+            
+            // If the squared distance is greater than radius^2, there's no collision
+            if (minDistSq > radius * radius)
+                return false;
+            
+            // Compute collision details
+            float dist = (float)Math.Sqrt(minDistSq);
+            
+            // This handles both cases: circle inside and outside polygon 
+            // by checking if the center-to-closest vector is zero
+            if (dist < 0.0001f)
+            {
+                // Circle center is on polygon edge or very close - use an edge normal
+                int prevI = (closestIndex > 0) ? closestIndex - 1 : poly.Length - 1;
+                Vector2 edge = poly[closestIndex] - poly[prevI];
+                m.Normal = Vector2.Normalize(new Vector2(edge.Y, -edge.X));
+                m.Penetration = radius;
+            }
+            else
+            {
+                Vector2 normal = (circleCenter - closestPoint) / dist;
+                
+                // Check which side of the polygon the circle is on
+                // by projecting from closest point toward poly center
+                Vector2 toPolyCenter = polyObj.Center - closestPoint;
+                bool circleIsOutside = Vector2.Dot(normal, toPolyCenter) <= 0;
+                
+                // If circle is inside, reverse the normal
+                if (!circleIsOutside)
+                {
+                    normal = -normal;
+                    // Penetration is radius plus distance to closest edge
+                    m.Penetration = radius + dist;
+                }
+                else
+                {
+                    m.Penetration = radius - dist;
+                }
+                
+                m.Normal = normal;
+            }
+            
+            m.ContactPoint = closestPoint;
+            return true;
         }
 
-        // If the closest distance is greater than the circle's radius, there is no collision.
-        if (minDistSq > radius * radius)
-            return false;
+        /// <summary>
+        /// Calculates the squared distance from a point to a line segment.
+        /// </summary>
+        private static float DistancePointToSegmentSquared(Vector2 a, Vector2 b, Vector2 p)
+        {
+            // Reuse the closest point calculation to maintain consistency
+            Vector2 closest = ClosestPointOnSegment(a, b, p);
+            return Vector2.DistanceSquared(p, closest);
+        }
 
-        // Compute collision details.
-        float d = (float)Math.Sqrt(minDistSq);
-        Vector2 normal = (d > 0) ? (circleCenter - closestPoint) / d : new Vector2(1, 0); // Arbitrary if centers coincide.
-        m.Normal = normal;
-        m.Penetration = radius - d;
-        // Approximate contact point: on the circle's perimeter along the collision normal.
-        m.ContactPoint = circleCenter - normal * radius;
-
-        return true;
-    }
-
-    /// <summary>
-    /// Helper: Returns the point on the segment [a, b] that is closest to point p.
-    /// </summary>
-    private static Vector2 ClosestPointOnSegment(Vector2 a, Vector2 b, Vector2 p)
-    {
-        Vector2 ab = b - a;
-        float t = Vector2.Dot(p - a, ab) / ab.LengthSquared();
-        t = Math.Max(0, Math.Min(1, t));
-        return a + ab * t;
-    }
+        /// <summary>
+        /// Helper: Returns the point on the segment [a, b] that is closest to point p.
+        /// </summary>
+        private static Vector2 ClosestPointOnSegment(Vector2 a, Vector2 b, Vector2 p)
+        {
+            Vector2 ab = b - a;
+            float t = Vector2.Dot(p - a, ab) / ab.LengthSquared();
+            t = Math.Max(0, Math.Min(1, t));
+            return a + ab * t;
+        }
 
         public static void ResolveCollisionRotational(ref Manifold m)
         {
@@ -357,7 +450,7 @@ namespace physics.Engine
             jt /= invMassSumFriction;
 
             // Clamp friction impulse (Coulomb friction).
-            float mu = Math.Max(A.Friction, B.Friction);
+            float mu = PhysicsObject.Friction; //Math.Max(A.Friction, B.Friction);
             jt = Math.Min(Math.Abs(jt), mu * Math.Abs(j));
             jt = jt * (jt < 0 ? -1 : 1); // restore sign
 

@@ -2,6 +2,7 @@ using physics.Engine.Input;
 using physics.Engine.Objects;
 using System.Numerics;
 using System.Collections.Generic;
+using System;
 
 namespace SharpPhysics.Engine.Player
 {
@@ -21,7 +22,6 @@ namespace SharpPhysics.Engine.Player
         public PlayerController(PhysicsObject player)
         {
             _player = player;
-            _player.Friction = 0.99f;
             _player.Restitution = 0.001f;
             _player.ContactPointAdded += OnContactPointAdded;
             _player.ContactPointRemoved += OnContactPointRemoved;
@@ -34,7 +34,7 @@ namespace SharpPhysics.Engine.Player
             if (normal.Y > 0.5f)
             {
                 _groundObjects.Add(obj);
-                _player.Velocity = new Vector2(_player.Velocity.X, 0);
+                //_player.Velocity = new Vector2(_player.Velocity.X, 0);
                 return;
             }
         }
@@ -65,9 +65,19 @@ namespace SharpPhysics.Engine.Player
             {
                 Jump();
             }
+            if (keyState.Down)
+            {
+                Slam();
+            }
 
             _player.Velocity = new Vector2(_horizontalInput * _speed, _player.Velocity.Y);
 
+        }
+
+        // Slam the player down at a high speed.
+        private void Slam()
+        {
+            _player.Velocity = new Vector2(_player.Velocity.X, 2000);
         }
 
         private void MoveLeft()

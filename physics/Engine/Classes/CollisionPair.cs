@@ -9,15 +9,31 @@ using System.Threading.Tasks;
 
 namespace physics.Engine.Classes
 {
-    public class CollisionPair : IEquatable<CollisionPair>
+    public sealed class CollisionPair : IEquatable<CollisionPair>
     {
-        public readonly PhysicsObject A;
-        public readonly PhysicsObject B;
+        public PhysicsObject A { get; private set; }
+        public PhysicsObject B { get; private set; }
+
+        public CollisionPair()
+        {
+        }
 
         public CollisionPair(PhysicsObject A, PhysicsObject B)
         {
             this.A = A;
             this.B = B;
+        }
+
+        public void Set(PhysicsObject a, PhysicsObject b)
+        {
+            A = a;
+            B = b;
+        }
+
+        public void Reset()
+        {
+            A = null;
+            B = null;
         }
 
         public override bool Equals(object obj)

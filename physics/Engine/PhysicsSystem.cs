@@ -15,16 +15,18 @@ namespace physics.Engine
         #region Public Properties
 
         public float GravityScale = 30F;
-        public Vector2 Gravity { get; set; }
+        public Vector2 Gravity { get; set; } = new Vector2(0, 9.8f);
         public float Friction { get; set; }
+        public float TimeScale { get; set; } = 1.0f;
+        public bool IsPaused { get; set; } = false;
 
         // Set this to roughly your average AABB size – adjust as needed.
         public float SpatialHashCellSize { get; set; } = 10F;
 
         // Sleep / Wake thresholds
         public static float WakeImpulseThreshold { get; private set; } = 4.0f;
-        public static float LinearSleepThreshold { get; set; } = 0.05f;
-        public static float AngularSleepThreshold { get; set; } = 0.1f;
+        public static float LinearSleepThreshold { get; set; } = 0.06f;
+        public static float AngularSleepThreshold { get; set; } = 0.11f;
         public static float SleepTimeThreshold { get; set; } = 0.9f;
 
         #endregion
@@ -35,12 +37,12 @@ namespace physics.Engine
         private const int PHYSICS_ITERATIONS = 8;
         private double accumulator = 0;
 
-        public static PhysicsObject ActiveObject;
-        private static readonly List<SFMLShader> ListShaders = new List<SFMLShader>();
-        private static readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
-        public static readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
-        public static readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
+        public PhysicsObject? ActiveObject;
+        private readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
+        public readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
+        public readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
         private readonly ManifoldPool _manifoldPool = new ManifoldPool();
+        private readonly CollisionPairPool _collisionPairPool = new CollisionPairPool();
         public List<Constraint> Constraints = new List<Constraint>();
 
         internal IEnumerable<PhysicsObject> GetMoveableObjects()
@@ -60,7 +62,7 @@ namespace physics.Engine
             physicsObject.Velocity = velocity;
         }
 
-        public static readonly Queue<PhysicsObject> RemovalQueue = new Queue<PhysicsObject>();
+        public readonly Queue<PhysicsObject> RemovalQueue = new Queue<PhysicsObject>();
 
         #endregion
 
@@ -77,7 +79,6 @@ namespace physics.Engine
 
         public PhysicsSystem()
         {
-            Gravity = new Vector2 { X = 0, Y = 10F * GravityScale };
             Friction = 1F;
         }
 
@@ -85,7 +86,7 @@ namespace physics.Engine
 
         #region Public Methods
 
-        public static PhysicsObject CreateStaticCircle(Vector2 loc, int radius, float restitution, bool locked, SFMLShader shader)
+        public PhysicsObject CreateStaticCircle(Vector2 loc, int radius, float restitution, bool locked, SFMLShader shader)
         {
             // Create the circle shape using the given radius.
             IShape shape = new CirclePhysShape(radius);
@@ -95,7 +96,7 @@ namespace physics.Engine
             return obj;
         }
 
-        public static PhysicsObject CreateStaticBox(Vector2 start, Vector2 end, bool locked, SFMLShader shader, float mass)
+        public PhysicsObject CreateStaticBox(Vector2 start, Vector2 end, bool locked, SFMLShader shader, float mass)
         {
             // Ensure start and end define the correct bounds.
             var min = new Vector2(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y));
@@ -114,7 +115,7 @@ namespace physics.Engine
             return obj;
         }
 
-        public static PhysicsObject CreateStaticBox2(Vector2 start, Vector2 end, bool locked, SFMLShader shader, float mass)
+        public PhysicsObject CreateStaticBox2(Vector2 start, Vector2 end, bool locked, SFMLShader shader, float mass)
         {
             // Compute the corrected bounding box.
             var min = new Vector2(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y));
@@ -129,17 +130,15 @@ namespace physics.Engine
             // Create the box shape.
             IShape shape = new BoxPhysShape(width, height);
             var obj = new PhysicsObject(shape, center, 0.2f, locked, shader, mass, canRotate: true);
-            obj.Friction = 0.8f;
             ListStaticObjects.Add(obj);
             return obj;
         }
 
-        public static PhysicsObject CreatePolygon(Vector2 origin, Vector2[] points, SFMLShader shader, bool locked = false, bool canRotate = true)
+        public PhysicsObject CreatePolygon(Vector2 origin, Vector2[] points, SFMLShader shader, bool locked = false, bool canRotate = true)
         {
             // Create the polygon shape.
             IShape shape = new PolygonPhysShape(points);
             var obj = new PhysicsObject(shape, origin, 0.2f, locked, shader, canRotate: canRotate);
-            obj.Friction = 0.8f;
             ListStaticObjects.Add(obj);
             return obj;
         }
@@ -249,6 +248,10 @@ namespace physics.Engine
 
         public void Tick(double elapsedTime)
         {
+            // If the system is paused, don't advance the physics simulation
+            if (IsPaused)
+                return;
+            
             accumulator += elapsedTime;
 
             // Avoid accumulator spiral of death by clamping
@@ -258,7 +261,7 @@ namespace physics.Engine
             while (accumulator > _dt)
             {
                 BroadPhase_GeneratePairs();
-                UpdatePhysics(_dt);
+                UpdatePhysics(_dt * TimeScale);
                 ProcessRemovalQueue();
                 accumulator -= _dt;
             }
@@ -319,9 +322,8 @@ namespace physics.Engine
                 diff.Y = (int)diff.Y == 0 ? 0 : diff.Y * falloffMultiplier;
 
                 if (diff.Length() > .005F)
-                {
                     forces += diff;
-                }
+                
             }
 
             return forces;
@@ -342,7 +344,7 @@ namespace physics.Engine
 
         private Vector2 GetGravityVector(PhysicsObject obj)
         {
-            return CalculatePointGravity(obj) + Gravity;
+            return CalculatePointGravity(obj) + Gravity * GravityScale;
         }
 
         private void ProcessRemovalQueue()
@@ -365,12 +367,13 @@ namespace physics.Engine
 
         private void UpdatePhysics(float dt)
         {
+
+            // divide dt into substeps
+            float dt_substep = dt / PHYSICS_ITERATIONS;
+
             // Loop over physics iterations.
             for (int iter = 0; iter < PHYSICS_ITERATIONS; iter++)
             {
-                //TODO: Constraints
-                //HandleConstraints(dt);
-                
                 // Use a for-loop to iterate over collision pairs.
                 for (int i = 0; i < ListCollisionPairs.Count; i++)
                 {
@@ -459,14 +462,18 @@ namespace physics.Engine
                         _manifoldPool.Return(m);
                     }
                 }
-            }
 
-            // Process static objects.
-            for (int i = 0; i < ListStaticObjects.Count; i++)
-            {
-                var staticObj = ListStaticObjects[i];
-                ApplyConstants(staticObj, dt);
-                staticObj.Update(dt);
+                // Apply constraints after collision resolution (uses substep dt)
+                HandleConstraints(dt_substep);
+
+                // Process static objects.
+                // Apply a portion of DT to static objects.
+                for (int i = 0; i < ListStaticObjects.Count; i++)
+                {
+                    var staticObj = ListStaticObjects[i];
+                    ApplyConstants(staticObj, dt_substep);
+                    staticObj.Update(dt_substep);
+                }
             }
         }
 
@@ -478,7 +485,8 @@ namespace physics.Engine
 
         private void BroadPhase_GeneratePairs()
         {
-            // Reuse the ListCollisionPairs (clear it first)
+            // Return all pairs to the pool before clearing
+            _collisionPairPool.ReturnAll(ListCollisionPairs);
             ListCollisionPairs.Clear();
 
             // Clear reusable structures to avoid allocations
@@ -527,12 +535,16 @@ namespace physics.Engine
 
                             // Skip pairs where both objects are sleeping.
                             if (objA.Sleeping && objB.Sleeping)
-                            continue;
+                                continue;
+
+                            // Skip connected objects (constraints link them, collisions should be ignored)
+                            if (objA.ConnectedObjects.Contains(objB))
+                                continue;
 
                             // Add the pair if it has not already been processed.
                             if (_pairSet.Add((objA, objB)))
                             {
-                                ListCollisionPairs.Add(new CollisionPair(objA, objB));
+                                ListCollisionPairs.Add(_collisionPairPool.Get(objA, objB));
                             }
                         }
                     }

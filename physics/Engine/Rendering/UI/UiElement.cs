@@ -8,8 +8,12 @@ namespace physics.Engine.Rendering.UI
 {
     public abstract class UiElement
     {
+        public UiElement()
+        {
+        }
+
         protected List<UiElement> Children { get; } = new List<UiElement>();
-        protected UiElement Parent { get; private set; } = null;
+        protected UiElement? Parent { get; private set; } = null;
         public Vector2 Position { get; set; } = new Vector2(0, 0);
 
         public void Draw(RenderTarget target)
@@ -48,7 +52,7 @@ namespace physics.Engine.Rendering.UI
 
         private bool IsDescendantOf(UiElement possibleAncestor)
         {
-            UiElement current = this.Parent;
+            UiElement? current = this.Parent;
             while (current != null)
             {
                 if (current == possibleAncestor) return true;
@@ -64,6 +68,30 @@ namespace physics.Engine.Rendering.UI
                 child.Parent = null;
                 Children.Remove(child);
             }
+        }
+
+        /// <summary>
+        /// Handles a click at the specified position.
+        /// Returns true if this element or a child handled the click.
+        /// </summary>
+        public virtual bool HandleClick(Vector2 clickPos)
+        {
+            // Check children first - this gives them priority
+            foreach (var child in Children)
+            {
+                if (child.HandleClick(clickPos))
+                {
+                    return true;
+                }
+            }
+
+            // Then check if this element implements IUiClickable
+            if (this is IUiClickable clickable && clickable.HandleClick(clickPos))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         protected abstract void DrawSelf(RenderTarget target);
