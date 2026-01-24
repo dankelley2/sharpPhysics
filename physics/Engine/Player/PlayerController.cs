@@ -8,8 +8,8 @@ namespace SharpPhysics.Engine.Player
 {
     public class PlayerController
     {
-        private float _speed = 150.0f;
-        private float _jumpForce = 180.0f;
+        private float _speed = 170.0f;
+        private float _jumpForce = 250.0f;
         private bool _isGrounded => _groundObjects.Count > 0;
         private PhysicsObject _player;
 
