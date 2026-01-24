@@ -73,17 +73,17 @@ public class DemoGame : IGame
         _objectTemplates.CreateWall(new Vector2(0, 0), (int)worldWidth, 15);
         _objectTemplates.CreateWall(new Vector2(0, (int)worldHeight - 15), (int)worldWidth, 15);
 
-        // Create a grid of medium balls
-        for (int i = 500; i < 1000; i += 50)
-        {
-            for (int j = 0; j < 600; j += 50)
-            {
-                if (j % 80 == 0)
-                    _objectTemplates.CreateMedBall(i + 210, j + 40);
-                else
-                    _objectTemplates.CreateMedBall(i + 200, j + 40);
-            }
-        }
+        // // Create a grid of medium balls
+        // for (int i = 500; i < 1000; i += 50)
+        // {
+        //     for (int j = 0; j < 600; j += 50)
+        //     {
+        //         if (j % 80 == 0)
+        //             _objectTemplates.CreateMedBall(i + 210, j + 40);
+        //         else
+        //             _objectTemplates.CreateMedBall(i + 200, j + 40);
+        //     }
+        // }
 
         // Create player
         var player = _objectTemplates.CreatePolygonCapsule(new Vector2(50, 20));
@@ -176,17 +176,31 @@ public class DemoGame : IGame
     
         // Add Chain of small balls as rope test
         PhysicsObject? prevObject = null;
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 12; i++)
         {
 
-            var currentObj = _objectTemplates.CreateMedBall(150 + (i * 40), 150);
+            var currentObj = _objectTemplates.CreateMedBall(150 + (i * 25), 150);
             
             if (prevObject != null)
             {
-                _engine.AddWeldConstraint(prevObject, currentObj, Vector2.Zero, new Vector2(40, 0));
+                _engine.AddWeldConstraint(prevObject, currentObj, Vector2.Zero, new Vector2(-25, 0));
             }
 
             prevObject = currentObj;
+        }
+        // Add Chain of small balls as rope test
+        PhysicsObject? prevObject2 = null;
+        for (int i = 0; i < 12; i++)
+        {
+
+            var currentObj = _objectTemplates.CreateMedBall(150 + (i * 25), 300);
+            
+            if (prevObject2 != null)
+            {
+                _engine.AddAxisConstraint(prevObject2, currentObj, Vector2.Zero, new Vector2(-25, 0));
+            }
+
+            prevObject2 = currentObj;
         }
     }
 
