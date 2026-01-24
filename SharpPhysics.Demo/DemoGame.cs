@@ -6,6 +6,7 @@ using physics.Engine.Constraints;
 using physics.Engine.Core;
 using physics.Engine.Helpers;
 using physics.Engine.Input;
+using physics.Engine.Objects;
 using physics.Engine.Rendering;
 using physics.Engine.Shaders;
 using SFML.Graphics;
@@ -124,23 +125,8 @@ public class DemoGame : IGame
         Vector2 frontAttachOnBody = new Vector2(frontWheelLocalX, bodyHeight / 2f + wheelRadius);
         Vector2 rearAttachOnBody = new Vector2(rearWheelLocalX, bodyHeight / 2f + wheelRadius);
 
-        // Connect wheels to body with AxisConstraints
-        var frontWheelConstraint = new AxisConstraint(
-            carBody,
-            frontWheel,
-            frontAttachOnBody,  // Local anchor on body
-            Vector2.Zero        // Local anchor on wheel (its center)
-        );
-
-        var rearWheelConstraint = new AxisConstraint(
-            carBody,
-            rearWheel,
-            rearAttachOnBody,   // Local anchor on body
-            Vector2.Zero        // Local anchor on wheel (its center)
-        );
-
-        _engine.PhysicsSystem.Constraints.Add(frontWheelConstraint);
-        _engine.PhysicsSystem.Constraints.Add(rearWheelConstraint);
+        _engine.AddAxisConstraint(carBody, frontWheel, frontAttachOnBody, Vector2.Zero);
+        _engine.AddAxisConstraint(carBody, rearWheel, rearAttachOnBody, Vector2.Zero);
 
         // === WELDED PARTS (rigid attachments) ===
 
@@ -157,13 +143,9 @@ public class DemoGame : IGame
         // Weld spoiler to body - use CENTER of spoiler (0,0) to minimize rotational coupling
         Vector2 spoilerAttachOnBody = new Vector2(spoilerLocalX, spoilerLocalY);
         Vector2 spoilerAttachOnSpoiler = Vector2.Zero;  // Center of spoiler
-        var spoilerWeld = new WeldConstraint(
-            carBody,
-            spoiler,
-            spoilerAttachOnBody,
-            spoilerAttachOnSpoiler
-        );
-        _engine.PhysicsSystem.Constraints.Add(spoilerWeld);
+
+        // Add Weld
+        _engine.AddWeldConstraint(carBody, spoiler, spoilerAttachOnBody, spoilerAttachOnSpoiler);
 
         // Front bumper
         float bumperWidth = 10f;
@@ -177,13 +159,9 @@ public class DemoGame : IGame
         Vector2 bumperAttachOnBody = new Vector2(bodyWidth / 2f, 0f);
         // Local anchor on bumper: left-center edge
         Vector2 bumperAttachOnBumper = new Vector2(-bumperWidth / 2f, 0f);
-        var bumperWeld = new WeldConstraint(
-            carBody,
-            frontBumper,
-            bumperAttachOnBody,
-            bumperAttachOnBumper
-        );
-        _engine.PhysicsSystem.Constraints.Add(bumperWeld);
+
+        // Add Weld
+        _engine.AddWeldConstraint(carBody, frontBumper, bumperAttachOnBody, bumperAttachOnBumper);
 
         // Rear bumper
         float rearBumperWorldX = carX - bumperWidth;
@@ -192,13 +170,24 @@ public class DemoGame : IGame
         // Weld rear bumper to body
         Vector2 rearBumperAttachOnBody = new Vector2(-bodyWidth / 2f, 0f);
         Vector2 rearBumperAttachOnBumper = new Vector2(bumperWidth / 2f, 0f);
-        var rearBumperWeld = new WeldConstraint(
-            carBody,
-            rearBumper,
-            rearBumperAttachOnBody,
-            rearBumperAttachOnBumper
-        );
-        _engine.PhysicsSystem.Constraints.Add(rearBumperWeld);
+        
+        // Add Weld
+        _engine.AddWeldConstraint(carBody, rearBumper, rearBumperAttachOnBody, rearBumperAttachOnBumper);
+    
+        // Add Chain of small balls as rope test
+        PhysicsObject? prevObject = null;
+        for (int i = 0; i < 10; i++)
+        {
+
+            var currentObj = _objectTemplates.CreateMedBall(150 + (i * 40), 150);
+            
+            if (prevObject != null)
+            {
+                _engine.AddWeldConstraint(prevObject, currentObj, Vector2.Zero, new Vector2(40, 0));
+            }
+
+            prevObject = currentObj;
+        }
     }
 
     private void InitializePersonDetection(uint worldWidth, uint worldHeight)
