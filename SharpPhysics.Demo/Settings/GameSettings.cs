@@ -58,6 +58,13 @@ public class GameSettings
     // ==================== Camera Settings ====================
 
     /// <summary>
+    /// Whether or not to run any camera or pose tracking functionality
+    /// Requires ProjectorSegmentation.Vision DLL and compatible MJPEG stream or
+    /// Connected webcam
+    /// </summary>
+    public bool PoseTrackingEnabled { get; set; } = false;
+
+    /// <summary>
     /// Camera source type: "url" for MJPEG stream, "device" for local camera.
     /// </summary>
     public string CameraSourceType { get; set; } = "url";

@@ -110,6 +110,8 @@ public class SettingsGame : IGame
         switch (_currentCategory)
         {
             case "Camera":
+                _currentSettings.Add(new SettingItem("Enable Body Tracking", _settings.PoseTrackingEnabled.ToString(),
+                    v => { if (bool.TryParse(v, out var i)) _settings.PoseTrackingEnabled = i; }, "true or false"));
                 _currentSettings.Add(new SettingItem("Source Type", _settings.CameraSourceType, 
                     v => _settings.CameraSourceType = v, "url or device"));
                 _currentSettings.Add(new SettingItem("Stream URL", _settings.CameraUrl, 
@@ -361,7 +363,7 @@ public class SettingsGame : IGame
             {
                 case "Camera":
                     renderer.DrawText("Common URL formats:", labelX, hintY, 14, new Color(180, 180, 200));
-                    renderer.DrawText("- IP Webcam (Android): http://<ip>:8080/video", labelX + 20f, hintY + 22f, 12, new Color(140, 140, 160));
+                    renderer.DrawText("- MJPEG Stream: http://<ip>:8080", labelX + 20f, hintY + 22f, 12, new Color(140, 140, 160));
                     renderer.DrawText("- ESP32-CAM: http://<ip>:81/stream", labelX + 20f, hintY + 40f, 12, new Color(140, 140, 160));
                     break;
                 case "Detection":

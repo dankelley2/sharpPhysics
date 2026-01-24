@@ -3,6 +3,7 @@
   "windowHeight": 720,
   "framerateLimit": 144,
   "antialiasingLevel": 8,
+  "poseTrackingEnabled": false,
   "cameraSourceType": "url",
   "cameraUrl": "http://192.168.1.161:8080",
   "cameraDeviceIndex": 0,

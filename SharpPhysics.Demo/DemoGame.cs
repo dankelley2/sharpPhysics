@@ -57,7 +57,11 @@ public class DemoGame : IGame
         _engine.Renderer.Window.KeyPressed += OnKeyPressed;
 
         InitializeWorld(engine.WindowWidth, engine.WindowHeight);
-        InitializePersonDetection(engine.WindowWidth, engine.WindowHeight);
+
+        // Enable or disable body detection
+        if (GameSettings.Instance.PoseTrackingEnabled) {
+            InitializePersonDetection(engine.WindowWidth, engine.WindowHeight);
+        }
     }
 
     private void InitializeWorld(uint worldWidth, uint worldHeight)

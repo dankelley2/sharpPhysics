@@ -67,7 +67,11 @@ public class BubblePopGame : IGame
         _physics.GravityScale = 15f;
 
         InitializeWorld(engine.WindowWidth, engine.WindowHeight);
-        InitializePersonDetection(engine.WindowWidth, engine.WindowHeight);
+
+        // Enable or disable body detection
+        if (GameSettings.Instance.PoseTrackingEnabled) {
+            InitializePersonDetection(engine.WindowWidth, engine.WindowHeight);
+        }
 
         Console.WriteLine("═══════════════════════════════════════");
         Console.WriteLine("   🫧  BUBBLE POP GAME  🫧");

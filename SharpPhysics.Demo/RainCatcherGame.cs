@@ -86,7 +86,11 @@ public class RainCatcherGame : IGame
         _physics.GravityScale = 25f;
 
         InitializeWorld(engine.WindowWidth, engine.WindowHeight);
-        InitializePersonDetection(engine.WindowWidth, engine.WindowHeight);
+
+        // Enable or disable body detection
+        if (GameSettings.Instance.PoseTrackingEnabled) {
+            InitializePersonDetection(engine.WindowWidth, engine.WindowHeight);
+        }
 
         Console.WriteLine("═══════════════════════════════════════");
         Console.WriteLine("   🌧️  RAIN CATCHER GAME  🌧️");
