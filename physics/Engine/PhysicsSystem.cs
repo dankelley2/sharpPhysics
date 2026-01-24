@@ -7,6 +7,7 @@ using physics.Engine.Shapes;
 using physics.Engine.Constraints;
 using physics.Engine.Shaders;
 using System.Numerics;
+using System.Linq;
 
 namespace physics.Engine
 {
@@ -44,6 +45,7 @@ namespace physics.Engine
         private readonly ManifoldPool _manifoldPool = new ManifoldPool();
         private readonly CollisionPairPool _collisionPairPool = new CollisionPairPool();
         public List<Constraint> Constraints = new List<Constraint>();
+        private Queue<Constraint> _constraintRemovalQueue = new Queue<Constraint>();
 
         internal IEnumerable<PhysicsObject> GetMoveableObjects()
         {
@@ -352,8 +354,37 @@ namespace physics.Engine
             while (RemovalQueue.Count > 0)
             {
                 var obj = RemovalQueue.Dequeue();
+                if (obj.ConnectedObjects.Any())
+                {
+                    foreach (var connectedObj in obj.ConnectedObjects)
+                    {
+                        var constraintToRemove = Constraints.FirstOrDefault(c => (c.A == obj && c.B == connectedObj) || (c.B == obj && c.A == connectedObj));
+                        if (constraintToRemove != null)
+                        {
+                            _constraintRemovalQueue.Enqueue(constraintToRemove);
+                        }
+                    }
+                }
                 ListStaticObjects.Remove(obj);
                 ListGravityObjects.Remove(obj);
+            }
+
+            while (_constraintRemovalQueue.Count > 0)
+            {
+                var constraint = _constraintRemovalQueue.Dequeue();
+
+                constraint.A.ConnectedObjects.Remove(constraint.B);
+                constraint.B.ConnectedObjects.Remove(constraint.A);
+
+                if (!constraint.A.ConnectedObjects.Any())
+                {
+                    constraint.A.CanSleep = true;
+                }
+                if (!constraint.B.ConnectedObjects.Any())
+                {
+                    constraint.B.CanSleep = true;
+                }
+                Constraints.Remove(constraint);
             }
         }
 
@@ -362,6 +393,12 @@ namespace physics.Engine
             foreach (var constraint in Constraints)
             {
                 constraint.ApplyConstraint(dt);
+
+                // Handle broken constraints, queue for removal
+                if (constraint.CanBreak && constraint.IsBroken)
+                {
+                    _constraintRemovalQueue.Enqueue(constraint);
+                }
             }
         }
 

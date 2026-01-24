@@ -239,14 +239,14 @@ public class DemoGame : IGame
                 firstBall = ball;
             if (prevBall != null)
             {
-                _engine.AddWeldConstraint(prevBall, ball);
+                _engine.AddWeldConstraint(prevBall, ball, true);
             }
             prevBall = ball;
         }
         // Close the circle
         if (firstBall != null && prevBall != null)
         {
-            _engine.AddWeldConstraint(prevBall, firstBall);
+            _engine.AddWeldConstraint(prevBall, firstBall, true);
         }
 
     }

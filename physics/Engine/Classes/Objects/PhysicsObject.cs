@@ -20,7 +20,7 @@ namespace physics.Engine.Objects
         public bool Locked { get; set; }
         public SFMLShader Shader { get; set; }
         public bool CanRotate { get; internal set; } = false;
-        public readonly List<PhysicsObject> ConnectedObjects = new List<PhysicsObject>();
+        public List<PhysicsObject> ConnectedObjects { get; private set; } = new List<PhysicsObject>();
         public float AngularVelocity { get; set; }
         public float Inertia { get; private set; }
         public float IInertia { get; private set; }
