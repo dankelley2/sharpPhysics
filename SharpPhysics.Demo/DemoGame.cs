@@ -227,7 +227,7 @@ public class DemoGame : IGame
         // circle of circles
         Vector2 center = new Vector2(800, 300);
         int numBalls = 12;
-        float radius = 200f;
+        float radius = 80f;
         PhysicsObject? firstBall = null;
         PhysicsObject? prevBall = null;
         for (int i = 0; i < numBalls; i++)

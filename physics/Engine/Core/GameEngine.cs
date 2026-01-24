@@ -111,6 +111,7 @@ namespace physics.Engine.Core
                 _physicsSystem.RemovalQueue.Enqueue(obj);
             }
             _physicsSystem.ListGravityObjects.Clear();
+            _physicsSystem.Constraints.Clear();
 
             // Process removal queue
             while (_physicsSystem.RemovalQueue.Count > 0)
