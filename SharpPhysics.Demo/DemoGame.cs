@@ -223,6 +223,32 @@ public class DemoGame : IGame
 
             prevObject2 = currentObj;
         }
+
+        // circle of circles
+        Vector2 center = new Vector2(800, 300);
+        int numBalls = 12;
+        float radius = 200f;
+        PhysicsObject? firstBall = null;
+        PhysicsObject? prevBall = null;
+        for (int i = 0; i < numBalls; i++)
+        {
+            float angle = i * (2 * MathF.PI / numBalls);
+            Vector2 pos = center + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius;
+            var ball = _objectTemplates.CreateMedBall(pos.X - 10, pos.Y - 10);
+            if (i == 0)
+                firstBall = ball;
+            if (prevBall != null)
+            {
+                _engine.AddWeldConstraint(prevBall, ball);
+            }
+            prevBall = ball;
+        }
+        // Close the circle
+        if (firstBall != null && prevBall != null)
+        {
+            _engine.AddWeldConstraint(prevBall, firstBall);
+        }
+
     }
 
     private void InitializePersonDetection(uint worldWidth, uint worldHeight)

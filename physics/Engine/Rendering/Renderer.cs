@@ -244,13 +244,13 @@ namespace physics.Engine.Rendering
             }
 
             // Draw all static objects with their shaders.
-            // foreach (var obj in _physicsSystem.Constraints)
-            // {
-            //     var a = obj.A.Center + PhysMath.RotateVector(obj.AnchorA, obj.A.Angle);
-            //     var b = obj.B.Center + PhysMath.RotateVector(obj.AnchorB, obj.B.Angle);
-            //     DrawLine(obj.A.Center, a, Color.Yellow, 2f);
-            //     DrawLine(obj.B.Center, b, Color.Red, 2f);
-            // }
+            foreach (var obj in _physicsSystem.Constraints)
+            {
+                var a = obj.A.Center + PhysMath.RotateVector(obj.AnchorA, obj.A.Angle);
+                var b = obj.B.Center + PhysMath.RotateVector(obj.AnchorB, obj.B.Angle);
+                DrawLine(obj.A.Center, a, Color.Yellow, 2f);
+                DrawLine(obj.B.Center, b, Color.Red, 2f);
+            }
         }
 
         #region Public Primitive Drawing Methods
