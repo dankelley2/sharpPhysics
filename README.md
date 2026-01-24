@@ -7,6 +7,8 @@
   - Enables body tracking via MJPEG stream or Webcam for physics games
 - Added game examples
 
+- https://youtu.be/Lo-g24-rv4k
+
 - TODO: Update the readme below
 
 # sharpPhysics
