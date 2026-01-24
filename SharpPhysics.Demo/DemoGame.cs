@@ -189,6 +189,8 @@ public class DemoGame : IGame
             prevObject = currentObj;
         }
         // Add Chain of small balls as rope test
+        var anchor = _objectTemplates.CreateBox(new Vector2(125, 300), 20, 20);
+        anchor.Locked = true;
         PhysicsObject? prevObject2 = null;
         for (int i = 0; i < 12; i++)
         {
@@ -198,6 +200,10 @@ public class DemoGame : IGame
             if (prevObject2 != null)
             {
                 _engine.AddAxisConstraint(prevObject2, currentObj, Vector2.Zero, new Vector2(-25, 0));
+            } else
+            {
+                // weld to anchor
+                _engine.AddAxisConstraint(anchor, currentObj, Vector2.Zero, new Vector2(-25, 0));
             }
 
             prevObject2 = currentObj;
