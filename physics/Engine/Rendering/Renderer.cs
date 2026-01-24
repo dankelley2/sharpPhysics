@@ -7,6 +7,8 @@ using SFML.Window;
 using System.Numerics;
 using physics.Engine.Shaders;
 using physics.Engine.Objects;
+using physics.Engine.Helpers;
+using System.Security.AccessControl;
 
 namespace physics.Engine.Rendering
 {
@@ -240,6 +242,15 @@ namespace physics.Engine.Rendering
                     sfmlShader.PostDraw(obj, Window);
                 }
             }
+
+            // Draw all static objects with their shaders.
+            // foreach (var obj in _physicsSystem.Constraints)
+            // {
+            //     var a = obj.A.Center + PhysMath.RotateVector(obj.AnchorA, obj.A.Angle);
+            //     var b = obj.B.Center + PhysMath.RotateVector(obj.AnchorB, obj.B.Angle);
+            //     DrawLine(obj.A.Center, a, Color.Yellow, 2f);
+            //     DrawLine(obj.B.Center, b, Color.Red, 2f);
+            // }
         }
 
         #region Public Primitive Drawing Methods

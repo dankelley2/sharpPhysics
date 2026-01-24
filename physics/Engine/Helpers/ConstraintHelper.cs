@@ -18,9 +18,25 @@ public static class ConstraintHelpers
         return weldConstraint;
     }
 
+    public static Constraint AddWeldConstraint(this GameEngine engine, PhysicsObject objA, PhysicsObject objB)
+    {
+        var halfdiff = (objB.Center - objA.Center) / 2f;
+        var weldConstraint = new WeldConstraint(objA, objB, halfdiff, -halfdiff);
+        engine.PhysicsSystem.Constraints.Add(weldConstraint);
+        return weldConstraint;
+    }
+
     public static Constraint AddAxisConstraint(this GameEngine engine, PhysicsObject objA, PhysicsObject objB, Vector2 localAnchorA, Vector2 localAnchorB)
     {
         var axisConstraint = new AxisConstraint(objA, objB, localAnchorA, localAnchorB);
+        engine.PhysicsSystem.Constraints.Add(axisConstraint);
+        return axisConstraint;
+    }
+
+    public static Constraint AddAxisConstraint(this GameEngine engine, PhysicsObject objA, PhysicsObject objB)
+    {
+        var halfdiff = (objB.Center - objA.Center) / 2f;
+        var axisConstraint = new AxisConstraint(objA, objB, halfdiff, -halfdiff);
         engine.PhysicsSystem.Constraints.Add(axisConstraint);
         return axisConstraint;
     }

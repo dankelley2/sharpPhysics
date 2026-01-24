@@ -13,6 +13,9 @@ namespace physics.Engine.Constraints
         public PhysicsObject A { get; protected set; }
         public PhysicsObject B { get; protected set; }
 
+        public Vector2 AnchorA { get; protected set; }
+        public Vector2 AnchorB { get; protected set; }
+
         public Constraint(PhysicsObject a, PhysicsObject b)
         {
             A = a;
@@ -37,8 +40,6 @@ namespace physics.Engine.Constraints
     /// </summary>
     public class WeldConstraint : Constraint
     {
-        public Vector2 AnchorA { get; private set; }
-        public Vector2 AnchorB { get; private set; }
         public float InitialRelativeAngle { get; private set; }
 
         private const float BaumgarteBias = 0.2f;
@@ -145,15 +146,12 @@ namespace physics.Engine.Constraints
     /// </summary>
     public class AxisConstraint : Constraint
     {
-        public Vector2 AnchorA { get; private set; }
-        public Vector2 AnchorB { get; private set; }
-
         // Baumgarte stabilization factor - keep low to avoid over-correction
         private const float BaumgarteFactor = 0.05f;
         // Maximum bias velocity to prevent explosive corrections
         private const float MaxBiasVelocity = 300f;
         // Slop - ignore errors smaller than this (prevents jitter)
-        private const float LinearSlop = 0.15f;
+        private const float LinearSlop = 0.12f;
 
         public AxisConstraint(PhysicsObject a, PhysicsObject b, Vector2 anchorA, Vector2 anchorB)
             : base(a, b)

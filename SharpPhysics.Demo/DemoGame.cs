@@ -183,27 +183,42 @@ public class DemoGame : IGame
             
             if (prevObject != null)
             {
-                _engine.AddWeldConstraint(prevObject, currentObj, Vector2.Zero, new Vector2(-25, 0));
+                //_engine.AddWeldConstraint(prevObject, currentObj, Vector2.Zero, new Vector2(-25, 0));
+                _engine.AddWeldConstraint(prevObject, currentObj);
+
             }
 
             prevObject = currentObj;
         }
         // Add Chain of small balls as rope test
-        var anchor = _objectTemplates.CreateBox(new Vector2(125, 300), 20, 20);
-        anchor.Locked = true;
         PhysicsObject? prevObject2 = null;
         for (int i = 0; i < 12; i++)
         {
 
             var currentObj = _objectTemplates.CreateMedBall(150 + (i * 25), 300);
             
-            if (prevObject2 != null)
+            // anchor
+            if (i == 0)
             {
-                _engine.AddAxisConstraint(prevObject2, currentObj, Vector2.Zero, new Vector2(-25, 0));
-            } else
+                var anchor = _objectTemplates.CreateBox(new Vector2(125, 290), 20, 20);
+                anchor.Locked = true;
+                // first one weld to anchor
+                _engine.AddAxisConstraint(anchor, currentObj);
+            }
+
+            // axis constraint to previous
+            if (i > 0 && prevObject2 != null)
             {
-                // weld to anchor
-                _engine.AddAxisConstraint(anchor, currentObj, Vector2.Zero, new Vector2(-25, 0));
+                _engine.AddAxisConstraint(prevObject2, currentObj);//, Vector2.Zero, new Vector2(-25, 0));
+            }
+
+            // end anchor
+            if (i == 11)
+            {
+                var anchor = _objectTemplates.CreateBox(new Vector2(150 + (i * 25), 290), 20, 20);
+                anchor.Locked = true;
+                _engine.AddAxisConstraint(currentObj, anchor);
+                
             }
 
             prevObject2 = currentObj;
