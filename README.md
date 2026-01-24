@@ -1,3 +1,14 @@
+## Updates:
+2026 - Jan Updates
+- Fixed Constraints
+- Added Demo games
+- Refactored to separate game engine from implementation
+- See https://github.com/dankelley2/ProjectorSegmentation for other project in solution
+  - Enables body tracking via MJPEG stream or Webcam for physics games
+- Added game examples
+
+- TODO: Update the readme below
+
 # sharpPhysics
 A 2D physics engine implemented in C# using SFML for rendering.
 
