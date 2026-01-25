@@ -48,9 +48,8 @@ namespace physics.Engine.Constraints
     {
         public float InitialRelativeAngle { get; private set; }
 
-        private const float BaumgarteBias = 0.1f;
-        private const float AngularBias = 0.05f;
-
+        private const float BaumgarteBias = 0.23f;
+        private const float AngularBias = 0.20f;
         public WeldConstraint(PhysicsObject a, PhysicsObject b, Vector2 anchorA, Vector2 anchorB, bool canBreak = false)
             : base(a, b)
         {

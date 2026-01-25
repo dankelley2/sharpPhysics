@@ -98,6 +98,16 @@ namespace physics.Engine
             return obj;
         }
 
+        public PhysicsObject CreateStaticCircle(Vector2 loc, int radius, float restitution, bool locked, SFMLShader shader, float mass)
+        {
+            // Create the circle shape using the given radius.
+            IShape shape = new CirclePhysShape(radius);
+            // For a circle, the center is the provided location.
+            var obj = new PhysicsObject(shape, loc, restitution, locked, shader, mass, canRotate: true);
+            ListStaticObjects.Add(obj);
+            return obj;
+        }
+
         public PhysicsObject CreateStaticBox(Vector2 start, Vector2 end, bool locked, SFMLShader shader, float mass)
         {
             // Ensure start and end define the correct bounds.

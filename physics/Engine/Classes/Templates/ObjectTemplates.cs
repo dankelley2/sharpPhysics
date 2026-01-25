@@ -56,6 +56,14 @@ namespace physics.Engine.Classes.ObjectTemplates
             return _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.6F, false, shader);
         }
 
+        public PhysicsObject CreateSmallBall(float originX, float originY, float mass)
+        {
+            // Using a diameter of 5.
+            int diameter = 5;
+            SFMLShader shader = GetShader<SFMLBallVelocityShader>(diameter);
+            return _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.6F, false, shader);
+        }
+
         public PhysicsObject CreateMedBall(float originX, float originY)
         {
             int diameter = 10;
