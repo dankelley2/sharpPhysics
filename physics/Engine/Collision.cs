@@ -272,12 +272,12 @@ namespace physics.Engine
                     // Circle center is exactly on an edge - use edge normal
                     int next = (closestEdgeIndex + 1) % poly.Length;
                     Vector2 edge = poly[next] - poly[closestEdgeIndex];
-                    m.Normal = Vector2.Normalize(new Vector2(-edge.Y, edge.X));
+                    m.Normal = -Vector2.Normalize(new Vector2(-edge.Y, edge.X));
                 }
                 else
                 {
                     // Normal points from closest point toward circle center
-                    m.Normal = (circleCenter - closestPoint) / dist;
+                    m.Normal = -(circleCenter - closestPoint) / dist;
                 }
                 // Penetration is radius plus distance to edge
                 m.Penetration = radius + dist;
