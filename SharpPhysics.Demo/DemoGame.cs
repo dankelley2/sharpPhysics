@@ -170,7 +170,7 @@ public class DemoGame : IGame
         // Add Weld
         _engine.AddWeldConstraint(carBody, rearBumper, rearBumperAttachOnBody, rearBumperAttachOnBumper);
 
-        DemoCar = new DemoGameCar(carBody, frontWheel, rearWheel, frontBumper, rearBumper, true);
+        DemoCar = new DemoGameCar(carBody, frontWheel, rearWheel, frontBumper, rearBumper, false);
 
     }
 
