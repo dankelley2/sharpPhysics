@@ -582,6 +582,12 @@ namespace physics.Engine
             // divide dt into substeps
             float dt_substep = dt / PHYSICS_ITERATIONS;
 
+            // Prepare constraints for this tick (enables warm starting)
+            foreach (var constraint in Constraints)
+            {
+                constraint.PrepareForTick();
+            }
+
             // Loop over physics iterations.
             for (int iter = 0; iter < PHYSICS_ITERATIONS; iter++)
             {

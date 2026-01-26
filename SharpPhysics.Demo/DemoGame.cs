@@ -128,20 +128,20 @@ public class DemoGame : IGame
         };
         var lShape = _objectTemplates.CreateConcavePolygon(new Vector2(600, 100), lShapeVertices, canRotate: true, canBreak: true);
 
-        _ = _objectTemplates.CreatePolygonTriangle(new Vector2(400, 200));
+        //_ = _objectTemplates.CreatePolygonTriangle(new Vector2(400, 200));
 
-        // Arrow-shaped concave polygon
-        var arrowVertices = new Vector2[]
-        {
-            new Vector2(0, 20),      // Left notch top
-            new Vector2(30, 20),     // Shaft top-left
-            new Vector2(30, 0),      // Arrow head left
-            new Vector2(60, 25),     // Arrow tip
-            new Vector2(30, 50),     // Arrow head right
-            new Vector2(30, 30),     // Shaft bottom-left
-            new Vector2(0, 30)       // Left notch bottom
-        };
-        var arrow = _objectTemplates.CreateConcavePolygon(new Vector2(700, 100), arrowVertices, canRotate: true, canBreak: true);
+        //// Arrow-shaped concave polygon
+        //var arrowVertices = new Vector2[]
+        //{
+        //    new Vector2(0, 20),      // Left notch top
+        //    new Vector2(30, 20),     // Shaft top-left
+        //    new Vector2(30, 0),      // Arrow head left
+        //    new Vector2(60, 25),     // Arrow tip
+        //    new Vector2(30, 50),     // Arrow head right
+        //    new Vector2(30, 30),     // Shaft bottom-left
+        //    new Vector2(0, 30)       // Left notch bottom
+        //};
+        //var arrow = _objectTemplates.CreateConcavePolygon(new Vector2(700, 100), arrowVertices, canRotate: true, canBreak: true);
 
         // Star-like concave polygon (5-pointed, simplified)
         var starVertices = new Vector2[]
