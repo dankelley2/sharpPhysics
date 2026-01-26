@@ -52,10 +52,22 @@ namespace physics.Engine.Shaders
             // 1) Draw the polygon outline.
             target.Draw(vertexes);
 
+            // 2) Draw a small red circle at the object's center.
+            float radius = 2f;
+            CircleShape circle = new CircleShape(radius)
+            {
+                Origin = new Vector2f(radius, radius),
+                Position = obj.Center.ToSfml(),
+                OutlineThickness = 1f,
+                OutlineColor = obj.Sleeping ? Color.Blue : Color.Red,
+                FillColor = Color.Transparent
+            };
+            target.Draw(circle);
+
             if (!DrawNormals)
                 return;
                 
-            // 2) Draw a line from each contact point along its normal.
+            // 3) Draw a line from each contact point along its normal.
             contactLines.Clear();
             float lineLength = 10f; // Adjust this value to scale the drawn normals.
             foreach (var kv in obj.GetContacts())
