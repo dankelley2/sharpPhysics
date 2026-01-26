@@ -17,6 +17,7 @@ namespace physics.Engine.Input
         // Input state properties - now minimal, just for panning
         public bool IsPanning { get; private set; } = false;
         public Vector2 MousePosition { get; private set; }
+        public Vector2 MouseScreenPosition { get; private set; }
         public Vector2 PanStartPos { get; private set; }
 
         // Key state for polling important keys.
@@ -126,6 +127,8 @@ namespace physics.Engine.Input
 
         private void OnMouseMoved(object sender, MouseMoveEventArgs e)
         {
+            // Store both screen (raw pixel) and world (transformed) coordinates
+            MouseScreenPosition = new Vector2(e.X, e.Y);
             MousePosition = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view).ToSystemNumerics();
 
             // Handle view panning
@@ -219,67 +222,68 @@ namespace physics.Engine.Input
             }
         }
 
-                /// <summary>
-                /// Returns the current mouse position in world coordinates.
-                /// </summary>
-                public Vector2 GetMousePosition() => MousePosition;
+        /// <summary>
+        /// Returns the current mouse position in world coordinates.
+        /// </summary>
+        public Vector2 GetMousePosition() => MousePosition;
 
-                /// <summary>
-                /// Returns a snapshot of the current key states with edge detection.
-                /// The caller can poll this method each frame to determine which keys are pressed.
-                /// "Pressed" properties are true only on the first frame a key/button is pressed (edge detection).
-                /// </summary>
-                public KeyState GetKeyState()
-                {
-                    // Build state directly - KeyState is now a struct, so no heap allocation
-                    KeyState currentState;
+        /// <summary>
+        /// Returns a snapshot of the current key states with edge detection.
+        /// The caller can poll this method each frame to determine which keys are pressed.
+        /// "Pressed" properties are true only on the first frame a key/button is pressed (edge detection).
+        /// </summary>
+        public KeyState GetKeyState()
+        {
+            // Build state directly - KeyState is now a struct, so no heap allocation
+            KeyState currentState;
 
-                    // Held states
-                    currentState.Left = keyState.Left;
-                    currentState.Right = keyState.Right;
-                    currentState.Up = keyState.Up;
-                    currentState.Down = keyState.Down;
-                    currentState.Space = keyState.Space;
-                    currentState.Escape = keyState.Escape;
-                    currentState.Enter = keyState.Enter;
-                    currentState.Tab = keyState.Tab;
-                    currentState.Backspace = keyState.Backspace;
+            // Held states
+            currentState.Left = keyState.Left;
+            currentState.Right = keyState.Right;
+            currentState.Up = keyState.Up;
+            currentState.Down = keyState.Down;
+            currentState.Space = keyState.Space;
+            currentState.Escape = keyState.Escape;
+            currentState.Enter = keyState.Enter;
+            currentState.Tab = keyState.Tab;
+            currentState.Backspace = keyState.Backspace;
 
-                    // Buffered pressed states (active for 150ms after initial press)
-                    currentState.LeftPressed = _pressTimers.TryGetValue("Left", out var leftTime) && leftTime > 0;
-                    currentState.RightPressed = _pressTimers.TryGetValue("Right", out var rightTime) && rightTime > 0;
-                    currentState.UpPressed = _pressTimers.TryGetValue("Up", out var upTime) && upTime > 0;
-                    currentState.DownPressed = _pressTimers.TryGetValue("Down", out var downTime) && downTime > 0;
-                    currentState.SpacePressed = _pressTimers.TryGetValue("Space", out var spaceTime) && spaceTime > 0;
-                    currentState.EscapePressed = _pressTimers.TryGetValue("Escape", out var escapeTime) && escapeTime > 0;
-                    currentState.EnterPressed = _pressTimers.TryGetValue("Enter", out var enterTime) && enterTime > 0;
-                    currentState.TabPressed = _pressTimers.TryGetValue("Tab", out var tabTime) && tabTime > 0;
-                    currentState.BackspacePressed = _pressTimers.TryGetValue("Backspace", out var backspaceTime) && backspaceTime > 0;
+            // Buffered pressed states (active for 150ms after initial press)
+            currentState.LeftPressed = _pressTimers.TryGetValue("Left", out var leftTime) && leftTime > 0;
+            currentState.RightPressed = _pressTimers.TryGetValue("Right", out var rightTime) && rightTime > 0;
+            currentState.UpPressed = _pressTimers.TryGetValue("Up", out var upTime) && upTime > 0;
+            currentState.DownPressed = _pressTimers.TryGetValue("Down", out var downTime) && downTime > 0;
+            currentState.SpacePressed = _pressTimers.TryGetValue("Space", out var spaceTime) && spaceTime > 0;
+            currentState.EscapePressed = _pressTimers.TryGetValue("Escape", out var escapeTime) && escapeTime > 0;
+            currentState.EnterPressed = _pressTimers.TryGetValue("Enter", out var enterTime) && enterTime > 0;
+            currentState.TabPressed = _pressTimers.TryGetValue("Tab", out var tabTime) && tabTime > 0;
+            currentState.BackspacePressed = _pressTimers.TryGetValue("Backspace", out var backspaceTime) && backspaceTime > 0;
 
-                    // Mouse button states
-                    currentState.LeftMouseDown = _leftMouseDown;
-                    currentState.RightMouseDown = _rightMouseDown;
-                    currentState.MiddleMouseDown = IsPanning;
-                    currentState.LeftMousePressed = _leftMouseDown && !_prevLeftMouseDown;
-                    currentState.RightMousePressed = _rightMouseDown && !_prevRightMouseDown;
-                    currentState.MousePosition = MousePosition;
+            // Mouse button states
+            currentState.LeftMouseDown = _leftMouseDown;
+            currentState.RightMouseDown = _rightMouseDown;
+            currentState.MiddleMouseDown = IsPanning;
+            currentState.LeftMousePressed = _leftMouseDown && !_prevLeftMouseDown;
+            currentState.RightMousePressed = _rightMouseDown && !_prevRightMouseDown;
+            currentState.MousePosition = MousePosition;
+            currentState.MouseScreenPosition = MouseScreenPosition;
 
-                    // Store current mouse state as previous for next frame
-                    _prevLeftMouseDown = _leftMouseDown;
-                    _prevRightMouseDown = _rightMouseDown;
+            // Store current mouse state as previous for next frame
+            _prevLeftMouseDown = _leftMouseDown;
+            _prevRightMouseDown = _rightMouseDown;
 
-                    // Store current key state as previous for next frame (struct copy, no allocation)
-                    prevKeyState.Left = keyState.Left;
-                    prevKeyState.Right = keyState.Right;
-                    prevKeyState.Up = keyState.Up;
-                    prevKeyState.Down = keyState.Down;
-                    prevKeyState.Space = keyState.Space;
-                    prevKeyState.Escape = keyState.Escape;
-                    prevKeyState.Enter = keyState.Enter;
-                    prevKeyState.Tab = keyState.Tab;
-                    prevKeyState.Backspace = keyState.Backspace;
+            // Store current key state as previous for next frame (struct copy, no allocation)
+            prevKeyState.Left = keyState.Left;
+            prevKeyState.Right = keyState.Right;
+            prevKeyState.Up = keyState.Up;
+            prevKeyState.Down = keyState.Down;
+            prevKeyState.Space = keyState.Space;
+            prevKeyState.Escape = keyState.Escape;
+            prevKeyState.Enter = keyState.Enter;
+            prevKeyState.Tab = keyState.Tab;
+            prevKeyState.Backspace = keyState.Backspace;
 
-                    return currentState;
-                }
-            }
+            return currentState;
         }
+    }
+}

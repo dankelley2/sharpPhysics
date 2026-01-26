@@ -125,7 +125,7 @@ namespace physics.Engine.Constraints
                                   (rAxN * rAxN) * invInertiaA +
                                   (rBxN * rBxN) * invInertiaB;
 
-            if (effectiveMass < 0.0001f)
+            if (effectiveMass < 1e-10f)
                 return;
 
             // Baumgarte bias
@@ -164,7 +164,7 @@ namespace physics.Engine.Constraints
         // Maximum bias velocity to prevent explosive corrections
         private const float MaxBiasVelocity = 300f;
         // Slop - ignore errors smaller than this (prevents jitter)
-        private const float LinearSlop = 0.12f;
+        private const float LinearSlop = 0.03f;
 
         public AxisConstraint(PhysicsObject a, PhysicsObject b, Vector2 anchorA, Vector2 anchorB)
             : base(a, b)
@@ -215,7 +215,7 @@ namespace physics.Engine.Constraints
                                   (rAxN * rAxN) * invInertiaA +
                                   (rBxN * rBxN) * invInertiaB;
 
-            if (effectiveMass < 0.0001f)
+            if (effectiveMass < 1e-10f)
                 return;
 
             // Baumgarte bias - clamped to prevent explosion with small dt

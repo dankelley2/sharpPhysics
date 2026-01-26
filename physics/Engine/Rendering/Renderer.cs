@@ -56,7 +56,7 @@ namespace physics.Engine.Rendering
         public Renderer(uint windowWidth, uint windowHeight, string windowTitle, PhysicsSystem physicsSystem)
         {
             ContextSettings settings = new ContextSettings();
-            settings.AntialiasingLevel = 8; 
+            settings.AntialiasingLevel = 8;
             Window = new RenderWindow(new VideoMode(windowWidth, windowHeight), windowTitle, Styles.Close, settings);
             Window.Closed += (s, e) => Window.Close();
 
@@ -86,96 +86,96 @@ namespace physics.Engine.Rendering
             };
             _reusableText = new Text("", debugFont, 24); // Reusable text for DrawText calls
 
-                // Note: Debug UI elements are managed by _debugUiManager
+            // Note: Debug UI elements are managed by _debugUiManager
 
-                UiElement roundedRect = new UiRoundedRectangle(new Vector2(140, 80), 5, 32)
-                {
-                    OutlineColor = Color.Red
-                };
-                roundedRect.Position = new Vector2(30, 30);
-                _debugUiManager.Add(roundedRect);
+            UiElement roundedRect = new UiRoundedRectangle(new Vector2(140, 80), 5, 32)
+            {
+                OutlineColor = Color.Red
+            };
+            roundedRect.Position = new Vector2(30, 30);
+            _debugUiManager.Add(roundedRect);
 
-                // UI Elements for "Enable viewing normals"
-                var viewingNormalsLabel = new UiTextLabel("Contact Normals", debugFont)
-                {
-                    Position = new Vector2(200, 30),
-                    CharacterSize = 14 // optional customization
-                };
-                var viewingNormalsCheckbox = new UiCheckbox(new Vector2(350, 30), new Vector2(20, 20));
-                viewingNormalsCheckbox.IsChecked = SFMLPolyShader.DrawNormals;
-                viewingNormalsCheckbox.OnClick += (isChecked) =>
-                {
-                    SFMLPolyShader.DrawNormals = isChecked;
-                };
-                _debugUiManager.Add(viewingNormalsLabel);
-                _debugUiManager.Add(viewingNormalsCheckbox);
+            // UI Elements for "Enable viewing normals"
+            var viewingNormalsLabel = new UiTextLabel("Contact Normals", debugFont)
+            {
+                Position = new Vector2(200, 30),
+                CharacterSize = 14 // optional customization
+            };
+            var viewingNormalsCheckbox = new UiCheckbox(new Vector2(350, 30), new Vector2(20, 20));
+            viewingNormalsCheckbox.IsChecked = SFMLPolyShader.DrawNormals;
+            viewingNormalsCheckbox.OnClick += (isChecked) =>
+            {
+                SFMLPolyShader.DrawNormals = isChecked;
+            };
+            _debugUiManager.Add(viewingNormalsLabel);
+            _debugUiManager.Add(viewingNormalsCheckbox);
 
-                // Add Gravity X control
-                var gravityXLabelPosition = new Vector2(200, 60);
-                var gravityXSliderPosition = new Vector2(200, 80);
+            // Add Gravity X control
+            var gravityXLabelPosition = new Vector2(200, 60);
+            var gravityXSliderPosition = new Vector2(200, 80);
 
-                var gravityXLabel = new UiTextLabel("Gravity X", debugFont)
-                {
-                    Position = gravityXLabelPosition,
-                    CharacterSize = 14
-                };
-                _debugUiManager.Add(gravityXLabel);
+            var gravityXLabel = new UiTextLabel("Gravity X", debugFont)
+            {
+                Position = gravityXLabelPosition,
+                CharacterSize = 14
+            };
+            _debugUiManager.Add(gravityXLabel);
 
-                var gravityXSlider = new UiSlider(gravityXSliderPosition, new Vector2(150, 20), -20f, 20f, _physicsSystem.Gravity.X);
-                gravityXSlider.OnValueChanged += (value) =>
-                {
-                    var currentGravity = _physicsSystem.Gravity;
-                    _physicsSystem.Gravity = new Vector2(value, currentGravity.Y);
-                };
-                _debugUiManager.Add(gravityXSlider);
+            var gravityXSlider = new UiSlider(gravityXSliderPosition, new Vector2(150, 20), -20f, 20f, _physicsSystem.Gravity.X);
+            gravityXSlider.OnValueChanged += (value) =>
+            {
+                var currentGravity = _physicsSystem.Gravity;
+                _physicsSystem.Gravity = new Vector2(value, currentGravity.Y);
+            };
+            _debugUiManager.Add(gravityXSlider);
 
-                // Add Gravity Y control
-                var gravityYLabelPosition = new Vector2(400, 60);
-                var gravityYSliderPosition = new Vector2(400, 80);
+            // Add Gravity Y control
+            var gravityYLabelPosition = new Vector2(400, 60);
+            var gravityYSliderPosition = new Vector2(400, 80);
 
-                var gravityYLabel = new UiTextLabel("Gravity Y", debugFont)
-                {
-                    Position = gravityYLabelPosition,
-                    CharacterSize = 14
-                };
-                _debugUiManager.Add(gravityYLabel);
+            var gravityYLabel = new UiTextLabel("Gravity Y", debugFont)
+            {
+                Position = gravityYLabelPosition,
+                CharacterSize = 14
+            };
+            _debugUiManager.Add(gravityYLabel);
 
-                var gravityYSlider = new UiSlider(gravityYSliderPosition, new Vector2(150, 20), -20f, 20f, _physicsSystem.Gravity.Y);
-                gravityYSlider.OnValueChanged += (value) =>
-                {
-                    var currentGravity = _physicsSystem.Gravity;
-                    _physicsSystem.Gravity = new Vector2(currentGravity.X, value);
-                };
-                _debugUiManager.Add(gravityYSlider);
+            var gravityYSlider = new UiSlider(gravityYSliderPosition, new Vector2(150, 20), -20f, 20f, _physicsSystem.Gravity.Y);
+            gravityYSlider.OnValueChanged += (value) =>
+            {
+                var currentGravity = _physicsSystem.Gravity;
+                _physicsSystem.Gravity = new Vector2(currentGravity.X, value);
+            };
+            _debugUiManager.Add(gravityYSlider);
 
-                // Add Simulation Speed control
-                var simSpeedLabelPosition = new Vector2(200, 110);
-                var simSpeedSliderPosition = new Vector2(200, 130);
+            // Add Simulation Speed control
+            var simSpeedLabelPosition = new Vector2(200, 110);
+            var simSpeedSliderPosition = new Vector2(200, 130);
 
-                var simSpeedLabel = new UiTextLabel("Simulation Speed", debugFont)
-                {
-                    Position = simSpeedLabelPosition,
-                    CharacterSize = 14
-                };
-                _debugUiManager.Add(simSpeedLabel);
+            var simSpeedLabel = new UiTextLabel("Simulation Speed", debugFont)
+            {
+                Position = simSpeedLabelPosition,
+                CharacterSize = 14
+            };
+            _debugUiManager.Add(simSpeedLabel);
 
-                var simSpeedSlider = new UiSlider(simSpeedSliderPosition, new Vector2(150, 20), 0.1f, 2f, _physicsSystem.TimeScale);
-                simSpeedSlider.OnValueChanged += (value) =>
-                {
-                    _physicsSystem.TimeScale = value;
-                };
-                _debugUiManager.Add(simSpeedSlider);
+            var simSpeedSlider = new UiSlider(simSpeedSliderPosition, new Vector2(150, 20), 0.1f, 2f, _physicsSystem.TimeScale);
+            simSpeedSlider.OnValueChanged += (value) =>
+            {
+                _physicsSystem.TimeScale = value;
+            };
+            _debugUiManager.Add(simSpeedSlider);
 
-                // Add Pause/Resume button
-                var pauseButtonPosition = new Vector2(450, 30);
-                var pauseButton = new UiButton("Pause", debugFont, pauseButtonPosition, new Vector2(70, 20));
-                pauseButton.OnClick += (state) => 
-                {
-                    _physicsSystem.IsPaused = !_physicsSystem.IsPaused;
-                    pauseButton.Text = _physicsSystem.IsPaused ? "Resume" : "Pause";
-                };
-                _debugUiManager.Add(pauseButton);
-            }
+            // Add Pause/Resume button
+            var pauseButtonPosition = new Vector2(450, 30);
+            var pauseButton = new UiButton("Pause", debugFont, pauseButtonPosition, new Vector2(70, 20));
+            pauseButton.OnClick += (state) =>
+            {
+                _physicsSystem.IsPaused = !_physicsSystem.IsPaused;
+                pauseButton.Text = _physicsSystem.IsPaused ? "Resume" : "Pause";
+            };
+            _debugUiManager.Add(pauseButton);
+        }
 
         /// <summary>
         /// Render the game window view and UI elements view
@@ -435,24 +435,24 @@ namespace physics.Engine.Rendering
 
         #endregion
 
-                        private void DrawUiView(long msPhysicsTime, long msDrawTime, long msFrameTime)
-                        {
-                            // Switch to UI window view
-                            Window.SetView(UiView);
+        private void DrawUiView(long msPhysicsTime, long msDrawTime, long msFrameTime)
+        {
+            // Switch to UI window view
+            Window.SetView(UiView);
 
-                            // Draw debug info only if enabled
-                            if (ShowDebugUI)
-                            {
-                                debugText.DisplayedString =
-                                    $"ms physics time: {msPhysicsTime}\n" +
-                                    $"ms draw time: {msDrawTime}\n" +
-                                    $"frame rate: {1000 / Math.Max(msFrameTime, 1)}\n" +
-                                    $"num objects: {_physicsSystem.ListStaticObjects.Count}";
-                                Window.Draw(debugText);
+            // Draw debug info only if enabled
+            if (ShowDebugUI)
+            {
+                debugText.DisplayedString =
+                    $"ms physics time: {msPhysicsTime}\n" +
+                    $"ms draw time: {msDrawTime}\n" +
+                    $"frame rate: {1000 / Math.Max(msFrameTime, 1)}\n" +
+                    $"num objects: {_physicsSystem.ListStaticObjects.Count}";
+                Window.Draw(debugText);
 
-                                // Draw debug UI elements
-                                _debugUiManager.Draw(Window);
-                            }
-                        }
-                    }
-                }
+                // Draw debug UI elements
+                _debugUiManager.Draw(Window);
+            }
+        }
+    }
+}

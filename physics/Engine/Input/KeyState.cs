@@ -35,8 +35,17 @@ namespace physics.Engine.Input
         public bool LeftMousePressed;
         public bool RightMousePressed;
 
-        // Mouse position in world coordinates
+        /// <summary>
+        /// Mouse position in world coordinates (accounts for view panning/zoom).
+        /// Use this for game logic, physics interactions, and drawing.
+        /// </summary>
         public Vector2 MousePosition;
+
+        /// <summary>
+        /// Mouse position in screen/pixel coordinates (raw window position).
+        /// Use this for UI hit detection and toolbar interactions.
+        /// </summary>
+        public Vector2 MouseScreenPosition;
 
         /// <summary>
         /// Copies all values from another KeyState.
@@ -67,6 +76,7 @@ namespace physics.Engine.Input
             LeftMousePressed = other.LeftMousePressed;
             RightMousePressed = other.RightMousePressed;
             MousePosition = other.MousePosition;
+            MouseScreenPosition = other.MouseScreenPosition;
         }
     }
 }

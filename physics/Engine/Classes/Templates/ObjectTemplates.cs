@@ -78,6 +78,20 @@ namespace physics.Engine.Classes.ObjectTemplates
             return _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.8F, false, shader);
         }
 
+        /// <summary>
+        /// Creates a circle with a custom radius. Origin is the top-left corner.
+        /// </summary>
+        /// <param name="originX">X coordinate of top-left corner.</param>
+        /// <param name="originY">Y coordinate of top-left corner.</param>
+        /// <param name="radius">The radius of the circle.</param>
+        /// <returns>The created physics circle object.</returns>
+        public PhysicsObject CreateCircle(float originX, float originY, float radius)
+        {
+            int diameter = (int)(radius * 2);
+            SFMLShader shader = GetShader<SFMLPolyShader>(diameter);
+            return _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), (int)radius, 0.8F, false, shader);
+        }
+
         public PhysicsObject CreateAttractor(float originX, float originY)
         {
             int diameter = 50;

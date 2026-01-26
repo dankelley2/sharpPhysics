@@ -13,8 +13,8 @@ namespace physics.Engine.Shaders
         // Preallocated VertexArray for drawing contact normals.
         private VertexArray contactLines = new VertexArray(PrimitiveType.Lines);
 
-        public static bool DrawNormals {get; set;} = false;
-        public static bool DrawSleepSupports {get; set;} = false;
+        public static bool DrawNormals { get; set; } = false;
+        public static bool DrawSleepSupports { get; set; } = false;
 
         public override void PreDraw(PhysicsObject obj, RenderTarget target)
         {
@@ -36,7 +36,7 @@ namespace physics.Engine.Shaders
                     vertexes.Append(new Vertex(points[i].ToSfml(), Color.Red));
                 else if (i == 1)
                     vertexes.Append(new Vertex(points[i].ToSfml(), Color.Green));
-                else 
+                else
                     vertexes.Append(new Vertex(points[i].ToSfml(), Color.White));
             }
 
@@ -66,7 +66,7 @@ namespace physics.Engine.Shaders
 
             if (!DrawNormals)
                 return;
-                
+
             // 3) Draw a line from each contact point along its normal.
             contactLines.Clear();
             float lineLength = 10f; // Adjust this value to scale the drawn normals.

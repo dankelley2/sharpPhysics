@@ -31,9 +31,11 @@ public class DemoGame : IGame
     private ActionTemplates _actionTemplates = null!;
     private PlayerController _playerController = null!;
     private PersonColliderBridge? _personColliderBridge;
+    private PrefabLoader _prefabLoader = null!;
 
     // Props
     private DemoGameCar? DemoCar;
+    private readonly List<PrefabInstance> _loadedPrefabs = new();
 
     // Physics sandbox input state
     private bool _isGrabbing = false;
@@ -47,11 +49,18 @@ public class DemoGame : IGame
     private float _launchTimer = 0f;
     private const float LaunchInterval = 0.035f;
 
+    // Weld/Axis constraint creation state
+    private enum ConstraintMode { None, Weld, Axis }
+    private ConstraintMode _constraintMode = ConstraintMode.None;
+    private PhysicsObject? _firstSelectedObject;
+    private Vector2 _firstClickWorldPos; // Store the click position for axis constraints
+
     public void Initialize(GameEngine engine)
     {
         _engine = engine;
         _objectTemplates = new ObjectTemplates(engine.PhysicsSystem);
         _actionTemplates = new ActionTemplates(engine.PhysicsSystem, _objectTemplates);
+        _prefabLoader = new PrefabLoader(engine, _objectTemplates);
 
         // Show debug UI for sandbox mode
         _engine.Renderer.ShowDebugUI = true;
@@ -69,6 +78,20 @@ public class DemoGame : IGame
         {
             InitializePersonDetection(engine.WindowWidth, engine.WindowHeight);
         }
+
+        // Print help for new features
+        PrintControls();
+    }
+
+    private void PrintControls()
+    {
+        Console.WriteLine("=== DemoGame Controls ===");
+        Console.WriteLine("  W - Weld mode (click two objects to weld)");
+        Console.WriteLine("  A - Axis mode (click rotation center on body, then wheel)");
+        Console.WriteLine("  Q - Cancel constraint mode");
+        Console.WriteLine("  L - Load prefab at mouse position");
+        Console.WriteLine("  ESC - Return to menu");
+        Console.WriteLine("========================");
     }
 
     private void InitializeWorld(uint worldWidth, uint worldHeight)
@@ -103,7 +126,7 @@ public class DemoGame : IGame
                 new Vector2(25, 60),
                 new Vector2(0, 60)
         };
-        var lShape = _objectTemplates.CreateConcavePolygon(new Vector2(600, 100), lShapeVertices, canRotate: true, canBreak: false);
+        var lShape = _objectTemplates.CreateConcavePolygon(new Vector2(600, 100), lShapeVertices, canRotate: true, canBreak: true);
 
         _ = _objectTemplates.CreatePolygonTriangle(new Vector2(400, 200));
 
@@ -118,7 +141,7 @@ public class DemoGame : IGame
             new Vector2(30, 30),     // Shaft bottom-left
             new Vector2(0, 30)       // Left notch bottom
         };
-        var arrow = _objectTemplates.CreateConcavePolygon(new Vector2(700, 100), arrowVertices, canRotate: true, canBreak: false);
+        var arrow = _objectTemplates.CreateConcavePolygon(new Vector2(700, 100), arrowVertices, canRotate: true, canBreak: true);
 
         // Star-like concave polygon (5-pointed, simplified)
         var starVertices = new Vector2[]
@@ -134,13 +157,8 @@ public class DemoGame : IGame
             new Vector2(0, 18),      // Left point
             new Vector2(20, 18)      // Inner left-top
         };
-        for (int i = 0; i < 10; i++)
-        {
-            for(int j = 0; j < 1; j++)
-            {
-                _ = _objectTemplates.CreateConcavePolygon(new Vector2(500 + i * 45, 100 + j * 50), starVertices, canRotate: true, canBreak: true);
-            }
-        }
+
+        _ = _objectTemplates.CreateConcavePolygon(new Vector2(500, 100), starVertices, canRotate: true, canBreak: true);
     }
 
     private void CreateCarDemo(uint worldWidth, uint worldHeight)
@@ -431,6 +449,16 @@ public class DemoGame : IGame
 
         // Draw skeleton overlay
         SkeletonRenderer.DrawSkeleton(renderer, _personColliderBridge);
+
+        // Draw constraint mode indicator
+        if (_constraintMode != ConstraintMode.None)
+        {
+            string modeText = _constraintMode == ConstraintMode.Weld ? "WELD MODE" : "AXIS MODE";
+            string stateText = _firstSelectedObject == null
+                ? (_constraintMode == ConstraintMode.Axis ? "Click rotation point on body" : "Click first object")
+                : "Click second object (Q to cancel)";
+            renderer.DrawText($"{modeText}: {stateText}", 10, 40, 16, Color.Yellow);
+        }
     }
 
     public void Shutdown()
@@ -444,13 +472,74 @@ public class DemoGame : IGame
         _personColliderBridge?.Dispose();
     }
 
+    private void HandleConstraintClick(Vector2 worldPos)
+    {
+        // Try to find an object at the click position
+        if (!_engine.PhysicsSystem.ActivateAtPoint(worldPos))
+        {
+            Console.WriteLine("No object found at click position");
+            return;
+        }
+
+        var clickedObject = _engine.PhysicsSystem.ActiveObject;
+        _engine.PhysicsSystem.ReleaseActiveObject();
+
+        if (_firstSelectedObject == null)
+        {
+            // First click - store the object and click position (the weld/pivot point)
+            _firstSelectedObject = clickedObject;
+            _firstClickWorldPos = worldPos;
+            string modeHint = _constraintMode == ConstraintMode.Weld
+                ? "weld point" : "pivot point";
+            Console.WriteLine($"Selected object at {modeHint} {worldPos} - now click second object");
+        }
+        else
+        {
+            // Second click - create the constraint
+            if (clickedObject == _firstSelectedObject)
+            {
+                Console.WriteLine("Cannot connect object to itself. Select a different object.");
+                return;
+            }
+
+            if (_constraintMode == ConstraintMode.Weld)
+            {
+                // Weld: Both anchors point to the same world position (the first click point)
+                // Convert world offset to LOCAL space by un-rotating by object's current angle
+                Vector2 worldOffsetA = _firstClickWorldPos - _firstSelectedObject.Center;
+                Vector2 worldOffsetB = _firstClickWorldPos - clickedObject.Center;
+                Vector2 localAnchorA = PhysMath.RotateVector(worldOffsetA, -_firstSelectedObject.Angle);
+                Vector2 localAnchorB = PhysMath.RotateVector(worldOffsetB, -clickedObject.Angle);
+                _engine.AddWeldConstraint(_firstSelectedObject, clickedObject, localAnchorA, localAnchorB);
+                Console.WriteLine($"Created Weld constraint at point {_firstClickWorldPos}");
+            }
+            else if (_constraintMode == ConstraintMode.Axis)
+            {
+                // Axis: Both anchors point to the same world position (the first click point)
+                // Convert world offset to LOCAL space by un-rotating by object's current angle
+                Vector2 worldOffsetA = _firstClickWorldPos - _firstSelectedObject.Center;
+                Vector2 worldOffsetB = _firstClickWorldPos - clickedObject.Center;
+                Vector2 localAnchorA = PhysMath.RotateVector(worldOffsetA, -_firstSelectedObject.Angle);
+                Vector2 localAnchorB = PhysMath.RotateVector(worldOffsetB, -clickedObject.Angle);
+                _engine.AddAxisConstraint(_firstSelectedObject, clickedObject, localAnchorA, localAnchorB);
+                Console.WriteLine($"Created Axis constraint at pivot point {_firstClickWorldPos}");
+            }
+
+            // Reset state for next constraint
+            _firstSelectedObject = null;
+            _firstClickWorldPos = Vector2.Zero;
+            // Stay in constraint mode for more connections
+            Console.WriteLine($"Ready for next {(_constraintMode == ConstraintMode.Weld ? "weld" : "axis")} - click first object or press Q to exit");
+        }
+    }
+
     #region Physics Sandbox Input Handlers
 
     private void OnMouseButtonPressed(object? sender, MouseButtonEventArgs e)
     {
         Vector2 worldPos = _engine.Renderer.Window.MapPixelToCoords(
-            new SFML.System.Vector2i(e.X, e.Y),
-            _engine.Renderer.GameView).ToSystemNumerics();
+                new SFML.System.Vector2i(e.X, e.Y),
+                _engine.Renderer.GameView).ToSystemNumerics();
 
         // Check if debug UI handles the click first
         if (e.Button == Mouse.Button.Left && _engine.Renderer.ShowDebugUI)
@@ -468,6 +557,13 @@ public class DemoGame : IGame
 
         if (e.Button == Mouse.Button.Left)
         {
+            // Handle constraint creation mode
+            if (_constraintMode != ConstraintMode.None)
+            {
+                HandleConstraintClick(worldPos);
+                return;
+            }
+
             if (_engine.PhysicsSystem.ActivateAtPoint(worldPos))
             {
                 _isGrabbing = true;
@@ -586,6 +682,74 @@ public class DemoGame : IGame
             case Keyboard.Key.Semicolon:
                 _actionTemplates.PopAndMultiply();
                 break;
+            case Keyboard.Key.Q:
+                // Exit constraint mode
+                if (_constraintMode != ConstraintMode.None)
+                {
+                    _constraintMode = ConstraintMode.None;
+                    _firstSelectedObject = null;
+                    Console.WriteLine("Constraint mode cancelled");
+                }
+                break;
+            case Keyboard.Key.W:
+                // Toggle Weld constraint mode
+                if (_constraintMode == ConstraintMode.Weld)
+                {
+                    _constraintMode = ConstraintMode.None;
+                    _firstSelectedObject = null;
+                    Console.WriteLine("Weld mode disabled");
+                }
+                else
+                {
+                    _constraintMode = ConstraintMode.Weld;
+                    _firstSelectedObject = null;
+                    Console.WriteLine("Weld mode enabled - click first object");
+                }
+                break;
+            case Keyboard.Key.A:
+                // Toggle Axis constraint mode
+                if (_constraintMode == ConstraintMode.Axis)
+                {
+                    _constraintMode = ConstraintMode.None;
+                    _firstSelectedObject = null;
+                    Console.WriteLine("Axis mode disabled");
+                }
+                else
+                {
+                    _constraintMode = ConstraintMode.Axis;
+                    _firstSelectedObject = null;
+                    Console.WriteLine("Axis mode enabled - click first object (click point = rotation center)");
+                }
+                break;
+            case Keyboard.Key.L:
+                // Load prefab at mouse position
+                LoadPrefabAtMouse();
+                break;
+        }
+    }
+
+    private void LoadPrefabAtMouse()
+    {
+        var prefabFiles = PrefabLoader.GetAvailablePrefabs();
+        if (prefabFiles.Length == 0)
+        {
+            Console.WriteLine("No prefabs available. Create some in the Prefab Designer first!");
+            return;
+        }
+
+        Console.WriteLine("Available prefabs:");
+        for (int i = 0; i < prefabFiles.Length; i++)
+        {
+            Console.WriteLine($"  {i + 1}: {Path.GetFileNameWithoutExtension(prefabFiles[i])}");
+        }
+
+        // Load the most recent prefab by default
+        var prefabPath = prefabFiles[^1];
+        var instance = _prefabLoader.LoadPrefab(prefabPath, _mousePosition);
+        if (instance != null)
+        {
+            _loadedPrefabs.Add(instance);
+            Console.WriteLine($"Loaded prefab '{instance.Name}' at position {_mousePosition}");
         }
     }
 

@@ -37,6 +37,7 @@ public class MenuGame : IGame
         ["BubblePop"] = () => new BubblePopGame(),
         ["Platformer"] = () => new PlatformerGame(),
         ["Sandbox"] = () => new DemoGame(),
+        ["PrefabDesigner"] = () => new PrefabDesignerGame(),
         ["Settings"] = () => new SettingsGame(),
     };
 
@@ -127,12 +128,27 @@ public class MenuGame : IGame
         _menuButtons.Add(sandboxButton);
         _uiManager.Add(sandboxButton);
 
+        // Prefab Designer button
+        var prefabButton = new UiMenuButton(
+            "Prefab Designer",
+            "Design physics object prefabs and save to JSON",
+            font,
+            new Vector2(centerX - buttonWidth / 2, startY + (buttonHeight + spacing) * 4),
+            new Vector2(buttonWidth, buttonHeight),
+            baseColor: new Color(70, 70, 80),
+            hoverColor: new Color(100, 100, 120),
+            borderColor: new Color(180, 180, 220)
+        );
+        prefabButton.OnClick += _ => SwitchToGame("PrefabDesigner");
+        _menuButtons.Add(prefabButton);
+        _uiManager.Add(prefabButton);
+
         // Settings button
         var settingsButton = new UiMenuButton(
             "Settings",
             "Configure camera, detection, and display options",
             font,
-            new Vector2(centerX - buttonWidth / 2, startY + (buttonHeight + spacing) * 4),
+            new Vector2(centerX - buttonWidth / 2, startY + (buttonHeight + spacing) * 5),
             new Vector2(buttonWidth, buttonHeight),
             baseColor: new Color(50, 50, 60),
             hoverColor: new Color(70, 70, 90),
@@ -223,26 +239,26 @@ public class MenuGame : IGame
     {
         // Draw animated title
         float titleY = 50 + MathF.Sin(_animationTime * 2f) * 5f;
-        renderer.DrawText("SharpPhysics Demo Games", 
+        renderer.DrawText("SharpPhysics Demo Games",
             _engine.WindowWidth / 2f - 300, titleY, 42, Color.White);
 
         // Draw subtitle
-        renderer.DrawText("Select a game to play", 
+        renderer.DrawText("Select a game to play",
             _engine.WindowWidth / 2f - 100, 100, 20, new Color(180, 180, 200));
 
         // Draw animated background particles
         DrawParticles(renderer);
 
-            // Draw version/info at bottom
-            renderer.DrawText("Use your body to interact! • Body tracking powered by YOLO Pose", 
-                _engine.WindowWidth / 2f - 250, _engine.WindowHeight - 30, 14, new Color(120, 120, 140));
+        // Draw version/info at bottom
+        renderer.DrawText("Use your body to interact! • Body tracking powered by YOLO Pose",
+            _engine.WindowWidth / 2f - 250, _engine.WindowHeight - 30, 14, new Color(120, 120, 140));
 
-            // Draw UI elements (menu buttons)
-            renderer.Window.SetView(renderer.UiView);
-            _uiManager.Draw(renderer.Window);
-        }
+        // Draw UI elements (menu buttons)
+        renderer.Window.SetView(renderer.UiView);
+        _uiManager.Draw(renderer.Window);
+    }
 
-        private void DrawParticles(Renderer renderer)
+    private void DrawParticles(Renderer renderer)
     {
         foreach (var p in _particles)
         {
