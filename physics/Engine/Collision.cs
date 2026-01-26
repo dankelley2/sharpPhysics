@@ -450,7 +450,7 @@ namespace physics.Engine
             jt /= invMassSumFriction;
 
             // Clamp friction impulse (Coulomb friction).
-            float mu = PhysicsObject.Friction; //Math.Max(A.Friction, B.Friction);
+            float mu = Math.Max(A.Friction, B.Friction);
             jt = Math.Min(Math.Abs(jt), mu * Math.Abs(j));
             jt = jt * (jt < 0 ? -1 : 1); // restore sign
 

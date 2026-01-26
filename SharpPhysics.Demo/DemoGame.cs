@@ -1,5 +1,6 @@
 #nullable enable
 using System.Numerics;
+using System.Runtime.ConstrainedExecution;
 using physics.Engine;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Constraints;
@@ -11,6 +12,7 @@ using physics.Engine.Rendering;
 using physics.Engine.Shaders;
 using SFML.Graphics;
 using SFML.Window;
+using SharpPhysics.Demo.DemoProps;
 using SharpPhysics.Demo.Helpers;
 using SharpPhysics.Demo.Integration;
 using SharpPhysics.Demo.Settings;
@@ -29,6 +31,9 @@ public class DemoGame : IGame
     private ActionTemplates _actionTemplates = null!;
     private PlayerController _playerController = null!;
     private PersonColliderBridge? _personColliderBridge;
+
+    // Props
+    private DemoGameCar? DemoCar;
 
     // Physics sandbox input state
     private bool _isGrabbing = false;
@@ -73,24 +78,15 @@ public class DemoGame : IGame
         _objectTemplates.CreateWall(new Vector2(0, 0), (int)worldWidth, 15);
         _objectTemplates.CreateWall(new Vector2(0, (int)worldHeight - 15), (int)worldWidth, 15);
 
-        // // Create a grid of medium balls
-        // for (int i = 500; i < 1000; i += 50)
-        // {
-        //     for (int j = 0; j < 600; j += 50)
-        //     {
-        //         if (j % 80 == 0)
-        //             _objectTemplates.CreateMedBall(i + 210, j + 40);
-        //         else
-        //             _objectTemplates.CreateMedBall(i + 200, j + 40);
-        //     }
-        // }
-
         // Create player
         var player = _objectTemplates.CreatePolygonCapsule(new Vector2(50, 20));
         _playerController = new PlayerController(player);
 
-        // Create a car demo using AxisConstraints for wheels
+        // Demo objects
         CreateCarDemo(worldWidth, worldHeight);
+        CreateDemoBridge();
+        CreateDemoChain();
+        CreateDemoSproket();
     }
 
     private void CreateCarDemo(uint worldWidth, uint worldHeight)
@@ -134,9 +130,9 @@ public class DemoGame : IGame
         float spoilerWidth = 40f;
         float spoilerHeight = 8f;
         // Position spoiler so its center aligns with where we want to attach
-        float spoilerLocalX = -bodyWidth / 2f + 25f;  // X offset from body center
+        float spoilerLocalX = -bodyWidth / 2f + 75f;  // X offset from body center
         float spoilerLocalY = -bodyHeight / 2f - spoilerHeight / 2f - 2f;  // Just above body
-        float spoilerWorldX = carX + bodyWidth / 2f + spoilerLocalX - spoilerWidth / 2f;
+        float spoilerWorldX = carX + bodyWidth + spoilerLocalX - spoilerWidth / 2f;
         float spoilerWorldY = carY + bodyHeight / 2f + spoilerLocalY - spoilerHeight / 2f;
         var spoiler = _objectTemplates.CreateBox(new Vector2(spoilerWorldX, spoilerWorldY), (int)spoilerWidth, (int)spoilerHeight);
         spoiler.Angle = 10f; // Tilted angle
@@ -170,63 +166,21 @@ public class DemoGame : IGame
         // Weld rear bumper to body
         Vector2 rearBumperAttachOnBody = new Vector2(-bodyWidth / 2f, 0f);
         Vector2 rearBumperAttachOnBumper = new Vector2(bumperWidth / 2f, 0f);
-        
+
         // Add Weld
         _engine.AddWeldConstraint(carBody, rearBumper, rearBumperAttachOnBody, rearBumperAttachOnBumper);
-    
-        // Add Chain of small balls as rope test
-        PhysicsObject? prevObject = null;
-        for (int i = 0; i < 12; i++)
-        {
 
-            var currentObj = _objectTemplates.CreateMedBall(150 + (i * 25), 150);
-            
-            if (prevObject != null)
-            {
-                //_engine.AddWeldConstraint(prevObject, currentObj, Vector2.Zero, new Vector2(-25, 0));
-                _engine.AddWeldConstraint(prevObject, currentObj);
+        DemoCar = new DemoGameCar(carBody, frontWheel, rearWheel, frontBumper, rearBumper, true);
 
-            }
+    }
 
-            prevObject = currentObj;
-        }
-        // Add Chain of small balls as rope test
-        PhysicsObject? prevObject2 = null;
-        for (int i = 0; i < 12; i++)
-        {
+    private void CreateDemoSproket()
+    {
 
-            var currentObj = _objectTemplates.CreateMedBall(150 + (i * 25), 300);
-            
-            // anchor
-            if (i == 0)
-            {
-                var anchor = _objectTemplates.CreateBox(new Vector2(125, 290), 20, 20);
-                anchor.Locked = true;
-                // first one weld to anchor
-                _engine.AddAxisConstraint(anchor, currentObj);
-            }
-
-            // axis constraint to previous
-            if (i > 0 && prevObject2 != null)
-            {
-                _engine.AddAxisConstraint(prevObject2, currentObj);//, Vector2.Zero, new Vector2(-25, 0));
-            }
-
-            // end anchor
-            if (i == 11)
-            {
-                var anchor = _objectTemplates.CreateBox(new Vector2(150 + (i * 25), 290), 20, 20);
-                anchor.Locked = true;
-                _engine.AddAxisConstraint(currentObj, anchor);
-                
-            }
-
-            prevObject2 = currentObj;
-        }
 
         // circle of circles
         Vector2 center = new Vector2(800, 300);
-        int numBalls = 18;
+        int numBalls = 22;
         float radius = 80f;
         PhysicsObject? firstBall = null;
         PhysicsObject? prevBall = null;
@@ -248,7 +202,64 @@ public class DemoGame : IGame
         {
             _engine.AddWeldConstraint(prevBall, firstBall, true);
         }
+    }
 
+    private void CreateDemoChain()
+    {
+        // Add Chain of small balls as rope test
+        PhysicsObject? prevObject2 = null;
+        for (int i = 0; i < 12; i++)
+        {
+
+            var currentObj = _objectTemplates.CreateMedBall(150 + (i * 25), 300);
+
+            // anchor
+            if (i == 0)
+            {
+                var anchor = _objectTemplates.CreateBox(new Vector2(125, 290), 20, 20);
+                anchor.Locked = true;
+                // first one weld to anchor
+                _engine.AddAxisConstraint(anchor, currentObj);
+            }
+
+            // axis constraint to previous
+            if (i > 0 && prevObject2 != null)
+            {
+                _engine.AddAxisConstraint(prevObject2, currentObj);//, Vector2.Zero, new Vector2(-25, 0));
+            }
+
+            // end anchor
+            if (i == 11)
+            {
+                var anchor = _objectTemplates.CreateBox(new Vector2(150 + (i * 25), 290), 20, 20);
+                anchor.Locked = true;
+                _engine.AddAxisConstraint(currentObj, anchor);
+
+            }
+
+            prevObject2 = currentObj;
+        }
+    }
+
+    private void CreateDemoBridge()
+    {
+
+        // Add Chain of small balls as rope test
+        PhysicsObject? prevObject = null;
+        for (int i = 0; i < 12; i++)
+        {
+
+            var currentObj = _objectTemplates.CreateMedBall(150 + (i * 25), 150);
+
+            if (prevObject != null)
+            {
+                //_engine.AddWeldConstraint(prevObject, currentObj, Vector2.Zero, new Vector2(-25, 0));
+                _engine.AddWeldConstraint(prevObject, currentObj);
+
+            }
+
+            prevObject = currentObj;
+        }
     }
 
     private void InitializePersonDetection(uint worldWidth, uint worldHeight)
@@ -340,6 +351,9 @@ public class DemoGame : IGame
 
         // Process person detection updates (thread-safe)
         _personColliderBridge?.ProcessPendingUpdates();
+
+        // Process object updates for demo car
+        DemoCar?.Update(deltaTime, keyState);
     }
 
         public void Render(Renderer renderer)

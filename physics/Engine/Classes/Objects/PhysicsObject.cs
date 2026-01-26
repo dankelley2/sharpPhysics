@@ -26,7 +26,7 @@ namespace physics.Engine.Objects
         public float IInertia { get; private set; }
 
         // Friction, in newtons
-        public static float Friction { get; set; }= 0.5f;
+        public float Friction { get; set; }= 0.5f;
 
         /// <summary>
         /// Orientation in radians.

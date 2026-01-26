@@ -148,26 +148,6 @@ namespace physics.Engine.Rendering
                 };
                 _debugUiManager.Add(gravityYSlider);
 
-                // Add Friction slider and label (200px to the right of the checkbox)
-                var frictionLabelPosition = new Vector2(400, 110); // Position above the slider
-                var frictionSliderPosition = new Vector2(400, 130); // Same Y as checkbox
-
-                // Create and add friction label
-                var frictionLabel = new UiTextLabel("Friction", debugFont)
-                {
-                    Position = frictionLabelPosition,
-                    CharacterSize = 14
-                };
-                _debugUiManager.Add(frictionLabel);
-
-                // Create and add friction slider
-                var frictionSlider = new UiSlider(frictionSliderPosition, new Vector2(150, 20), 0f, 1f, PhysicsObject.Friction);
-                frictionSlider.OnValueChanged += (value) =>
-                {
-                    PhysicsObject.Friction = value;
-                };
-                _debugUiManager.Add(frictionSlider);
-
                 // Add Simulation Speed control
                 var simSpeedLabelPosition = new Vector2(200, 110);
                 var simSpeedSliderPosition = new Vector2(200, 130);
