@@ -19,7 +19,7 @@ namespace SharpPhysics.Demo.DemoProps
 
         public bool InstanceControlled { get; }
 
-        private float speed = 10f;
+        private float speed = 5f;
         private bool canChangeDir = true;
         private float directionChangeTimer;
         private float _horizontalInput;

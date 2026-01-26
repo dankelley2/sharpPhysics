@@ -238,120 +238,105 @@ namespace physics.Engine
             Vector2 circleCenter = circleObj.Center;
             float radius = circleShape.Radius;
 
-            // Find closest feature (vertex or edge) on the polygon to the circle
+            // Find the closest point on the polygon boundary to the circle center
             float minDistSq = float.MaxValue;
             Vector2 closestPoint = Vector2.Zero;
-            int closestIndex = 0;
-            
-            // First, find the closest vertex
+            int closestEdgeIndex = 0;
+
+            // Check all edges
             for (int i = 0; i < poly.Length; i++)
             {
-                float distSq = Vector2.DistanceSquared(poly[i], circleCenter);
+                int next = (i + 1) % poly.Length;
+                Vector2 cp = ClosestPointOnSegment(poly[i], poly[next], circleCenter);
+                float distSq = Vector2.DistanceSquared(cp, circleCenter);
+
                 if (distSq < minDistSq)
                 {
                     minDistSq = distSq;
-                    closestPoint = poly[i];
-                    closestIndex = i;
+                    closestPoint = cp;
+                    closestEdgeIndex = i;
                 }
             }
-            
-            // Check if closest point is a vertex or an edge
-            int prevIndex = (closestIndex > 0) ? closestIndex - 1 : poly.Length - 1;
-            int nextIndex = (closestIndex + 1) % poly.Length;
-            
-            Vector2 va = poly[prevIndex];
-            Vector2 vb = poly[closestIndex];
-            Vector2 vc = poly[nextIndex];
-            
-            // Check if circle center is in the Voronoi region of the closest vertex
-            Vector2 ab = vb - va;
-            Vector2 bc = vc - vb;
-            Vector2 toCircle = circleCenter - vb;
-            
-            bool inVoronoiRegionForVertex = 
-                Vector2.Dot(ab, toCircle) <= 0 && 
-                Vector2.Dot(bc, toCircle) >= 0;
-            
-            // If not in vertex Voronoi region, check the edges
-            if (!inVoronoiRegionForVertex)
-            {
-                float distToEdge1Sq = DistancePointToSegmentSquared(va, vb, circleCenter);
-                float distToEdge2Sq = DistancePointToSegmentSquared(vb, vc, circleCenter);
-                
-                if (distToEdge1Sq < minDistSq)
-                {
-                    minDistSq = distToEdge1Sq;
-                    closestPoint = ClosestPointOnSegment(va, vb, circleCenter);
-                }
-                
-                if (distToEdge2Sq < minDistSq)
-                {
-                    minDistSq = distToEdge2Sq;
-                    closestPoint = ClosestPointOnSegment(vb, vc, circleCenter);
-                }
-            }
-            
-            // Check all other edges
-            for (int i = 0; i < poly.Length; i++)
-            {
-                if (i == prevIndex || i == closestIndex)
-                    continue; // Already checked these edges
-                    
-                int nextI = (i + 1) % poly.Length;
-                if (nextI == prevIndex || nextI == closestIndex)
-                    continue;
-                    
-                float distSq = DistancePointToSegmentSquared(poly[i], poly[nextI], circleCenter);
-                if (distSq < minDistSq)
-                {
-                    minDistSq = distSq;
-                    closestPoint = ClosestPointOnSegment(poly[i], poly[nextI], circleCenter);
-                }
-            }
-            
-            // If the squared distance is greater than radius^2, there's no collision
-            if (minDistSq > radius * radius)
-                return false;
-            
-            // Compute collision details
+
             float dist = (float)Math.Sqrt(minDistSq);
-            
-            // This handles both cases: circle inside and outside polygon 
-            // by checking if the center-to-closest vector is zero
-            if (dist < 0.0001f)
+
+            // Check if circle center is inside the polygon using winding number / crossing test
+            bool circleInsidePolygon = IsPointInsidePolygon(circleCenter, poly);
+
+            if (circleInsidePolygon)
             {
-                // Circle center is on polygon edge or very close - use an edge normal
-                int prevI = (closestIndex > 0) ? closestIndex - 1 : poly.Length - 1;
-                Vector2 edge = poly[closestIndex] - poly[prevI];
-                m.Normal = Vector2.Normalize(new Vector2(edge.Y, -edge.X));
-                m.Penetration = radius;
-            }
-            else
-            {
-                Vector2 normal = (circleCenter - closestPoint) / dist;
-                
-                // Check which side of the polygon the circle is on
-                // by projecting from closest point toward poly center
-                Vector2 toPolyCenter = polyObj.Center - closestPoint;
-                bool circleIsOutside = Vector2.Dot(normal, toPolyCenter) <= 0;
-                
-                // If circle is inside, reverse the normal
-                if (!circleIsOutside)
+                // Circle center is inside - always a collision
+                // Normal points from polygon toward circle (outward from polygon's perspective)
+                if (dist < 0.0001f)
                 {
-                    normal = -normal;
-                    // Penetration is radius plus distance to closest edge
-                    m.Penetration = radius + dist;
+                    // Circle center is exactly on an edge - use edge normal
+                    int next = (closestEdgeIndex + 1) % poly.Length;
+                    Vector2 edge = poly[next] - poly[closestEdgeIndex];
+                    m.Normal = Vector2.Normalize(new Vector2(-edge.Y, edge.X));
                 }
                 else
                 {
+                    // Normal points from closest point toward circle center
+                    m.Normal = (circleCenter - closestPoint) / dist;
+                }
+                // Penetration is radius plus distance to edge
+                m.Penetration = radius + dist;
+                m.ContactPoint = closestPoint;
+                return true;
+            }
+            else
+            {
+                // Circle center is outside - only collide if distance < radius
+                if (dist > radius)
+                    return false;
+
+                if (dist < 0.0001f)
+                {
+                    // Circle center is exactly on the boundary
+                    int next = (closestEdgeIndex + 1) % poly.Length;
+                    Vector2 edge = poly[next] - poly[closestEdgeIndex];
+                    m.Normal = Vector2.Normalize(new Vector2(-edge.Y, edge.X));
+                    m.Penetration = radius;
+                }
+                else
+                {
+                    // Normal points from closest point toward circle center (pushing circle out)
+                    m.Normal = (circleCenter - closestPoint) / dist;
                     m.Penetration = radius - dist;
                 }
-                
-                m.Normal = normal;
+                m.ContactPoint = closestPoint;
+                return true;
             }
-            
-            m.ContactPoint = closestPoint;
-            return true;
+        }
+
+        /// <summary>
+        /// Determines if a point is inside a polygon using the ray casting (crossing number) algorithm.
+        /// </summary>
+        private static bool IsPointInsidePolygon(Vector2 point, Vector2[] poly)
+        {
+            int crossings = 0;
+            int n = poly.Length;
+
+            for (int i = 0; i < n; i++)
+            {
+                int j = (i + 1) % n;
+                Vector2 vi = poly[i];
+                Vector2 vj = poly[j];
+
+                // Check if the edge crosses the horizontal ray from point going right
+                if ((vi.Y <= point.Y && vj.Y > point.Y) || (vj.Y <= point.Y && vi.Y > point.Y))
+                {
+                    // Compute x coordinate of intersection
+                    float t = (point.Y - vi.Y) / (vj.Y - vi.Y);
+                    float xIntersect = vi.X + t * (vj.X - vi.X);
+
+                    if (point.X < xIntersect)
+                        crossings++;
+                }
+            }
+
+            // Point is inside if crossing count is odd
+            return (crossings % 2) == 1;
         }
 
         /// <summary>

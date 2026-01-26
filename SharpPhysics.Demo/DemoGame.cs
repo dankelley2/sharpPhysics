@@ -65,7 +65,8 @@ public class DemoGame : IGame
         InitializeWorld(engine.WindowWidth, engine.WindowHeight);
 
         // Enable or disable body detection
-        if (GameSettings.Instance.PoseTrackingEnabled) {
+        if (GameSettings.Instance.PoseTrackingEnabled)
+        {
             InitializePersonDetection(engine.WindowWidth, engine.WindowHeight);
         }
     }
@@ -87,6 +88,59 @@ public class DemoGame : IGame
         CreateDemoBridge();
         CreateDemoChain();
         CreateDemoSproket();
+        CreateConcavePolygonDemo();
+    }
+
+    private void CreateConcavePolygonDemo()
+    {
+        // L-shaped concave polygon (decomposed into convex pieces and welded)
+        var lShapeVertices = new Vector2[]
+        {
+                new Vector2(0, 0),
+                new Vector2(60, 0),
+                new Vector2(60, 25),
+                new Vector2(25, 25),
+                new Vector2(25, 60),
+                new Vector2(0, 60)
+        };
+        var lShape = _objectTemplates.CreateConcavePolygon(new Vector2(600, 100), lShapeVertices, canRotate: true, canBreak: false);
+
+        _ = _objectTemplates.CreatePolygonTriangle(new Vector2(400, 200));
+
+        // Arrow-shaped concave polygon
+        var arrowVertices = new Vector2[]
+        {
+            new Vector2(0, 20),      // Left notch top
+            new Vector2(30, 20),     // Shaft top-left
+            new Vector2(30, 0),      // Arrow head left
+            new Vector2(60, 25),     // Arrow tip
+            new Vector2(30, 50),     // Arrow head right
+            new Vector2(30, 30),     // Shaft bottom-left
+            new Vector2(0, 30)       // Left notch bottom
+        };
+        var arrow = _objectTemplates.CreateConcavePolygon(new Vector2(700, 100), arrowVertices, canRotate: true, canBreak: false);
+
+        // Star-like concave polygon (5-pointed, simplified)
+        var starVertices = new Vector2[]
+        {
+            new Vector2(25, 0),      // Top point
+            new Vector2(30, 18),     // Inner right-top
+            new Vector2(50, 18),     // Right point
+            new Vector2(35, 30),     // Inner right-bottom
+            new Vector2(40, 50),     // Bottom-right point
+            new Vector2(25, 38),     // Inner bottom
+            new Vector2(10, 50),     // Bottom-left point
+            new Vector2(15, 30),     // Inner left-bottom
+            new Vector2(0, 18),      // Left point
+            new Vector2(20, 18)      // Inner left-top
+        };
+        for (int i = 0; i < 10; i++)
+        {
+            for(int j = 0; j < 1; j++)
+            {
+                _ = _objectTemplates.CreateConcavePolygon(new Vector2(500 + i * 45, 100 + j * 50), starVertices, canRotate: true, canBreak: true);
+            }
+        }
     }
 
     private void CreateCarDemo(uint worldWidth, uint worldHeight)
@@ -356,184 +410,184 @@ public class DemoGame : IGame
         DemoCar?.Update(deltaTime, keyState);
     }
 
-        public void Render(Renderer renderer)
+    public void Render(Renderer renderer)
+    {
+        // Draw box creation preview
+        if (_isCreatingBox)
         {
-            // Draw box creation preview
-            if (_isCreatingBox)
+            float minX = Math.Min(_boxStartPoint.X, _boxEndPoint.X);
+            float minY = Math.Min(_boxStartPoint.Y, _boxEndPoint.Y);
+            float width = Math.Abs(_boxEndPoint.X - _boxStartPoint.X);
+            float height = Math.Abs(_boxEndPoint.Y - _boxStartPoint.Y);
+            RectangleShape previewRect = new RectangleShape(new SFML.System.Vector2f(width, height))
             {
-                float minX = Math.Min(_boxStartPoint.X, _boxEndPoint.X);
-                float minY = Math.Min(_boxStartPoint.Y, _boxEndPoint.Y);
-                float width = Math.Abs(_boxEndPoint.X - _boxStartPoint.X);
-                float height = Math.Abs(_boxEndPoint.Y - _boxStartPoint.Y);
-                RectangleShape previewRect = new RectangleShape(new SFML.System.Vector2f(width, height))
-                {
-                    Position = new SFML.System.Vector2f(minX, minY),
-                    FillColor = new Color(0, 0, 0, 0),
-                    OutlineColor = Color.Red,
-                    OutlineThickness = 2
-                };
-                renderer.Window.Draw(previewRect);
-            }
-
-            // Draw skeleton overlay
-            SkeletonRenderer.DrawSkeleton(renderer, _personColliderBridge);
+                Position = new SFML.System.Vector2f(minX, minY),
+                FillColor = new Color(0, 0, 0, 0),
+                OutlineColor = Color.Red,
+                OutlineThickness = 2
+            };
+            renderer.Window.Draw(previewRect);
         }
 
-        public void Shutdown()
+        // Draw skeleton overlay
+        SkeletonRenderer.DrawSkeleton(renderer, _personColliderBridge);
+    }
+
+    public void Shutdown()
+    {
+        // Unsubscribe from window events
+        _engine.Renderer.Window.MouseButtonPressed -= OnMouseButtonPressed;
+        _engine.Renderer.Window.MouseButtonReleased -= OnMouseButtonReleased;
+        _engine.Renderer.Window.MouseMoved -= OnMouseMoved;
+        _engine.Renderer.Window.KeyPressed -= OnKeyPressed;
+
+        _personColliderBridge?.Dispose();
+    }
+
+    #region Physics Sandbox Input Handlers
+
+    private void OnMouseButtonPressed(object? sender, MouseButtonEventArgs e)
+    {
+        Vector2 worldPos = _engine.Renderer.Window.MapPixelToCoords(
+            new SFML.System.Vector2i(e.X, e.Y),
+            _engine.Renderer.GameView).ToSystemNumerics();
+
+        // Check if debug UI handles the click first
+        if (e.Button == Mouse.Button.Left && _engine.Renderer.ShowDebugUI)
         {
-            // Unsubscribe from window events
-            _engine.Renderer.Window.MouseButtonPressed -= OnMouseButtonPressed;
-            _engine.Renderer.Window.MouseButtonReleased -= OnMouseButtonReleased;
-            _engine.Renderer.Window.MouseMoved -= OnMouseMoved;
-            _engine.Renderer.Window.KeyPressed -= OnKeyPressed;
-
-            _personColliderBridge?.Dispose();
-        }
-
-        #region Physics Sandbox Input Handlers
-
-        private void OnMouseButtonPressed(object? sender, MouseButtonEventArgs e)
-        {
-            Vector2 worldPos = _engine.Renderer.Window.MapPixelToCoords(
+            // Get UI position for debug UI
+            Vector2 uiPos = _engine.Renderer.Window.MapPixelToCoords(
                 new SFML.System.Vector2i(e.X, e.Y),
-                _engine.Renderer.GameView).ToSystemNumerics();
+                _engine.Renderer.UiView).ToSystemNumerics();
 
-            // Check if debug UI handles the click first
-            if (e.Button == Mouse.Button.Left && _engine.Renderer.ShowDebugUI)
+            if (_engine.Renderer.DebugUiManager.HandleClick(uiPos))
             {
-                // Get UI position for debug UI
-                Vector2 uiPos = _engine.Renderer.Window.MapPixelToCoords(
-                    new SFML.System.Vector2i(e.X, e.Y),
-                    _engine.Renderer.UiView).ToSystemNumerics();
-
-                if (_engine.Renderer.DebugUiManager.HandleClick(uiPos))
-                {
-                    return; // UI handled the click
-                }
-            }
-
-            if (e.Button == Mouse.Button.Left)
-            {
-                if (_engine.PhysicsSystem.ActivateAtPoint(worldPos))
-                {
-                    _isGrabbing = true;
-                    return;
-                }
-                _startPoint = worldPos;
-                _isMousePressedLeft = true;
-                _launchTimer = 0f;
-            }
-            else if (e.Button == Mouse.Button.Right)
-            {
-                bool objectFound = _engine.PhysicsSystem.ActivateAtPoint(worldPos);
-                if (objectFound)
-                {
-                    if (_isGrabbing)
-                    {
-                        // Lock the grabbed object in place
-                        _engine.PhysicsSystem.ActiveObject.Locked = true;
-                    }
-                    else
-                    {
-                        _engine.PhysicsSystem.RemoveActiveObject();
-                    }
-                }
-                else
-                {
-                    _isCreatingBox = true;
-                    _boxStartPoint = worldPos;
-                    _boxEndPoint = worldPos;
-                }
-                _isMousePressedRight = true;
+                return; // UI handled the click
             }
         }
 
-        private void OnMouseButtonReleased(object? sender, MouseButtonEventArgs e)
+        if (e.Button == Mouse.Button.Left)
         {
-            // Stop debug UI drag operations
-            if (e.Button == Mouse.Button.Left)
+            if (_engine.PhysicsSystem.ActivateAtPoint(worldPos))
             {
-                _engine.Renderer.DebugUiManager.StopDrag();
+                _isGrabbing = true;
+                return;
             }
-
-            if (e.Button == Mouse.Button.Left)
+            _startPoint = worldPos;
+            _isMousePressedLeft = true;
+            _launchTimer = 0f;
+        }
+        else if (e.Button == Mouse.Button.Right)
+        {
+            bool objectFound = _engine.PhysicsSystem.ActivateAtPoint(worldPos);
+            if (objectFound)
             {
                 if (_isGrabbing)
                 {
-                    _engine.PhysicsSystem.ReleaseActiveObject();
-                    _isGrabbing = false;
-                    return;
+                    // Lock the grabbed object in place
+                    _engine.PhysicsSystem.ActiveObject.Locked = true;
                 }
-                if (_isMousePressedLeft)
-                {
-                    _isMousePressedLeft = false;
-                    _launchTimer = 0f;
-                }
-            }
-            else if (e.Button == Mouse.Button.Right)
-            {
-                if (_isCreatingBox)
-                {
-                    float minX = Math.Min(_boxStartPoint.X, _boxEndPoint.X);
-                    float minY = Math.Min(_boxStartPoint.Y, _boxEndPoint.Y);
-                    float maxX = Math.Max(_boxStartPoint.X, _boxEndPoint.X);
-                    float maxY = Math.Max(_boxStartPoint.Y, _boxEndPoint.Y);
-                    _objectTemplates.CreateBox(new Vector2(minX, minY), (int)(maxX - minX), (int)(maxY - minY));
-                    _isCreatingBox = false;
-                }
-                _isMousePressedRight = false;
-            }
-        }
-
-        private void OnMouseMoved(object? sender, MouseMoveEventArgs e)
-        {
-            _mousePosition = _engine.Renderer.Window.MapPixelToCoords(
-                new SFML.System.Vector2i(e.X, e.Y),
-                _engine.Renderer.GameView).ToSystemNumerics();
-
-            // Handle debug UI drag
-            if (_engine.Renderer.DebugUiManager.DraggedElement != null)
-            {
-                Vector2 uiPos = _engine.Renderer.Window.MapPixelToCoords(
-                    new SFML.System.Vector2i(e.X, e.Y),
-                    _engine.Renderer.UiView).ToSystemNumerics();
-                _engine.Renderer.DebugUiManager.HandleDrag(uiPos);
-            }
-
-            if (_isCreatingBox)
-            {
-                _boxEndPoint = _mousePosition;
-            }
-            else if (_isMousePressedRight && !_isCreatingBox)
-            {
-                if (_engine.PhysicsSystem.ActivateAtPoint(_mousePosition))
+                else
                 {
                     _engine.PhysicsSystem.RemoveActiveObject();
                 }
             }
+            else
+            {
+                _isCreatingBox = true;
+                _boxStartPoint = worldPos;
+                _boxEndPoint = worldPos;
+            }
+            _isMousePressedRight = true;
+        }
+    }
+
+    private void OnMouseButtonReleased(object? sender, MouseButtonEventArgs e)
+    {
+        // Stop debug UI drag operations
+        if (e.Button == Mouse.Button.Left)
+        {
+            _engine.Renderer.DebugUiManager.StopDrag();
         }
 
-        private void OnKeyPressed(object? sender, KeyEventArgs e)
+        if (e.Button == Mouse.Button.Left)
         {
-            switch (e.Code)
+            if (_isGrabbing)
             {
-                case Keyboard.Key.Space:
-                    _engine.PhysicsSystem.FreezeStaticObjects();
-                    break;
-                case Keyboard.Key.P:
-                    _actionTemplates.ChangeShader(new SFMLPolyShader());
-                    break;
-                case Keyboard.Key.V:
-                    _actionTemplates.ChangeShader(new SFMLPolyRainbowShader());
-                    break;
-                case Keyboard.Key.G:
-                    _objectTemplates.CreateAttractor(_mousePosition.X, _mousePosition.Y);
-                    break;
-                case Keyboard.Key.Semicolon:
-                    _actionTemplates.PopAndMultiply();
-                    break;
+                _engine.PhysicsSystem.ReleaseActiveObject();
+                _isGrabbing = false;
+                return;
+            }
+            if (_isMousePressedLeft)
+            {
+                _isMousePressedLeft = false;
+                _launchTimer = 0f;
             }
         }
-
-        #endregion
+        else if (e.Button == Mouse.Button.Right)
+        {
+            if (_isCreatingBox)
+            {
+                float minX = Math.Min(_boxStartPoint.X, _boxEndPoint.X);
+                float minY = Math.Min(_boxStartPoint.Y, _boxEndPoint.Y);
+                float maxX = Math.Max(_boxStartPoint.X, _boxEndPoint.X);
+                float maxY = Math.Max(_boxStartPoint.Y, _boxEndPoint.Y);
+                _objectTemplates.CreateBox(new Vector2(minX, minY), (int)(maxX - minX), (int)(maxY - minY));
+                _isCreatingBox = false;
+            }
+            _isMousePressedRight = false;
+        }
     }
+
+    private void OnMouseMoved(object? sender, MouseMoveEventArgs e)
+    {
+        _mousePosition = _engine.Renderer.Window.MapPixelToCoords(
+            new SFML.System.Vector2i(e.X, e.Y),
+            _engine.Renderer.GameView).ToSystemNumerics();
+
+        // Handle debug UI drag
+        if (_engine.Renderer.DebugUiManager.DraggedElement != null)
+        {
+            Vector2 uiPos = _engine.Renderer.Window.MapPixelToCoords(
+                new SFML.System.Vector2i(e.X, e.Y),
+                _engine.Renderer.UiView).ToSystemNumerics();
+            _engine.Renderer.DebugUiManager.HandleDrag(uiPos);
+        }
+
+        if (_isCreatingBox)
+        {
+            _boxEndPoint = _mousePosition;
+        }
+        else if (_isMousePressedRight && !_isCreatingBox)
+        {
+            if (_engine.PhysicsSystem.ActivateAtPoint(_mousePosition))
+            {
+                _engine.PhysicsSystem.RemoveActiveObject();
+            }
+        }
+    }
+
+    private void OnKeyPressed(object? sender, KeyEventArgs e)
+    {
+        switch (e.Code)
+        {
+            case Keyboard.Key.Space:
+                _engine.PhysicsSystem.FreezeStaticObjects();
+                break;
+            case Keyboard.Key.P:
+                _actionTemplates.ChangeShader(new SFMLPolyShader());
+                break;
+            case Keyboard.Key.V:
+                _actionTemplates.ChangeShader(new SFMLPolyRainbowShader());
+                break;
+            case Keyboard.Key.G:
+                _objectTemplates.CreateAttractor(_mousePosition.X, _mousePosition.Y);
+                break;
+            case Keyboard.Key.Semicolon:
+                _actionTemplates.PopAndMultiply();
+                break;
+        }
+    }
+
+    #endregion
+}

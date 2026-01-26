@@ -228,8 +228,8 @@ namespace physics.Engine.Rendering
             {
                 var a = obj.A.Center + PhysMath.RotateVector(obj.AnchorA, obj.A.Angle);
                 var b = obj.B.Center + PhysMath.RotateVector(obj.AnchorB, obj.B.Angle);
-                DrawLine(obj.A.Center, a, Color.Yellow, 2f);
-                DrawLine(obj.B.Center, b, Color.Red, 2f);
+                DrawLine(obj.A.Center, a, Color.Yellow, 1f);
+                DrawLine(obj.B.Center, b, Color.Red, 1f);
             }
         }
 
