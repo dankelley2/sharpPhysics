@@ -14,7 +14,7 @@ using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
 
-namespace SharpPhysics.Demo.PrefabDesignerGame;
+namespace SharpPhysics.Demo.Designer;
 
 /// <summary>
 /// Prefab Part Designer - allows users to design physics object prefabs

@@ -7,6 +7,7 @@ using physics.Engine.Rendering;
 using physics.Engine.Rendering.UI;
 using physics.Engine.Shaders;
 using physics.Engine.Objects;
+using SharpPhysics.Demo.Designer;
 using SFML.Graphics;
 using SFML.Window;
 
