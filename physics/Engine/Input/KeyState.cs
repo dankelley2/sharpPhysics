@@ -34,6 +34,12 @@ namespace physics.Engine.Input
         // Mouse button pressed this frame (edge detection)
         public bool LeftMousePressed;
         public bool RightMousePressed;
+        public bool MiddleMousePressed;
+
+        /// <summary>
+        /// Scroll wheel delta this frame. Positive = scroll up, Negative = scroll down, 0 = no scroll.
+        /// </summary>
+        public float ScrollWheelDelta;
 
         /// <summary>
         /// Mouse position in world coordinates (accounts for view panning/zoom).
@@ -75,6 +81,8 @@ namespace physics.Engine.Input
             MiddleMouseDown = other.MiddleMouseDown;
             LeftMousePressed = other.LeftMousePressed;
             RightMousePressed = other.RightMousePressed;
+            MiddleMousePressed = other.MiddleMousePressed;
+            ScrollWheelDelta = other.ScrollWheelDelta;
             MousePosition = other.MousePosition;
             MouseScreenPosition = other.MouseScreenPosition;
         }

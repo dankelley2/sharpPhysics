@@ -49,6 +49,10 @@ public class DemoGame : IGame
     private float _launchTimer = 0f;
     private const float LaunchInterval = 0.035f;
 
+    // View panning state
+    private bool _isPanning = false;
+    private Vector2 _panStartScreenPos;
+
     // Weld/Axis constraint creation state
     private enum ConstraintMode { None, Weld, Axis }
     private ConstraintMode _constraintMode = ConstraintMode.None;
@@ -400,6 +404,29 @@ public class DemoGame : IGame
             return;
         }
 
+        // Handle view panning with middle mouse button
+        if (keyState.MiddleMousePressed)
+        {
+            _isPanning = true;
+            _panStartScreenPos = keyState.MouseScreenPosition;
+        }
+        else if (!keyState.MiddleMouseDown && _isPanning)
+        {
+            _isPanning = false;
+        }
+
+        if (_isPanning)
+        {
+            _engine.Renderer.PanViewByScreenDelta(_panStartScreenPos, keyState.MouseScreenPosition);
+            _panStartScreenPos = keyState.MouseScreenPosition;
+        }
+
+        // Handle scroll wheel zoom
+        if (keyState.ScrollWheelDelta != 0)
+        {
+            _engine.Renderer.ZoomView(keyState.ScrollWheelDelta, keyState.MouseScreenPosition);
+        }
+
         // Handle physics sandbox input - ball launching
         if (_isGrabbing)
         {
@@ -430,21 +457,19 @@ public class DemoGame : IGame
 
     public void Render(Renderer renderer)
     {
-        // Draw box creation preview
+        // Draw box creation preview (ensure GameView is active for world coordinates)
         if (_isCreatingBox)
         {
             float minX = Math.Min(_boxStartPoint.X, _boxEndPoint.X);
             float minY = Math.Min(_boxStartPoint.Y, _boxEndPoint.Y);
             float width = Math.Abs(_boxEndPoint.X - _boxStartPoint.X);
             float height = Math.Abs(_boxEndPoint.Y - _boxStartPoint.Y);
-            RectangleShape previewRect = new RectangleShape(new SFML.System.Vector2f(width, height))
-            {
-                Position = new SFML.System.Vector2f(minX, minY),
-                FillColor = new Color(0, 0, 0, 0),
-                OutlineColor = Color.Red,
-                OutlineThickness = 2
-            };
-            renderer.Window.Draw(previewRect);
+            renderer.DrawRectangle(
+                new Vector2(minX, minY),
+                new Vector2(width, height),
+                new Color(0, 0, 0, 0),
+                Color.Red,
+                2f);
         }
 
         // Draw skeleton overlay

@@ -51,6 +51,10 @@ public class PrefabDesignerGame : IGame
     private int? _firstSelectedShapeIndex;
     private Vector2? _firstAnchorPoint;
 
+    // View panning state
+    private bool _isPanning = false;
+    private Vector2 _panStartScreenPos;
+
     // Cached SFML shapes to avoid GC pressure
     private readonly RectangleShape _cachedLine = new();
     private readonly CircleShape _cachedCircle = new();
@@ -232,6 +236,29 @@ public class PrefabDesignerGame : IGame
         {
             _engine.SwitchGame(new MenuGame());
             return;
+        }
+
+        // Handle view panning with middle mouse button
+        if (keyState.MiddleMousePressed)
+        {
+            _isPanning = true;
+            _panStartScreenPos = keyState.MouseScreenPosition;
+        }
+        else if (!keyState.MiddleMouseDown && _isPanning)
+        {
+            _isPanning = false;
+        }
+
+        if (_isPanning)
+        {
+            _engine.Renderer.PanViewByScreenDelta(_panStartScreenPos, keyState.MouseScreenPosition);
+            _panStartScreenPos = keyState.MouseScreenPosition;
+        }
+
+        // Handle scroll wheel zoom
+        if (keyState.ScrollWheelDelta != 0)
+        {
+            _engine.Renderer.ZoomView(keyState.ScrollWheelDelta, keyState.MouseScreenPosition);
         }
 
         // Handle Enter key for closing polygon

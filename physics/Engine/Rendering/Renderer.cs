@@ -69,6 +69,81 @@ namespace physics.Engine.Rendering
             InitializeUi(windowWidth, windowHeight);
         }
 
+        #region View Pan/Zoom Methods
+
+        /// <summary>
+        /// Pans the game view by the specified delta in world coordinates.
+        /// </summary>
+        /// <param name="delta">Amount to pan the view.</param>
+        public void PanView(Vector2 delta)
+        {
+            GameView.Center += new Vector2f(delta.X, delta.Y);
+        }
+
+        /// <summary>
+        /// Pans the game view based on screen pixel movement.
+        /// Converts pixel delta to world coordinates accounting for current zoom.
+        /// </summary>
+        /// <param name="previousScreenPos">Previous mouse screen position.</param>
+        /// <param name="currentScreenPos">Current mouse screen position.</param>
+        public void PanViewByScreenDelta(Vector2 previousScreenPos, Vector2 currentScreenPos)
+        {
+            var prevWorld = Window.MapPixelToCoords(
+                new Vector2i((int)previousScreenPos.X, (int)previousScreenPos.Y), GameView);
+            var currWorld = Window.MapPixelToCoords(
+                new Vector2i((int)currentScreenPos.X, (int)currentScreenPos.Y), GameView);
+
+            Vector2 delta = new Vector2(prevWorld.X - currWorld.X, prevWorld.Y - currWorld.Y);
+            PanView(delta);
+        }
+
+        /// <summary>
+        /// Zooms the game view by a factor. Positive = zoom in, Negative = zoom out.
+        /// Optionally focuses on a specific world point (keeps that point stationary during zoom).
+        /// </summary>
+        /// <param name="zoomDelta">Zoom amount. Positive zooms in, negative zooms out.</param>
+        /// <param name="focusScreenPos">Optional screen position to zoom towards (e.g., mouse position).</param>
+        public void ZoomView(float zoomDelta, Vector2? focusScreenPos = null)
+        {
+            // Convert delta to zoom factor (e.g., scroll wheel delta of 1 = 10% zoom)
+            float zoomFactor = 1f - (zoomDelta * 0.1f);
+            zoomFactor = Math.Clamp(zoomFactor, 0.5f, 2f); // Limit single-frame zoom
+
+            if (focusScreenPos.HasValue)
+            {
+                // Zoom towards the focus point (keeps that world point under the cursor)
+                var worldPosBefore = Window.MapPixelToCoords(
+                    new Vector2i((int)focusScreenPos.Value.X, (int)focusScreenPos.Value.Y), GameView);
+
+                GameView.Zoom(zoomFactor);
+
+                var worldPosAfter = Window.MapPixelToCoords(
+                    new Vector2i((int)focusScreenPos.Value.X, (int)focusScreenPos.Value.Y), GameView);
+
+                // Adjust center to keep focus point stationary
+                Vector2f offset = new Vector2f(
+                    worldPosBefore.X - worldPosAfter.X,
+                    worldPosBefore.Y - worldPosAfter.Y);
+                GameView.Center += offset;
+            }
+            else
+            {
+                GameView.Zoom(zoomFactor);
+            }
+        }
+
+        /// <summary>
+        /// Resets the game view to its default state (original size and position).
+        /// </summary>
+        /// <param name="windowWidth">Window width in pixels.</param>
+        /// <param name="windowHeight">Window height in pixels.</param>
+        public void ResetView(uint windowWidth, uint windowHeight)
+        {
+            GameView.Reset(new FloatRect(0, 0, windowWidth, windowHeight));
+        }
+
+        #endregion
+
         /// <summary>
         /// Initialize UI elements for the window
         /// </summary>

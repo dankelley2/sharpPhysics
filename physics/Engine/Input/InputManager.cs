@@ -1,9 +1,7 @@
 ﻿using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using physics.Engine.Helpers;
 
@@ -11,20 +9,14 @@ namespace physics.Engine.Input
 {
     public class InputManager
     {
-        private RenderWindow window;
-        private View view;
+        private RenderWindow _window;
 
-        // Input state properties - now minimal, just for panning
-        public bool IsPanning { get; private set; } = false;
+        // Input state properties
         public Vector2 MousePosition { get; private set; }
         public Vector2 MouseScreenPosition { get; private set; }
-        public Vector2 PanStartPos { get; private set; }
 
         // Key state for polling important keys.
         private KeyState keyState = new KeyState();
-
-        // Previous frame's key state for edge detection
-        private KeyState prevKeyState = new KeyState();
 
         // Press time tracking for input buffering (keys stay "pressed" for a short duration)
         private Dictionary<string, float> _pressTimers = new Dictionary<string, float>();
@@ -34,28 +26,42 @@ namespace physics.Engine.Input
         // Mouse button state tracking
         private bool _leftMouseDown = false;
         private bool _rightMouseDown = false;
+        private bool _middleMouseDown = false;
         private bool _prevLeftMouseDown = false;
         private bool _prevRightMouseDown = false;
+        private bool _prevMiddleMouseDown = false;
 
-        public InputManager(RenderWindow window, PhysicsSystem physicsSystem, View view)
+        // Scroll wheel delta (accumulated per frame, reset after GetKeyState)
+        private float _scrollWheelDelta = 0f;
+
+        // View reference for coordinate transformation (set externally)
+        private View? _currentView;
+
+        public InputManager(RenderWindow window)
         {
-            this.window = window;
-            this.view = view;
+            _window = window;
 
             // Subscribe to window events.
             window.MouseButtonPressed += OnMouseButtonPressed;
             window.MouseButtonReleased += OnMouseButtonReleased;
             window.MouseMoved += OnMouseMoved;
+            window.MouseWheelScrolled += OnMouseWheelScrolled;
             window.KeyPressed += OnKeyPressed;
             window.KeyReleased += OnKeyReleased;
         }
 
-        // Called once per frame to handle continuous actions.
+        /// <summary>
+        /// Sets the view used for mouse coordinate transformation.
+        /// Call this each frame before Update() with the current game view.
+        /// </summary>
+        public void SetView(View view)
+        {
+            _currentView = view;
+        }
+
+        // Called once per frame to decay input buffers.
         public void Update(float deltaTime)
         {
-            // InputManager now only handles view panning
-            // Game-specific input is handled in each game's Update method
-
             // Decay press timers using reusable list to avoid allocations
             _keysToRemove.Clear();
             foreach (var kvp in _pressTimers)
@@ -103,8 +109,7 @@ namespace physics.Engine.Input
             }
             else if (e.Button == Mouse.Button.Middle)
             {
-                IsPanning = true;
-                PanStartPos = new Vector2(e.X, e.Y);
+                _middleMouseDown = true;
             }
         }
 
@@ -121,27 +126,30 @@ namespace physics.Engine.Input
             }
             else if (e.Button == Mouse.Button.Middle)
             {
-                IsPanning = false;
+                _middleMouseDown = false;
             }
         }
 
         private void OnMouseMoved(object sender, MouseMoveEventArgs e)
         {
-            // Store both screen (raw pixel) and world (transformed) coordinates
+            // Store screen (raw pixel) coordinates
             MouseScreenPosition = new Vector2(e.X, e.Y);
-            MousePosition = window.MapPixelToCoords(new Vector2i(e.X, e.Y), view).ToSystemNumerics();
 
-            // Handle view panning
-            if (IsPanning)
+            // Transform to world coordinates using current view
+            if (_currentView != null)
             {
-                Vector2i prevPixelPos = new Vector2i((int)PanStartPos.X, (int)PanStartPos.Y);
-                Vector2i currentPixelPos = new Vector2i(e.X, e.Y);
-                Vector2 worldPrev = window.MapPixelToCoords(prevPixelPos, view).ToSystemNumerics();
-                Vector2 worldCurrent = window.MapPixelToCoords(currentPixelPos, view).ToSystemNumerics();
-                Vector2 delta = worldPrev - worldCurrent;
-                view.Center += delta.ToSfml();
-                PanStartPos = new Vector2(e.X, e.Y);
+                MousePosition = _window.MapPixelToCoords(new Vector2i(e.X, e.Y), _currentView).ToSystemNumerics();
             }
+            else
+            {
+                MousePosition = MouseScreenPosition;
+            }
+        }
+
+        private void OnMouseWheelScrolled(object sender, MouseWheelScrollEventArgs e)
+        {
+            // Accumulate scroll delta (will be reset after GetKeyState is called)
+            _scrollWheelDelta += e.Delta;
         }
 
         private void OnKeyPressed(object sender, KeyEventArgs e)
@@ -223,11 +231,6 @@ namespace physics.Engine.Input
         }
 
         /// <summary>
-        /// Returns the current mouse position in world coordinates.
-        /// </summary>
-        public Vector2 GetMousePosition() => MousePosition;
-
-        /// <summary>
         /// Returns a snapshot of the current key states with edge detection.
         /// The caller can poll this method each frame to determine which keys are pressed.
         /// "Pressed" properties are true only on the first frame a key/button is pressed (edge detection).
@@ -262,26 +265,21 @@ namespace physics.Engine.Input
             // Mouse button states
             currentState.LeftMouseDown = _leftMouseDown;
             currentState.RightMouseDown = _rightMouseDown;
-            currentState.MiddleMouseDown = IsPanning;
+            currentState.MiddleMouseDown = _middleMouseDown;
             currentState.LeftMousePressed = _leftMouseDown && !_prevLeftMouseDown;
             currentState.RightMousePressed = _rightMouseDown && !_prevRightMouseDown;
+            currentState.MiddleMousePressed = _middleMouseDown && !_prevMiddleMouseDown;
+            currentState.ScrollWheelDelta = _scrollWheelDelta;
             currentState.MousePosition = MousePosition;
             currentState.MouseScreenPosition = MouseScreenPosition;
 
             // Store current mouse state as previous for next frame
             _prevLeftMouseDown = _leftMouseDown;
             _prevRightMouseDown = _rightMouseDown;
+            _prevMiddleMouseDown = _middleMouseDown;
 
-            // Store current key state as previous for next frame (struct copy, no allocation)
-            prevKeyState.Left = keyState.Left;
-            prevKeyState.Right = keyState.Right;
-            prevKeyState.Up = keyState.Up;
-            prevKeyState.Down = keyState.Down;
-            prevKeyState.Space = keyState.Space;
-            prevKeyState.Escape = keyState.Escape;
-            prevKeyState.Enter = keyState.Enter;
-            prevKeyState.Tab = keyState.Tab;
-            prevKeyState.Backspace = keyState.Backspace;
+            // Reset scroll wheel delta after reading
+            _scrollWheelDelta = 0f;
 
             return currentState;
         }

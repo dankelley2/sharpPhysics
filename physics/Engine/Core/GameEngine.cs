@@ -71,7 +71,7 @@ namespace physics.Engine.Core
 
             _physicsSystem = new PhysicsSystem();
             _renderer = new Renderer(width, height, title, _physicsSystem);
-            _inputManager = new InputManager(_renderer.Window, _physicsSystem, _renderer.GameView);
+            _inputManager = new InputManager(_renderer.Window);
         }
 
         /// <summary>
@@ -126,6 +126,9 @@ namespace physics.Engine.Core
             _physicsSystem.TimeScale = 1f;
             _physicsSystem.IsPaused = false;
 
+            // Reset view pan/zoom to default
+            _renderer.ResetView(WindowWidth, WindowHeight);
+
             // Switch to new game
             _currentGame = _pendingGame;
             _pendingGame = null;
@@ -174,7 +177,8 @@ namespace physics.Engine.Core
                 _lastFrameTicks = currentTicks;
                 deltaTime = Math.Min(deltaTime, MAX_DELTA_TIME);
 
-                // Update input
+                // Update input (set view for coordinate transformation first)
+                _inputManager.SetView(_renderer.GameView);
                 _inputManager.Update(deltaTime);
 
                 // Update game logic
