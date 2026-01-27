@@ -52,39 +52,5 @@ namespace physics.Engine.Input
         /// Use this for UI hit detection and toolbar interactions.
         /// </summary>
         public Vector2 MouseScreenPosition;
-
-        /// <summary>
-        /// Copies all values from another KeyState.
-        /// </summary>
-        public void CopyFrom(in KeyState other)
-        {
-            Left = other.Left;
-            Right = other.Right;
-            Up = other.Up;
-            Down = other.Down;
-            Space = other.Space;
-            Escape = other.Escape;
-            Enter = other.Enter;
-            Tab = other.Tab;
-            Backspace = other.Backspace;
-            LeftPressed = other.LeftPressed;
-            RightPressed = other.RightPressed;
-            UpPressed = other.UpPressed;
-            DownPressed = other.DownPressed;
-            SpacePressed = other.SpacePressed;
-            EscapePressed = other.EscapePressed;
-            EnterPressed = other.EnterPressed;
-            TabPressed = other.TabPressed;
-            BackspacePressed = other.BackspacePressed;
-            LeftMouseDown = other.LeftMouseDown;
-            RightMouseDown = other.RightMouseDown;
-            MiddleMouseDown = other.MiddleMouseDown;
-            LeftMousePressed = other.LeftMousePressed;
-            RightMousePressed = other.RightMousePressed;
-            MiddleMousePressed = other.MiddleMousePressed;
-            ScrollWheelDelta = other.ScrollWheelDelta;
-            MousePosition = other.MousePosition;
-            MouseScreenPosition = other.MouseScreenPosition;
-        }
     }
 }

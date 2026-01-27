@@ -26,7 +26,7 @@ public class PrefabDesignerGame : IGame
     private ObjectTemplates _objectTemplates = null!;
 
     // Grid settings
-    private const int GRID_SIZE = 20;
+    private const int GRID_SIZE = 10;
     private const int TOOLBAR_HEIGHT = 70;
     private Color _gridColor = new(60, 60, 70);
     private Color _gridMajorColor = new(80, 80, 100);
@@ -256,7 +256,7 @@ public class PrefabDesignerGame : IGame
         }
 
         // Handle scroll wheel zoom
-        if (keyState.ScrollWheelDelta != 0)
+        if (Math.Abs(keyState.ScrollWheelDelta) > 1e-6f)
         {
             _engine.Renderer.ZoomView(keyState.ScrollWheelDelta, keyState.MouseScreenPosition);
         }
@@ -770,11 +770,13 @@ public class PrefabDesignerGame : IGame
                 DrawCachedLine(renderer, arrowPos, arrowPos - perpB * 8f, colorB, 2f);
             }
 
-            // Draw shape index labels near the constraint lines
-            Vector2 labelPosA = Vector2.Lerp(centerA, pivot, 0.3f);
-            Vector2 labelPosB = Vector2.Lerp(centerB, pivot, 0.3f);
-            renderer.DrawText($"[{constraint.ShapeIndexA}]", (int)labelPosA.X - 10, (int)labelPosA.Y - 8, 12, colorA);
-            renderer.DrawText($"[{constraint.ShapeIndexB}]", (int)labelPosB.X - 10, (int)labelPosB.Y - 8, 12, colorB);
+            // Draw shape index labels near the constraint lines (convert world to screen coords)
+            Vector2 labelWorldA = Vector2.Lerp(centerA, pivot, 0.3f);
+            Vector2 labelWorldB = Vector2.Lerp(centerB, pivot, 0.3f);
+            var screenPosA = renderer.Window.MapCoordsToPixel(new Vector2f(labelWorldA.X, labelWorldA.Y), renderer.GameView);
+            var screenPosB = renderer.Window.MapCoordsToPixel(new Vector2f(labelWorldB.X, labelWorldB.Y), renderer.GameView);
+            renderer.DrawText($"[{constraint.ShapeIndexA}]", screenPosA.X - 10, screenPosA.Y - 8, 12, colorA);
+            renderer.DrawText($"[{constraint.ShapeIndexB}]", screenPosB.X - 10, screenPosB.Y - 8, 12, colorB);
         }
     }
 
