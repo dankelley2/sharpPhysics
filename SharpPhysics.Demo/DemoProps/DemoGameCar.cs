@@ -52,7 +52,7 @@ namespace SharpPhysics.Demo.DemoProps
             directionChangeTimer = 0;
         }
 
-        public void Update(float deltatime, KeyState keyState)
+        public void Update(float deltatime, InputManager inputManager)
         {
             if (!InstanceControlled)
             {
@@ -70,11 +70,11 @@ namespace SharpPhysics.Demo.DemoProps
             // Reset the horizontal input accumulator.
             _horizontalInput = 0f;
 
-            if (keyState.Left)
+            if (inputManager.IsKeyHeld(SFML.Window.Keyboard.Key.Left))
             {
                 MoveLeft();
             }
-            if (keyState.Right)
+            if (inputManager.IsKeyHeld(SFML.Window.Keyboard.Key.Right))
             {
                 MoveRight();
             }

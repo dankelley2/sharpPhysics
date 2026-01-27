@@ -177,7 +177,7 @@ public class SettingsGame : IGame
         {
             ConfirmEdit();
             // Consume Enter so it doesn't immediately re-enter edit mode
-            _engine.InputManager.ConsumePress("Enter");
+            _engine.InputManager.ConsumeKeyPress(Keyboard.Key.Enter);
             return;
         }
 
@@ -220,15 +220,15 @@ public class SettingsGame : IGame
         _engine.SwitchGame(new MenuGame());
     }
 
-    public void Update(float deltaTime, KeyState keyState)
+    public void Update(float deltaTime, InputManager inputManager)
     {
         _keyRepeatTimer -= deltaTime;
 
         // ESC behavior: First press exits editing, second press exits settings
         // Using edge-detected EscapePressed from InputManager
-        if (keyState.EscapePressed)
+        if (inputManager.IsKeyPressedBuffered(Keyboard.Key.Escape))
         {
-            _engine.InputManager.ConsumePress("Escape");
+            inputManager.ConsumeKeyPress(Keyboard.Key.Escape);
             if (_editingIndex >= 0)
             {
                 // Currently editing - exit editing mode
@@ -243,9 +243,9 @@ public class SettingsGame : IGame
         }
 
         // Handle UI clicks (category buttons)
-        if (keyState.LeftMousePressed)
+        if (inputManager.IsMousePressed(Mouse.Button.Left))
         {
-            if (_uiManager.HandleClick(keyState.MousePosition))
+            if (_uiManager.HandleClick(inputManager.MousePosition))
             {
                 // UI handled the click
                 return;
@@ -253,7 +253,7 @@ public class SettingsGame : IGame
         }
 
         // Handle mouse click on settings rows
-        if (keyState.LeftMousePressed && _editingIndex < 0)
+        if (inputManager.IsMousePressed(Mouse.Button.Left) && _editingIndex < 0)
         {
             float startY = 145f;
             float rowHeight = 38f;
@@ -263,10 +263,10 @@ public class SettingsGame : IGame
             {
                 float y = startY + i * rowHeight;
                 // Check if click is within this row
-                if (keyState.MousePosition.X >= labelX && 
-                    keyState.MousePosition.X <= _engine.WindowWidth - 100f &&
-                    keyState.MousePosition.Y >= y && 
-                    keyState.MousePosition.Y <= y + rowHeight)
+                if (inputManager.MousePosition.X >= labelX && 
+                    inputManager.MousePosition.X <= _engine.WindowWidth - 100f &&
+                    inputManager.MousePosition.Y >= y && 
+                    inputManager.MousePosition.Y <= y + rowHeight)
                 {
                     _selectedIndex = i;
                     // Single click starts editing
@@ -280,21 +280,23 @@ public class SettingsGame : IGame
         // Navigation when not editing
         if (_editingIndex < 0 && _keyRepeatTimer <= 0)
         {
-            if (keyState.Up && _selectedIndex > 0)
+            if (inputManager.IsKeyPressedBuffered(Keyboard.Key.Up) && _selectedIndex > 0)
             {
+                inputManager.ConsumeKeyPress(Keyboard.Key.Up);
                 _selectedIndex--;
                 _keyRepeatTimer = KEY_REPEAT_DELAY;
             }
-            if (keyState.Down && _selectedIndex < _currentSettings.Count - 1)
+            if (inputManager.IsKeyPressedBuffered(Keyboard.Key.Down) && _selectedIndex < _currentSettings.Count - 1)
             {
+                inputManager.ConsumeKeyPress(Keyboard.Key.Down);
                 _selectedIndex++;
                 _keyRepeatTimer = KEY_REPEAT_DELAY;
             }
             // Use edge-detected EnterPressed from InputManager
-            if (keyState.SpacePressed || keyState.EnterPressed)
+            if (inputManager.IsKeyPressedBuffered(Keyboard.Key.Space) || inputManager.IsKeyPressedBuffered(Keyboard.Key.Enter))
             {
-                _engine.InputManager.ConsumePress("Space");
-                _engine.InputManager.ConsumePress("Enter");
+                inputManager.ConsumeKeyPress(Keyboard.Key.Space);
+                inputManager.ConsumeKeyPress(Keyboard.Key.Enter);
                 // Start editing
                 _editingIndex = _selectedIndex;
                 _editBuffer = _currentSettings[_selectedIndex].Value;
@@ -303,7 +305,7 @@ public class SettingsGame : IGame
         }
 
         // Update button hover states using KeyState mouse position
-        var mouseVec = keyState.MousePosition;
+        var mouseVec = inputManager.MousePosition;
 
         foreach (var button in _menuButtons)
         {

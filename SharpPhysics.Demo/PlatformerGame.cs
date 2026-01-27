@@ -9,6 +9,7 @@ using physics.Engine.Rendering;
 using physics.Engine.Shaders;
 using SharpPhysics.Engine.Player;
 using SFML.Graphics;
+using SFML.Window;
 
 namespace SharpPhysics.Demo;
 
@@ -270,19 +271,20 @@ public class PlatformerGame : IGame
         return vertices.ToArray();
     }
 
-    public void Update(float deltaTime, KeyState keyState)
+    public void Update(float deltaTime, InputManager inputManager)
     {
         // Check for ESC to return to menu
-        if (keyState.Escape)
+        if (inputManager.IsKeyPressedBuffered(Keyboard.Key.Escape))
         {
             _engine.SwitchGame(new MenuGame());
+            inputManager.ConsumeKeyPress(Keyboard.Key.Escape);
             return;
         }
 
         if (_gameOver || _levelComplete)
         {
             _messageTimer -= deltaTime;
-            if (_messageTimer <= 0 && keyState.Space)
+            if (_messageTimer <= 0 && inputManager.IsKeyPressedBuffered(Keyboard.Key.Space))
             {
                 if (_gameOver)
                 {
@@ -298,6 +300,7 @@ public class PlatformerGame : IGame
                     // Return to menu on win
                     _engine.SwitchGame(new MenuGame());
                 }
+                inputManager.ConsumeKeyPress(Keyboard.Key.Space);
             }
             return;
         }
@@ -305,7 +308,7 @@ public class PlatformerGame : IGame
         _gameTime += deltaTime;
 
         // Update player
-        _playerController.Update(keyState);
+        _playerController.Update(inputManager);
 
         // Update enemies (patrol movement)
         UpdateEnemies(deltaTime);

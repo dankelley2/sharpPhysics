@@ -3,6 +3,7 @@ using physics.Engine.Objects;
 using System.Numerics;
 using System.Collections.Generic;
 using System;
+using SFML.Window;
 
 namespace SharpPhysics.Engine.Player
 {
@@ -44,7 +45,7 @@ namespace SharpPhysics.Engine.Player
             _ = _groundObjects.Remove(obj);
         }
 
-        public void Update(KeyState keyState)
+        public void Update(InputManager inputManager)
         {
             if (_player.Sleeping)
             {
@@ -53,19 +54,19 @@ namespace SharpPhysics.Engine.Player
             // Reset the horizontal input accumulator.
             _horizontalInput = 0f;
 
-            if (keyState.Left)
+            if (inputManager.IsKeyHeld(Keyboard.Key.Left))
             {
                 MoveLeft();
             }
-            if (keyState.Right)
+            if (inputManager.IsKeyHeld(Keyboard.Key.Right))
             {
                 MoveRight();
             }
-            if (keyState.Up)
+            if (inputManager.IsKeyHeld(Keyboard.Key.Up))
             {
                 Jump();
             }
-            if (keyState.Down)
+            if (inputManager.IsKeyHeld(Keyboard.Key.Down))
             {
                 Slam();
             }

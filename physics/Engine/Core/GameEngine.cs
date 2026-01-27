@@ -182,7 +182,10 @@ namespace physics.Engine.Core
                 _inputManager.Update(deltaTime);
 
                 // Update game logic
-                _currentGame.Update(deltaTime, _inputManager.GetKeyState());
+                _currentGame.Update(deltaTime, _inputManager);
+
+                // End input frame (updates previous state for edge detection)
+                _inputManager.EndFrame();
 
                 // Physics update
                 long physicsStart = _stopwatch.ElapsedMilliseconds;

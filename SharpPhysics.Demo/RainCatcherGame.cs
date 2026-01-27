@@ -7,6 +7,7 @@ using physics.Engine.Input;
 using physics.Engine.Objects;
 using physics.Engine.Rendering;
 using physics.Engine.Shaders;
+using SFML.Window;
 using SharpPhysics.Demo.Helpers;
 using SharpPhysics.Demo.Integration;
 using SharpPhysics.Demo.Settings;
@@ -198,12 +199,13 @@ public class RainCatcherGame : IGame
         }
     }
 
-    public void Update(float deltaTime, KeyState keyState)
+    public void Update(float deltaTime, InputManager inputManager)
     {
         // Check for ESC to return to menu
-        if (keyState.Escape)
+        if (inputManager.IsKeyPressedBuffered(Keyboard.Key.Escape))
         {
             _engine.SwitchGame(new MenuGame());
+            inputManager.ConsumeKeyPress(Keyboard.Key.Escape);
             return;
         }
 
@@ -223,9 +225,6 @@ public class RainCatcherGame : IGame
 
         // Check for scoring (balls hitting player)
         CheckScoring();
-
-        // Handle keyboard shortcuts for testing
-        HandleDebugInput(keyState);
     }
 
     private void UpdateTimers(float deltaTime)
@@ -489,18 +488,6 @@ public class RainCatcherGame : IGame
         }
 
         _activePowerUp = null;
-    }
-
-    private void HandleDebugInput(KeyState keyState)
-    {
-        // Space to spawn extra balls (for testing)
-        if (keyState.Space)
-        {
-            for (int i = 0; i < 5; i++)
-            {
-                SpawnBall();
-            }
-        }
     }
 
     public void Render(Renderer renderer)

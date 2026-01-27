@@ -8,6 +8,7 @@ using physics.Engine.Rendering.UI;
 using physics.Engine.Shaders;
 using physics.Engine.Objects;
 using SFML.Graphics;
+using SFML.Window;
 
 namespace SharpPhysics.Demo;
 
@@ -197,7 +198,7 @@ public class MenuGame : IGame
         }
     }
 
-    public void Update(float deltaTime, KeyState keyState)
+    public void Update(float deltaTime, InputManager inputManager)
     {
         _animationTime += deltaTime;
 
@@ -205,15 +206,15 @@ public class MenuGame : IGame
         UpdateParticles(deltaTime);
 
         // Handle UI clicks
-        if (keyState.LeftMousePressed)
+        if (inputManager.IsMousePressed(Mouse.Button.Left))
         {
-            _uiManager.HandleClick(keyState.MousePosition);
+            _uiManager.HandleClick(inputManager.MousePosition);
         }
 
         // Check for button hover
         foreach (var button in _menuButtons)
         {
-            button.SetHovered(button.ContainsPoint(keyState.MousePosition));
+            button.SetHovered(button.ContainsPoint(inputManager.MousePosition));
         }
     }
 

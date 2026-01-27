@@ -20,8 +20,8 @@ namespace physics.Engine.Core
         /// Called each frame to update game logic.
         /// </summary>
         /// <param name="deltaTime">Time elapsed since last frame in seconds.</param>
-        /// <param name="keyState">Current state of input keys.</param>
-        void Update(float deltaTime, KeyState keyState);
+        /// <param name="input">Input manager for querying keyboard and mouse state.</param>
+        void Update(float deltaTime, InputManager input);
 
         /// <summary>
         /// Called each frame after physics to allow game-specific rendering.

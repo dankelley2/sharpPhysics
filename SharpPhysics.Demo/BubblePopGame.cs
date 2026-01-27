@@ -10,6 +10,7 @@ using physics.Engine.Shaders;
 using SharpPhysics.Demo.Helpers;
 using SharpPhysics.Demo.Integration;
 using SharpPhysics.Demo.Settings;
+using SFML.Window;
 
 namespace SharpPhysics.Demo;
 
@@ -142,12 +143,13 @@ public class BubblePopGame : IGame
         }
     }
 
-    public void Update(float deltaTime, KeyState keyState)
+    public void Update(float deltaTime, InputManager inputManager)
     {
         // Check for ESC to return to menu
-        if (keyState.Escape)
+        if (inputManager.IsKeyPressedBuffered(Keyboard.Key.Escape))
         {
             _engine.SwitchGame(new MenuGame());
+            inputManager.ConsumeKeyPress(Keyboard.Key.Escape);
             return;
         }
 

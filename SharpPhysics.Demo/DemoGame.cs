@@ -395,36 +395,37 @@ public class DemoGame : IGame
         }
     }
 
-    public void Update(float deltaTime, KeyState keyState)
+    public void Update(float deltaTime, InputManager inputManager)
     {
         // Check for ESC to return to menu
-        if (keyState.Escape)
+        if (inputManager.IsKeyPressedBuffered(Keyboard.Key.Escape))
         {
             _engine.SwitchGame(new MenuGame());
+            inputManager.ConsumeKeyPress(Keyboard.Key.Escape);
             return;
         }
 
         // Handle view panning with middle mouse button
-        if (keyState.MiddleMousePressed)
+        if (inputManager.IsMousePressed(Mouse.Button.Middle))
         {
             _isPanning = true;
-            _panStartScreenPos = keyState.MouseScreenPosition;
+            _panStartScreenPos = inputManager.MouseScreenPosition;
         }
-        else if (!keyState.MiddleMouseDown && _isPanning)
+        else if (!inputManager.IsMouseHeld(Mouse.Button.Middle) && _isPanning)
         {
             _isPanning = false;
         }
 
         if (_isPanning)
         {
-            _engine.Renderer.PanViewByScreenDelta(_panStartScreenPos, keyState.MouseScreenPosition);
-            _panStartScreenPos = keyState.MouseScreenPosition;
+            _engine.Renderer.PanViewByScreenDelta(_panStartScreenPos, inputManager.MouseScreenPosition);
+            _panStartScreenPos = inputManager.MouseScreenPosition;
         }
 
         // Handle scroll wheel zoom
-        if (keyState.ScrollWheelDelta != 0)
+        if (Math.Abs(inputManager.ScrollWheelDelta) > 1e-6)
         {
-            _engine.Renderer.ZoomView(keyState.ScrollWheelDelta, keyState.MouseScreenPosition);
+            _engine.Renderer.ZoomView(inputManager.ScrollWheelDelta, inputManager.MouseScreenPosition);
         }
 
         // Handle physics sandbox input - ball launching
@@ -446,13 +447,13 @@ public class DemoGame : IGame
         }
 
         // Update player controller
-        _playerController.Update(keyState);
+        _playerController.Update(inputManager);
 
         // Process person detection updates (thread-safe)
         _personColliderBridge?.ProcessPendingUpdates();
 
         // Process object updates for demo car
-        DemoCar?.Update(deltaTime, keyState);
+        DemoCar?.Update(deltaTime, inputManager);
     }
 
     public void Render(Renderer renderer)
