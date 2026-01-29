@@ -7,7 +7,7 @@ A 2D physics engine implemented in C# (.NET 9) using SFML for rendering.
 - Added constraint system with WeldConstraint and AxisConstraint
 - Added demo games showcasing engine capabilities
 - Integrated with [ProjectorSegmentation](https://github.com/dankelley2/ProjectorSegmentation) for body tracking via MJPEG stream or webcam
-- Demo video: https://youtu.be/Lo-g24-rv4k
+- Demo video: [https://youtu.be/Lo-g24-rv4k](https://youtu.be/aCmTZrhkQ3E?si=JVf6uVizv2wlRzBA)
 
 ## Features
 - **Arbitrary Polygon Physics**: Support for complex polygon shapes beyond simple circles and boxes
