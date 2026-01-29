@@ -2,7 +2,7 @@
 
 A 2D physics engine implemented in C# (.NET 9) using SFML for rendering.
 
-## Recent Updates (2025)
+## Recent Updates (2026)
 - Refactored to separate game engine from implementation - the physics engine is now a standalone library
 - Added constraint system with WeldConstraint and AxisConstraint
 - Added demo games showcasing engine capabilities
