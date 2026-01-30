@@ -19,6 +19,12 @@ public sealed class YoloV26PoseDetector : IPoseDetector
     private readonly int _maxPeople;
     private readonly string _inputName;
 
+    // Pre-allocated buffers for reuse (reduces GC pressure)
+    private readonly Mat _resizedBuffer;
+    private readonly Mat _rgbBuffer;
+    private readonly DenseTensor<float> _tensorBuffer;
+    private readonly List<NamedOnnxValue> _inputsBuffer;
+
     /// <summary>
     /// YOLOv26-Pose COCO keypoint names (17 keypoints).
     /// </summary>
@@ -59,13 +65,20 @@ public sealed class YoloV26PoseDetector : IPoseDetector
 
         var options = new SessionOptions();
 
+        // Suppress ONNX Runtime informational warnings about node assignments
+        options.LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR;
+
+        // Enable all graph optimizations (constant folding, node fusion, etc.)
+        options.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
+
         if (useGpu)
         {
             try
             {
-                options.EnableMemoryPattern = false;
-                options.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
-                options.AppendExecutionProvider_DML(0);
+                // DirectML-specific settings
+                options.EnableMemoryPattern = false;  // Required: memory patterns don't work with GPU
+                options.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;  // Recommended: parallel adds overhead with GPU
+                options.AppendExecutionProvider_DML(0);  // Use first GPU
                 Console.WriteLine("YOLOv26-Pose: Using DirectML (GPU) acceleration");
             }
             catch
@@ -74,14 +87,23 @@ public sealed class YoloV26PoseDetector : IPoseDetector
             }
         }
 
-            _session = new InferenceSession(modelPath, options);
+        _session = new InferenceSession(modelPath, options);
 
-            // Log model info and cache input name
-            var inputMeta = _session.InputMetadata.First();
-            _inputName = inputMeta.Key;
-            Console.WriteLine($"YOLOv26-Pose loaded: Input '{inputMeta.Key}' shape: [{string.Join(", ", inputMeta.Value.Dimensions)}]");
-            Console.WriteLine($"YOLOv26-Pose: Multi-person detection enabled (max {_maxPeople} people)");
-        }
+        // Log model info and cache input name
+        var inputMeta = _session.InputMetadata.First();
+        _inputName = inputMeta.Key;
+        Console.WriteLine($"YOLOv26-Pose loaded: Input '{inputMeta.Key}' shape: [{string.Join(", ", inputMeta.Value.Dimensions)}]");
+        Console.WriteLine($"YOLOv26-Pose: Multi-person detection enabled (max {_maxPeople} people)");
+
+                // Pre-allocate reusable buffers
+                _resizedBuffer = new Mat(_inputHeight, _inputWidth, MatType.CV_8UC3);
+                _rgbBuffer = new Mat(_inputHeight, _inputWidth, MatType.CV_8UC3);
+                _tensorBuffer = new DenseTensor<float>(new[] { 1, 3, _inputHeight, _inputWidth });
+                _inputsBuffer = new List<NamedOnnxValue>(1)
+                {
+                    NamedOnnxValue.CreateFromTensor(_inputName, _tensorBuffer)
+                };
+            }
 
     public PoseDetectionResult Detect(Mat frame, long timestampMs)
     {
@@ -91,18 +113,13 @@ public sealed class YoloV26PoseDetector : IPoseDetector
         try
         {
             // Preprocess - YOLO v26 uses simple resize, NOT letterboxing (do_pad: false)
-            using var preprocessed = PreprocessFrame(frame, out float scaleX, out float scaleY);
+            PreprocessFrame(frame, out float scaleX, out float scaleY);
 
             // Convert to YOLO tensor format (NCHW: batch, channels, height, width)
-            var tensor = MatToTensor(preprocessed);
+            MatToTensor();
 
-            // Run inference using cached input name
-            var inputs = new List<NamedOnnxValue>
-            {
-                NamedOnnxValue.CreateFromTensor(_inputName, tensor)
-            };
-
-            using var results = _session.Run(inputs);
+            // Run inference using cached input name and pre-allocated inputs
+            using var results = _session.Run(_inputsBuffer);
             var output = results.First().AsTensor<float>();
 
             // Parse YOLOv26 output format - returns all detected people
@@ -119,44 +136,39 @@ public sealed class YoloV26PoseDetector : IPoseDetector
 
     /// <summary>
     /// Preprocesses frame with simple resize for YOLO v26 (no letterboxing, do_pad: false).
+    /// Uses pre-allocated buffers to avoid allocations.
     /// </summary>
-    private Mat PreprocessFrame(Mat frame, out float scaleX, out float scaleY)
+    private void PreprocessFrame(Mat frame, out float scaleX, out float scaleY)
     {
         // Calculate scale factors
         scaleX = (float)frame.Width / _inputWidth;
         scaleY = (float)frame.Height / _inputHeight;
 
-        // Resize frame to input size (no letterboxing)
-        using var resized = new Mat();
-        Cv2.Resize(frame, resized, new Size(_inputWidth, _inputHeight));
+        // Resize frame to input size using pre-allocated buffer
+        Cv2.Resize(frame, _resizedBuffer, new Size(_inputWidth, _inputHeight));
 
-        // Convert BGR to RGB
-        var rgb = new Mat();
-        Cv2.CvtColor(resized, rgb, ColorConversionCodes.BGR2RGB);
-
-        return rgb;
+        // Convert BGR to RGB using pre-allocated buffer
+        Cv2.CvtColor(_resizedBuffer, _rgbBuffer, ColorConversionCodes.BGR2RGB);
     }
 
     /// <summary>
     /// Converts Mat to YOLO tensor format (NCHW, normalized 0-1 range).
     /// Optimized for performance using direct buffer access and channel-first iteration.
+    /// Uses pre-allocated tensor buffer.
     /// </summary>
-    private DenseTensor<float> MatToTensor(Mat mat)
+    private void MatToTensor()
     {
-        // YOLO expects NCHW format (batch, channels, height, width)
-        var tensor = new DenseTensor<float>(new[] { 1, 3, _inputHeight, _inputWidth });
-
         // Pre-compute normalization factor (multiplication is faster than division)
         const float scale = 1f / 255f;
 
         // Get direct access to tensor's underlying buffer to avoid indexer overhead
-        var tensorSpan = tensor.Buffer.Span;
+        var tensorSpan = _tensorBuffer.Buffer.Span;
         int channelSize = _inputHeight * _inputWidth;
 
         unsafe
         {
-            byte* ptr = (byte*)mat.DataPointer;
-            int step = (int)mat.Step();
+            byte* ptr = (byte*)_rgbBuffer.DataPointer;
+            int step = (int)_rgbBuffer.Step();
 
             // Process each channel separately for better cache locality
             // Channel 0 (R) starts at index 0
@@ -179,8 +191,6 @@ public sealed class YoloV26PoseDetector : IPoseDetector
                 }
             }
         }
-
-        return tensor;
     }
 
     /// <summary>
@@ -343,8 +353,10 @@ public sealed class YoloV26PoseDetector : IPoseDetector
         return keypoints;
     }
 
-    public void Dispose()
-    {
-        _session?.Dispose();
+        public void Dispose()
+        {
+            _session?.Dispose();
+            _resizedBuffer?.Dispose();
+            _rgbBuffer?.Dispose();
+        }
     }
-}
