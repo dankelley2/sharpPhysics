@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Use DirectML version for GPU support on Windows (replaces base package) -->
+    <!-- <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.23.0" />-->
+    <!-- <PackageReference Include="OpenCvSharp4" Version="4.11.0.20250507" />-->
+    <!-- <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.11.0.20250507" />-->
+    
+    <!-- Cross-platform ONNX Runtime -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" />
+
+    <!-- Use DirectML only on Windows for GPU support -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+
+    <PackageReference Include="OpenCvSharp4" />
+
+    <!-- Platform-specific OpenCV runtimes -->
+    <PackageReference Include="OpenCvSharp4.runtime.win" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+    <PackageReference Include="OpenCvSharp4.runtime.osx.10.15-universal" Condition="$([MSBuild]::IsOSPlatform('OSX'))" />
+    <PackageReference Include="OpenCvSharp4.official.runtime.linux-x64" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
+  </ItemGroup>
+
+</Project>

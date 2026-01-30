@@ -59,7 +59,7 @@ public class GameSettings
 
     /// <summary>
     /// Whether or not to run any camera or pose tracking functionality
-    /// Requires ProjectorSegmentation.Vision DLL and compatible MJPEG stream or
+    /// Requires PoseIntegrator.Vision DLL and compatible MJPEG stream or
     /// Connected webcam
     /// </summary>
     public bool PoseTrackingEnabled { get; set; } = false;

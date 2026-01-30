@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\physics\SharpPhysics.csproj" />
-    <ProjectReference Include="..\..\..\ProjectorSegmentation\src\ProjectorSegmentation.Vision\ProjectorSegmentation.Vision.csproj" />
+    <ProjectReference Include="..\PoseIntegrator.Vision\PoseIntegrator.Vision.csproj" />
   </ItemGroup>
 
   <ItemGroup>

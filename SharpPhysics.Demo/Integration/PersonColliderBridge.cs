@@ -8,16 +8,16 @@ using System.Threading;
 using physics.Engine;
 using physics.Engine.Objects;
 using physics.Engine.Shaders;
-using ProjectorSegmentation.Vision.Models;
-using ProjectorSegmentation.Vision.PoseDetection;
-using ProjectorSegmentation.Vision.FrameSources;
-using ProjectorSegmentation.Vision.Abstractions;
+using PoseIntegrator.Vision.Models;
+using PoseIntegrator.Vision.PoseDetection;
+using PoseIntegrator.Vision.FrameSources;
+using PoseIntegrator.Vision.Abstractions;
 
 namespace SharpPhysics.Demo.Integration
 {
 
     /// <summary>
-    /// Bridges ProjectorSegmentation pose detection with the SharpPhysics engine.
+    /// Bridges PoseIntegrator pose detection with the SharpPhysics engine.
     /// Creates physics balls for hands and head that track detected keypoints.
     /// Supports multiple simultaneous people detection.
     /// </summary>
