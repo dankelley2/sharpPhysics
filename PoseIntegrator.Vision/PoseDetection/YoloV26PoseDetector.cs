@@ -17,6 +17,7 @@ public sealed class YoloV26PoseDetector : IPoseDetector
     private readonly int _inputHeight;
     private readonly float _confidenceThreshold;
     private readonly int _maxPeople;
+    private readonly string _inputName;
 
     /// <summary>
     /// YOLOv26-Pose COCO keypoint names (17 keypoints).
@@ -73,13 +74,14 @@ public sealed class YoloV26PoseDetector : IPoseDetector
             }
         }
 
-        _session = new InferenceSession(modelPath, options);
+            _session = new InferenceSession(modelPath, options);
 
-        // Log model info
-        var inputMeta = _session.InputMetadata.First();
-        Console.WriteLine($"YOLOv26-Pose loaded: Input '{inputMeta.Key}' shape: [{string.Join(", ", inputMeta.Value.Dimensions)}]");
-        Console.WriteLine($"YOLOv26-Pose: Multi-person detection enabled (max {_maxPeople} people)");
-    }
+            // Log model info and cache input name
+            var inputMeta = _session.InputMetadata.First();
+            _inputName = inputMeta.Key;
+            Console.WriteLine($"YOLOv26-Pose loaded: Input '{inputMeta.Key}' shape: [{string.Join(", ", inputMeta.Value.Dimensions)}]");
+            Console.WriteLine($"YOLOv26-Pose: Multi-person detection enabled (max {_maxPeople} people)");
+        }
 
     public PoseDetectionResult Detect(Mat frame, long timestampMs)
     {
@@ -94,11 +96,10 @@ public sealed class YoloV26PoseDetector : IPoseDetector
             // Convert to YOLO tensor format (NCHW: batch, channels, height, width)
             var tensor = MatToTensor(preprocessed);
 
-            // Run inference
-            var inputName = _session.InputMetadata.Keys.First();
+            // Run inference using cached input name
             var inputs = new List<NamedOnnxValue>
             {
-                NamedOnnxValue.CreateFromTensor(inputName, tensor)
+                NamedOnnxValue.CreateFromTensor(_inputName, tensor)
             };
 
             using var results = _session.Run(inputs);
@@ -138,28 +139,43 @@ public sealed class YoloV26PoseDetector : IPoseDetector
 
     /// <summary>
     /// Converts Mat to YOLO tensor format (NCHW, normalized 0-1 range).
+    /// Optimized for performance using direct buffer access and channel-first iteration.
     /// </summary>
     private DenseTensor<float> MatToTensor(Mat mat)
     {
         // YOLO expects NCHW format (batch, channels, height, width)
         var tensor = new DenseTensor<float>(new[] { 1, 3, _inputHeight, _inputWidth });
 
+        // Pre-compute normalization factor (multiplication is faster than division)
+        const float scale = 1f / 255f;
+
+        // Get direct access to tensor's underlying buffer to avoid indexer overhead
+        var tensorSpan = tensor.Buffer.Span;
+        int channelSize = _inputHeight * _inputWidth;
+
         unsafe
         {
             byte* ptr = (byte*)mat.DataPointer;
             int step = (int)mat.Step();
 
+            // Process each channel separately for better cache locality
+            // Channel 0 (R) starts at index 0
+            // Channel 1 (G) starts at index channelSize
+            // Channel 2 (B) starts at index channelSize * 2
             for (int y = 0; y < _inputHeight; y++)
             {
                 byte* row = ptr + (y * step);
+                int rowOffset = y * _inputWidth;
+
                 for (int x = 0; x < _inputWidth; x++)
                 {
-                    int offset = x * 3;
-                    // NCHW format: channels are outer dimension
-                    // YOLOv26 ONNX expects normalized 0-1 range
-                    tensor[0, 0, y, x] = row[offset + 0] / 255f; // R
-                    tensor[0, 1, y, x] = row[offset + 1] / 255f; // G
-                    tensor[0, 2, y, x] = row[offset + 2] / 255f; // B
+                    int srcOffset = x * 3;
+                    int dstOffset = rowOffset + x;
+
+                    // Write each channel to contiguous memory regions
+                    tensorSpan[dstOffset] = row[srcOffset] * scale;                     // R
+                    tensorSpan[channelSize + dstOffset] = row[srcOffset + 1] * scale;   // G
+                    tensorSpan[channelSize * 2 + dstOffset] = row[srcOffset + 2] * scale; // B
                 }
             }
         }
