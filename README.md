@@ -1,13 +1,17 @@
 # SharpPhysics
 
-A 2D physics engine implemented in C# (.NET 9) using SFML for rendering.
+A WIP 2D physics engine implemented in C# (.NET 9) using SFML for rendering. Project includes Demo implementaitons.
+<img width="1201" height="574" alt="image" src="https://github.com/user-attachments/assets/a1ca9196-9ef5-454c-9d01-1787532e1695" />
+<img width="1272" height="746" alt="image" src="https://github.com/user-attachments/assets/1a759955-dd96-45a4-b1b1-da69ce689272" />
 
-## Recent Updates (2025)
+
+
+## Recent Updates (2026)
 - Refactored to separate game engine from implementation - the physics engine is now a standalone library
 - Added constraint system with WeldConstraint and AxisConstraint
 - Added demo games showcasing engine capabilities
-- Integrated with [PoseIntegrator](https://github.com/dankelley2/PoseIntegrator) for body tracking via MJPEG stream or webcam
-- Demo video: https://youtu.be/Lo-g24-rv4k
+- Integrated with [ProjectorSegmentation](https://github.com/dankelley2/ProjectorSegmentation) for body tracking via MJPEG stream or webcam
+- Demo video: [https://youtu.be/Lo-g24-rv4k](https://youtu.be/aCmTZrhkQ3E?si=JVf6uVizv2wlRzBA)
 
 ## Features
 - **Arbitrary Polygon Physics**: Support for complex polygon shapes beyond simple circles and boxes
