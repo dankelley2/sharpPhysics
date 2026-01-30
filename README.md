@@ -10,7 +10,7 @@ A WIP 2D physics engine implemented in C# (.NET 9) using SFML for rendering. Pro
 - Refactored to separate game engine from implementation - the physics engine is now a standalone library
 - Added constraint system with WeldConstraint and AxisConstraint
 - Added demo games showcasing engine capabilities
-- Integrated with [ProjectorSegmentation](https://github.com/dankelley2/ProjectorSegmentation) for body tracking via MJPEG stream or webcam
+- Integrated with PoseIntegrator for body tracking via MJPEG stream or webcam (Now in the same solution / git repo)
 - Demo video: [https://youtu.be/Lo-g24-rv4k](https://youtu.be/aCmTZrhkQ3E?si=JVf6uVizv2wlRzBA)
 
 ## Features
