@@ -84,10 +84,18 @@ sharpPhysics/
 │   ├── Settings/                     # Game settings
 │   └── Resources/                    # Fonts, images, etc.
 │
-└── SharpPhysics.Tests/               # Unit Tests
-    ├── CollisionTests.cs
-    ├── CollisionHelperTests.cs
-    └── Vec2Tests.cs
+├── SharpPhysics.Tests/               # Unit Tests
+│   ├── CollisionTests.cs
+│   ├── CollisionHelperTests.cs
+│   └── Vec2Tests.cs
+│
+├── PoseIntegrator.Vision/            # Computer Vision Library for Pose Detection
+│   ├── PoseDetection/                # YOLO-based pose detection implementation
+│   ├── Visualization/                # Pose visualization utilities
+│   └── PersonDetector.cs             # Main detector class
+│
+└── PoseIntegrator.Demo/              # Standalone Pose Detection Demo
+    └── Program.cs                    # Demo application entry point
 ```
 
 ## Physics Algorithms
@@ -123,8 +131,19 @@ public class MyGame : IGame
 ```
 
 ## Dependencies
-- [SFML.Net](https://www.sfml-dev.org/download/sfml.net/) - Simple and Fast Multimedia Library for .NET
-- [PoseIntegrator](https://github.com/dankelley2/PoseIntegrator) (optional) - Body tracking for interactive demos
+
+### Core Physics Engine (SharpPhysics.Engine)
+- [SFML.Net](https://www.sfml-dev.org/download/sfml.net/) - Simple and Fast Multimedia Library for .NET (rendering, windowing, input)
+
+### Pose Detection (PoseIntegrator.Vision)
+The pose detection library uses machine learning for real-time body tracking:
+
+- **Microsoft.ML.OnnxRuntime** - Cross-platform ONNX model inference runtime
+- **Microsoft.ML.OnnxRuntime.DirectML** (Windows only) - GPU acceleration via DirectML for faster inference on Windows
+- **OpenCvSharp4** - OpenCV wrapper for image processing, video capture, and frame manipulation
+- **OpenCvSharp4.runtime.*** - Platform-specific native binaries (win/osx/linux)
+
+> **Note:** The platform-specific packages are conditionally included based on the build target OS, allowing the same codebase to run on Windows, macOS, and Linux.
 
 ## Credits and References
 
