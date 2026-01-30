@@ -367,19 +367,15 @@ public class DemoGame : IGame
             // Start detection using configured camera source
             if (settings.CameraSourceType == "url")
             {
-                _personColliderBridge.Start(
-                    url: settings.CameraUrl,
-                    width: settings.CameraWidth,
-                    height: settings.CameraHeight,
-                    fps: settings.CameraFps);
+                _personColliderBridge.Start(url: settings.CameraUrl);
             }
             else
             {
                 _personColliderBridge.Start(
                     cameraIndex: settings.CameraDeviceIndex,
-                    width: settings.CameraWidth,
-                    height: settings.CameraHeight,
-                    fps: settings.CameraFps);
+                    width: settings.CameraDeviceResolutionX,
+                    height: settings.CameraDeviceResolutionY,
+                    fps: settings.CameraDeviceFps);
             }
 
             Console.WriteLine("Person detection initialized successfully.");

@@ -118,12 +118,12 @@ public class SettingsGame : IGame
                     v => _settings.CameraUrl = v, "MJPEG stream URL"));
                 _currentSettings.Add(new SettingItem("Device Index", _settings.CameraDeviceIndex.ToString(), 
                     v => { if (int.TryParse(v, out var i)) _settings.CameraDeviceIndex = i; }, "0, 1, 2..."));
-                _currentSettings.Add(new SettingItem("Width", _settings.CameraWidth.ToString(), 
-                    v => { if (int.TryParse(v, out var i)) _settings.CameraWidth = i; }, "pixels"));
-                _currentSettings.Add(new SettingItem("Height", _settings.CameraHeight.ToString(), 
-                    v => { if (int.TryParse(v, out var i)) _settings.CameraHeight = i; }, "pixels"));
-                _currentSettings.Add(new SettingItem("FPS", _settings.CameraFps.ToString(), 
-                    v => { if (int.TryParse(v, out var i)) _settings.CameraFps = i; }, "frames per second"));
+                _currentSettings.Add(new SettingItem("Device Resolution X", _settings.CameraDeviceResolutionX.ToString(), 
+                    v => { if (int.TryParse(v, out var i)) _settings.CameraDeviceResolutionX = i; }, "requested width (pixels)"));
+                _currentSettings.Add(new SettingItem("Device Resolution Y", _settings.CameraDeviceResolutionY.ToString(), 
+                    v => { if (int.TryParse(v, out var i)) _settings.CameraDeviceResolutionY = i; }, "requested height (pixels)"));
+                _currentSettings.Add(new SettingItem("Device FPS", _settings.CameraDeviceFps.ToString(), 
+                    v => { if (int.TryParse(v, out var i)) _settings.CameraDeviceFps = i; }, "local camera only"));
                 break;
 
             case "Detection":

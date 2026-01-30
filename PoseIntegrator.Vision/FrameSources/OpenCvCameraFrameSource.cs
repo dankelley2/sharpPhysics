@@ -23,6 +23,11 @@ public sealed class OpenCvCameraFrameSource : IFrameSource
         if (width is not null)  _cap.Set(VideoCaptureProperties.FrameWidth,  width.Value);
         if (height is not null) _cap.Set(VideoCaptureProperties.FrameHeight, height.Value);
         if (fps is not null)    _cap.Set(VideoCaptureProperties.Fps,         fps.Value);
+
+        // After setting, check actual values:
+        var actualWidth = _cap.Get(VideoCaptureProperties.FrameWidth);
+        var actualHeight = _cap.Get(VideoCaptureProperties.FrameHeight);
+        Console.WriteLine($"Requested: {width}x{height}, Actual: {actualWidth}x{actualHeight}");
     }
 
     public bool TryGetFrame(out Mat bgr, out long timestampMs)

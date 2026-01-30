@@ -199,7 +199,7 @@ namespace SharpPhysics.Demo.Integration
         /// <summary>
         /// Start pose detection with the specified MJPEG stream URL.
         /// </summary>
-        public void Start(string url, int width = 640, int height = 480, int fps = 30)
+        public void Start(string url, int fps = 30)
         {
             try
             {
@@ -214,7 +214,7 @@ namespace SharpPhysics.Demo.Integration
                 Console.WriteLine("[PersonBridge] Yolo model loaded successfully");
 
                 _camera = new MjpegCameraFrameSource(url, 5, true);
-                Console.WriteLine($"[PersonBridge] Stream {url} opened at {width}x{height} @ {fps}fps");
+                Console.WriteLine($"[PersonBridge] Stream {url} opened");
                 Console.WriteLine($"[PersonBridge] Multi-person tracking enabled (max {_maxPeople} people)");
 
                 _cts = new CancellationTokenSource();

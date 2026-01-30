@@ -13,7 +13,18 @@ public class GameSettings
 {
     private static GameSettings? _instance;
     private static readonly object _lock = new();
-    private const string SETTINGS_FILE = "gamesettings.json";
+    private const string APP_FOLDER = "SharpPhysics.Demo";
+    private const string SETTINGS_FILENAME = "gamesettings.json";
+
+    /// <summary>
+    /// Gets the full path to the settings file in the user's local app data directory.
+    /// Cross-platform: Windows (%LOCALAPPDATA%), macOS (~/Library/Application Support), Linux (~/.local/share)
+    /// </summary>
+    private static string SettingsFilePath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        APP_FOLDER,
+        SETTINGS_FILENAME
+    );
 
     /// <summary>
     /// Gets the singleton instance of GameSettings.
@@ -80,19 +91,19 @@ public class GameSettings
     public int CameraDeviceIndex { get; set; } = 0;
 
     /// <summary>
-    /// Camera capture width.
+    /// Requested camera device resolution width (may not be honored by all cameras/backends).
     /// </summary>
-    public int CameraWidth { get; set; } = 640;
+    public int CameraDeviceResolutionX { get; set; } = 640;
 
     /// <summary>
-    /// Camera capture height.
+    /// Requested camera device resolution height (may not be honored by all cameras/backends).
     /// </summary>
-    public int CameraHeight { get; set; } = 480;
+    public int CameraDeviceResolutionY { get; set; } = 480;
 
     /// <summary>
-    /// Camera capture FPS.
+    /// Requested camera device FPS (only applies to local cameras, not MJPEG streams).
     /// </summary>
-    public int CameraFps { get; set; } = 30;
+    public int CameraDeviceFps { get; set; } = 30;
 
     // ==================== Pose Detection Settings ====================
 
@@ -162,18 +173,20 @@ public class GameSettings
 
     /// <summary>
     /// Loads settings from the JSON file, or creates default settings if not found.
+    /// Settings are stored in the user's local app data directory.
     /// </summary>
     public static GameSettings Load()
     {
+        var settingsPath = SettingsFilePath;
         try
         {
-            if (File.Exists(SETTINGS_FILE))
+            if (File.Exists(settingsPath))
             {
-                var json = File.ReadAllText(SETTINGS_FILE);
+                var json = File.ReadAllText(settingsPath);
                 var settings = JsonSerializer.Deserialize<GameSettings>(json, GetJsonOptions());
                 if (settings != null)
                 {
-                    Console.WriteLine($"[Settings] Loaded from {SETTINGS_FILE}");
+                    Console.WriteLine($"[Settings] Loaded from {settingsPath}");
                     return settings;
                 }
             }
@@ -183,20 +196,29 @@ public class GameSettings
             Console.WriteLine($"[Settings] Failed to load: {ex.Message}");
         }
 
-        Console.WriteLine("[Settings] Using default settings");
+        Console.WriteLine($"[Settings] Using default settings (file: {settingsPath})");
         return new GameSettings();
     }
 
     /// <summary>
     /// Saves the current settings to the JSON file.
+    /// Settings are stored in the user's local app data directory.
     /// </summary>
     public void Save()
     {
+        var settingsPath = SettingsFilePath;
         try
         {
+            // Ensure the directory exists
+            var directory = Path.GetDirectoryName(settingsPath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
             var json = JsonSerializer.Serialize(this, GetJsonOptions());
-            File.WriteAllText(SETTINGS_FILE, json);
-            Console.WriteLine($"[Settings] Saved to {SETTINGS_FILE}");
+            File.WriteAllText(settingsPath, json);
+            Console.WriteLine($"[Settings] Saved to {settingsPath}");
         }
         catch (Exception ex)
         {

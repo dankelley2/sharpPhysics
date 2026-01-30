@@ -130,6 +130,8 @@ public class MyGame : IGame
 }
 ```
 
+> 📖 **For detailed API reference, common patterns, and troubleshooting tips, see the [Game Development Guide](SharpPhysics.Demo/README.md).**
+
 ## Dependencies
 
 ### Core Physics Engine (SharpPhysics.Engine)
