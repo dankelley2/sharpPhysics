@@ -435,7 +435,7 @@ public class DemoGame : IGame
             if (_launchTimer >= LaunchInterval)
             {
                 _actionTemplates.Launch(
-                    _objectTemplates.CreateMedBall(_startPoint.X, _startPoint.Y),
+                    _objectTemplates.CreateSmallBall(_startPoint.X, _startPoint.Y),
                     _startPoint,
                     _mousePosition);
                 _launchTimer = 0f;

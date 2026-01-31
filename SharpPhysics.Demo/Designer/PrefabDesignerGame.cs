@@ -23,7 +23,7 @@ public class PrefabDesignerGame : IGame
     private DesignerRenderer _designerRenderer = null!;
 
     // Grid settings
-    private const int GRID_SIZE = 10;
+    private int _gridSize { get ; set; } = 10;
     private const int TOOLBAR_HEIGHT = 70;
 
     // Drawing/interaction modes
@@ -212,6 +212,21 @@ public class PrefabDesignerGame : IGame
         HandleMouseClick(inputManager);
         HandleMouseRelease(inputManager);
         UpdateDrawingState(inputManager);
+        HandleGridControls(inputManager);
+    }
+
+    private void HandleGridControls(InputManager inputManager)
+    {
+        if (inputManager.IsKeyPressedBuffered(Keyboard.Key.Hyphen)){
+            _gridSize = Math.Max(5, _gridSize >> 1);
+            inputManager.ConsumeKeyPress(Keyboard.Key.Hyphen);
+        }
+
+        if (inputManager.IsKeyPressedBuffered(Keyboard.Key.Equal))
+        {
+            _gridSize = Math.Min(80, _gridSize << 1);
+            inputManager.ConsumeKeyPress(Keyboard.Key.Equal);
+        }
     }
 
     private bool HandleEscapeKey(InputManager inputManager)
@@ -317,7 +332,7 @@ public class PrefabDesignerGame : IGame
 
     private void HandleDrawingClick(Vector2 mousePos)
     {
-        Vector2 snappedPos = ShapeGeometry.SnapToGrid(mousePos, GRID_SIZE, TOOLBAR_HEIGHT);
+        Vector2 snappedPos = ShapeGeometry.SnapToGrid(mousePos, _gridSize, TOOLBAR_HEIGHT);
 
         switch (_currentMode)
         {
@@ -364,7 +379,7 @@ public class PrefabDesignerGame : IGame
         if (_currentPolygonPoints.Count >= 3)
         {
             float distToFirst = Vector2.Distance(snappedPos, _currentPolygonPoints[0]);
-            if (distToFirst < GRID_SIZE)
+            if (distToFirst < _gridSize)
             {
                 FinishPolygon();
                 return;
@@ -456,7 +471,7 @@ public class PrefabDesignerGame : IGame
         if (!_drawStartPoint.HasValue) return;
 
         Vector2 startPoint = _drawStartPoint.Value;
-        Vector2 endPoint = ShapeGeometry.SnapToGrid(_currentMousePos, GRID_SIZE, TOOLBAR_HEIGHT);
+        Vector2 endPoint = ShapeGeometry.SnapToGrid(_currentMousePos, _gridSize, TOOLBAR_HEIGHT);
 
         if (_currentMode == DrawMode.Circle)
         {
@@ -474,7 +489,7 @@ public class PrefabDesignerGame : IGame
     private void CreateCircle(Vector2 startPoint, Vector2 endPoint)
     {
         float size = Math.Max(Math.Abs(endPoint.X - startPoint.X), Math.Abs(endPoint.Y - startPoint.Y));
-        if (size > GRID_SIZE)
+        if (size > _gridSize)
         {
             var shape = new PrefabShape
             {
@@ -614,7 +629,7 @@ public class PrefabDesignerGame : IGame
         renderer.Window.SetView(renderer.GameView);
 
         // Draw grid
-        _designerRenderer.DrawGrid(renderer, _engine.WindowWidth, _engine.WindowHeight, GRID_SIZE, TOOLBAR_HEIGHT);
+        _designerRenderer.DrawGrid(renderer, _engine.WindowWidth, _engine.WindowHeight, _gridSize, TOOLBAR_HEIGHT);
 
         // Draw shapes
         _designerRenderer.DrawShapes(renderer, _shapes);
@@ -647,13 +662,13 @@ public class PrefabDesignerGame : IGame
     {
         renderer.Window.SetView(renderer.GameView);
 
-        Vector2 snappedMouse = ShapeGeometry.SnapToGrid(_currentMousePos, GRID_SIZE, TOOLBAR_HEIGHT);
+        Vector2 snappedMouse = ShapeGeometry.SnapToGrid(_currentMousePos, _gridSize, TOOLBAR_HEIGHT);
         _designerRenderer.DrawCursorIndicator(renderer, snappedMouse);
 
         switch (_currentMode)
         {
             case DrawMode.Polygon:
-                _designerRenderer.DrawPolygonPreview(renderer, _currentPolygonPoints, snappedMouse, GRID_SIZE);
+                _designerRenderer.DrawPolygonPreview(renderer, _currentPolygonPoints, snappedMouse, _gridSize);
                 break;
 
             case DrawMode.Circle when _drawStartPoint.HasValue && _isDrawing:

@@ -153,20 +153,20 @@ public class DesignerRenderer : IDisposable
         switch (shape.Type)
         {
             case ShapeType.Circle:
-                DrawCircle(renderer, shape.Center, shape.Radius + 3, highlightColor, highlightColor, 3f);
+                DrawCircle(renderer, shape.Center, shape.Radius + 3, highlightColor, highlightColor, 2f);
                 break;
 
             case ShapeType.Rectangle:
                 DrawRectangle(renderer, shape.Position - new Vector2(3, 3),
                     new Vector2(shape.Width + 6, shape.Height + 6),
-                    new Color(0, 0, 0, 0), highlightColor, 3f);
+                    new Color(0, 0, 0, 0), highlightColor, 2f);
                 break;
 
             case ShapeType.Polygon when shape.Points is { Length: >= 3 }:
                 for (int i = 0; i < shape.Points.Length; i++)
                 {
                     int next = (i + 1) % shape.Points.Length;
-                    DrawLine(renderer, shape.Points[i], shape.Points[next], highlightColor, 3f);
+                    DrawLine(renderer, shape.Points[i], shape.Points[next], highlightColor, 2f);
                 }
                 break;
         }
@@ -204,27 +204,27 @@ public class DesignerRenderer : IDisposable
             : new Color(100, 255, 100, 200); // Green for axis (object B - the rotating part)
 
         // Draw lines from each shape center to the pivot point
-        DrawLine(renderer, centerA, pivot, colorA, 2f);
-        DrawLine(renderer, centerB, pivot, colorB, 2f);
+        DrawLine(renderer, centerA, pivot, colorA, 1f);
+        DrawLine(renderer, centerB, pivot, colorB, 1f);
 
         // Draw the pivot point
-        float pivotRadius = constraint.Type == ConstraintType.Weld ? 5f : 8f;
+        float pivotRadius = constraint.Type == ConstraintType.Weld ? 3f : 6f;
         Color pivotColor = constraint.Type == ConstraintType.Weld
-            ? new Color(255, 150, 150, 255)
-            : new Color(255, 255, 100, 255); // Yellow pivot for axis
+            ? new Color(255, 150, 150, 50)
+            : new Color(255, 255, 100, 50); // Yellow pivot for axis
         DrawCircle(renderer, pivot, pivotRadius, pivotColor, Color.White, 2f);
 
         // For axis constraints, draw rotation indicator around pivot
         if (constraint.Type == ConstraintType.Axis)
         {
-            DrawCircle(renderer, pivot, 12f, new Color(0, 0, 0, 0), colorB, 2f);
+            DrawCircle(renderer, pivot, 8f, new Color(0, 0, 0, 0), colorB, 2f);
 
             // Draw small arrow/indicator on B's line to show it rotates
             Vector2 dirB = Vector2.Normalize(centerB - pivot);
             Vector2 perpB = new Vector2(-dirB.Y, dirB.X);
             Vector2 arrowPos = pivot + dirB * 20f;
-            DrawLine(renderer, arrowPos, arrowPos + perpB * 8f, colorB, 2f);
-            DrawLine(renderer, arrowPos, arrowPos - perpB * 8f, colorB, 2f);
+            DrawLine(renderer, arrowPos, arrowPos + perpB * 8f, colorB, 1f);
+            DrawLine(renderer, arrowPos, arrowPos - perpB * 8f, colorB, 1f);
         }
 
         // Draw shape index labels near the constraint lines (convert world to screen coords)
@@ -245,7 +245,7 @@ public class DesignerRenderer : IDisposable
 
     public void DrawCursorIndicator(Renderer renderer, Vector2 position)
     {
-        DrawCircle(renderer, position, 4, Color.Yellow, Color.White, 1f);
+        DrawCircle(renderer, position, 3, Color.Yellow, Color.White, 1f);
     }
 
     public void DrawPolygonPreview(Renderer renderer, IReadOnlyList<Vector2> points, Vector2 snappedMouse, int gridSize)
@@ -256,7 +256,7 @@ public class DesignerRenderer : IDisposable
         for (int i = 0; i < points.Count; i++)
         {
             // Draw point
-            DrawCircle(renderer, points[i], 5,
+            DrawCircle(renderer, points[i], 4,
                 i == 0 ? Color.Green : Color.Cyan, Color.White, 1f);
 
             // Draw line to next point
@@ -275,7 +275,7 @@ public class DesignerRenderer : IDisposable
             float distToFirst = Vector2.Distance(snappedMouse, points[0]);
             if (distToFirst < gridSize)
             {
-                DrawCircle(renderer, points[0], 8, new Color(0, 255, 0, 100), Color.Green, 2f);
+                DrawCircle(renderer, points[0], 6, new Color(0, 255, 0, 100), Color.Green, 2f);
             }
         }
     }
