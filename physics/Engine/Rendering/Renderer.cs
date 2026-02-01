@@ -1,12 +1,8 @@
 ﻿using SFML.Graphics;
 using SFML.System;
 using System;
-using System.Collections.Generic;
-using physics.Engine.Rendering.UI;
 using SFML.Window;
 using System.Numerics;
-using physics.Engine.Shaders;
-using physics.Engine.Objects;
 using physics.Engine.Helpers;
 
 namespace physics.Engine.Rendering
@@ -235,133 +231,6 @@ namespace physics.Engine.Rendering
 
             Window.Draw(_rectangleShapeRenderer);
         }
-
-        /// <summary>
-        /// Draws a polygon (connected line segments) in game coordinates.
-        /// More efficient than multiple DrawLine calls for connected paths.
-        /// </summary>
-        /// <param name="points">Array of points defining the polygon vertices.</param>
-        /// <param name="color">Color of the lines.</param>
-        /// <param name="thickness">Thickness of the lines.</param>
-        /// <param name="closed">If true, connects the last point to the first.</param>
-        public void DrawPolygon(Vector2[] points, Color color, float thickness = 2f, bool closed = false)
-        {
-            if (points == null || points.Length < 2) return;
-
-            Window.SetView(GameView);
-
-            int count = closed ? points.Length : points.Length - 1;
-            for (int i = 0; i < count; i++)
-            {
-                var start = points[i];
-                var end = points[(i + 1) % points.Length];
-
-                var direction = end - start;
-                var length = direction.Length();
-                var angle = MathF.Atan2(direction.Y, direction.X) * 180f / MathF.PI;
-
-                var line = new RectangleShape(new Vector2f(length, thickness))
-                {
-                    Position = new Vector2f(start.X, start.Y),
-                    FillColor = color,
-                    Rotation = angle,
-                    Origin = new Vector2f(0, thickness / 2)
-                };
-
-                Window.Draw(line);
-            }
-        }
-
-        /// <summary>
-        /// Draws a filled convex polygon in game coordinates.
-        /// </summary>
-        /// <param name="points">Array of points defining the polygon vertices (must be convex).</param>
-        /// <param name="fillColor">Fill color.</param>
-        /// <param name="outlineColor">Optional outline color.</param>
-        /// <param name="outlineThickness">Outline thickness.</param>
-        public void DrawFilledPolygon(Vector2[] points, Color fillColor, Color? outlineColor = null, float outlineThickness = 0f)
-        {
-            if (points == null || points.Length < 3) return;
-
-            Window.SetView(GameView);
-
-            var convex = new ConvexShape((uint)points.Length);
-            for (int i = 0; i < points.Length; i++)
-            {
-                convex.SetPoint((uint)i, new Vector2f(points[i].X, points[i].Y));
-            }
-
-            convex.FillColor = fillColor;
-            convex.OutlineColor = outlineColor ?? Color.Transparent;
-            convex.OutlineThickness = outlineThickness;
-
-            Window.Draw(convex);
-        }
-
-        /// <summary>
-        /// Draws multiple line segments efficiently (for skeleton rendering, etc.).
-        /// Each pair of points defines a line segment.
-        /// </summary>
-        /// <param name="segments">Array of line segments as (start, end) tuples.</param>
-        /// <param name="color">Color for all lines.</param>
-        /// <param name="thickness">Thickness of the lines.</param>
-        public void DrawLineSegments((Vector2 Start, Vector2 End)[] segments, Color color, float thickness = 2f)
-        {
-            if (segments == null || segments.Length == 0) return;
-
-            Window.SetView(GameView);
-
-            foreach (var (start, end) in segments)
-            {
-                var direction = end - start;
-                var length = direction.Length();
-                if (length < 0.001f) continue; // Skip zero-length lines
-
-                var angle = MathF.Atan2(direction.Y, direction.X) * 180f / MathF.PI;
-
-                var line = new RectangleShape(new Vector2f(length, thickness))
-                {
-                    Position = new Vector2f(start.X, start.Y),
-                    FillColor = color,
-                    Rotation = angle,
-                    Origin = new Vector2f(0, thickness / 2)
-                };
-
-                Window.Draw(line);
-            }
-        }
-
-        /// <summary>
-        /// Draws multiple line segments with individual colors.
-        /// </summary>
-        /// <param name="segments">Array of line segments with colors.</param>
-        /// <param name="thickness">Thickness of the lines.</param>
-        public void DrawColoredLineSegments((Vector2 Start, Vector2 End, Color Color)[] segments, float thickness = 2f)
-        {
-            if (segments == null || segments.Length == 0) return;
-
-            Window.SetView(GameView);
-
-            foreach (var (start, end, color) in segments)
-            {
-                var direction = end - start;
-                var length = direction.Length();
-                if (length < 0.001f) continue;
-
-                var angle = MathF.Atan2(direction.Y, direction.X) * 180f / MathF.PI;
-
-                var line = new RectangleShape(new Vector2f(length, thickness))
-                {
-                    Position = new Vector2f(start.X, start.Y),
-                    FillColor = color,
-                    Rotation = angle,
-                    Origin = new Vector2f(0, thickness / 2)
-                };
-
-                Window.Draw(line);
-            }
-        }
-
         #endregion
     }
 }
