@@ -7,7 +7,6 @@ using physics.Engine.Helpers;
 using physics.Engine.Input;
 using physics.Engine.Objects;
 using physics.Engine.Rendering;
-using physics.Engine.Shaders;
 using SFML.Graphics;
 using SFML.Window;
 using SharpPhysics.Demo.DemoProps;
@@ -195,7 +194,7 @@ public class DemoGame : IGame
             if (_launchTimer >= LaunchInterval)
             {
                 _actionTemplates.Launch(
-                    _objectTemplates.CreateSmallBall(_startPoint.X, _startPoint.Y),
+                    _objectTemplates.CreateMedBall(_startPoint.X, _startPoint.Y),
                     _startPoint,
                     _mousePosition);
                 _launchTimer = 0f;

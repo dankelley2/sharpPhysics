@@ -28,7 +28,7 @@ public class AnimatedBackground : IDisposable
     private FloatingCircle CreateCircle()
     {
         float size = _random.NextSingle() * 200f + 5f;
-        float alpha = _random.NextSingle() * 0.1f;
+        float alpha = _random.NextSingle() * 0.3f;
         float hue = _random.NextSingle();
 
         return new FloatingCircle

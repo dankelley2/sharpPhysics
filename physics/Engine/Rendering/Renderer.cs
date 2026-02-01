@@ -153,17 +153,19 @@ namespace physics.Engine.Rendering
                 var a = obj.A.Center + PhysMath.RotateVector(obj.AnchorA, obj.A.Angle);
                 var b = obj.B.Center + PhysMath.RotateVector(obj.AnchorB, obj.B.Angle);
                 DrawLine(obj.A.Center, a, _ConstraintAColor, 2f);
-                    DrawLine(obj.B.Center, b, _ConstraintBColor, 2f);
-                    }
-                }
+                DrawLine(obj.B.Center, b, _ConstraintBColor, 2f);
+            }
+        }
 
-                public void Display()
-                {
-                    Window.Display();
-                }
+        public void Display()
+        {
+            Window.Display();
+        }
 
-                #region Public Primitive Drawing Methods
+        #region Public Primitive Drawing Methods
 
+
+        private readonly VertexArray _lineRenderer = new VertexArray(PrimitiveType.Lines, 2);
         /// <summary>
         /// Draws a line between two points in game coordinates.
         /// </summary>
@@ -175,21 +177,14 @@ namespace physics.Engine.Rendering
         {
             Window.SetView(GameView);
 
-            var direction = end - start;
-            var length = direction.Length();
-            var angle = MathF.Atan2(direction.Y, direction.X) * 180f / MathF.PI;
+            _lineRenderer[0] = new Vertex(new Vector2f(start.X, start.Y), color);
+            _lineRenderer[1] = new Vertex(new Vector2f(end.X, end.Y), color);
 
-            var line = new RectangleShape(new Vector2f(length, thickness))
-            {
-                Position = new Vector2f(start.X, start.Y),
-                FillColor = color,
-                Rotation = angle,
-                Origin = new Vector2f(0, thickness / 2)
-            };
-
-            Window.Draw(line);
+            Window.Draw(_lineRenderer);
         }
 
+
+        private readonly CircleShape _circleShapeRenderer = new CircleShape();
         /// <summary>
         /// Draws a circle at the specified position in game coordinates.
         /// </summary>
@@ -202,17 +197,16 @@ namespace physics.Engine.Rendering
         {
             Window.SetView(GameView);
 
-            var circle = new CircleShape(radius)
-            {
-                Position = new Vector2f(center.X - radius, center.Y - radius),
-                FillColor = fillColor,
-                OutlineColor = outlineColor ?? Color.White,
-                OutlineThickness = outlineThickness
-            };
+            _circleShapeRenderer.Radius = radius;
+            _circleShapeRenderer.Position = new Vector2f(center.X - radius, center.Y - radius);
+            _circleShapeRenderer.FillColor = fillColor;
+            _circleShapeRenderer.OutlineColor = outlineColor ?? Color.White;
+            _circleShapeRenderer.OutlineThickness = outlineThickness;
 
-            Window.Draw(circle);
+            Window.Draw(_circleShapeRenderer);
         }
 
+        private readonly RectangleShape _rectangleShapeRenderer = new RectangleShape();
         /// <summary>
         /// Draws a filled rectangle in game coordinates.
         /// </summary>
@@ -225,15 +219,21 @@ namespace physics.Engine.Rendering
         {
             Window.SetView(GameView);
 
-            var rect = new RectangleShape(new Vector2f(size.X, size.Y))
-            {
-                Position = new Vector2f(position.X, position.Y),
-                FillColor = fillColor,
-                OutlineColor = outlineColor ?? Color.Transparent,
-                OutlineThickness = outlineThickness
-            };
+            //var rect = new RectangleShape(new Vector2f(size.X, size.Y))
+            //{
+            //    Position = new Vector2f(position.X, position.Y),
+            //    FillColor = fillColor,
+            //    OutlineColor = outlineColor ?? Color.Transparent,
+            //    OutlineThickness = outlineThickness
+            //};
 
-            Window.Draw(rect);
+            _rectangleShapeRenderer.Size = new Vector2f(size.X, size.Y);
+            _rectangleShapeRenderer.Position = new Vector2f(position.X, position.Y);
+            _rectangleShapeRenderer.FillColor = fillColor;
+            _rectangleShapeRenderer.OutlineColor = outlineColor ?? Color.Transparent;
+            _rectangleShapeRenderer.OutlineThickness = outlineThickness;
+
+            Window.Draw(_rectangleShapeRenderer);
         }
 
         /// <summary>
