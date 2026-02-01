@@ -3,8 +3,7 @@ using System;
 using System.Diagnostics;
 using physics.Engine.Input;
 using physics.Engine.Rendering;
-using physics.Engine.Rendering.UI;
-using physics.Engine.Objects;
+using SFML.Graphics;
 
 namespace physics.Engine.Core
 {
@@ -195,13 +194,19 @@ namespace physics.Engine.Core
                 // Rendering pipeline (layered)
                 long renderStart = _stopwatch.ElapsedMilliseconds;
 
-                _renderer.BeginFrame();
+                _renderer.BeginFrame(Color.Black);
                 _currentGame.RenderBackground(_renderer);
                 _renderer.RenderPhysicsObjects();
                 _currentGame.Render(_renderer);
+
+                // Counting rendering as just the draw calls (excluding buffer swap)
+                // Else it will always be high due to VSync wait.
+                MsDrawTime = _stopwatch.ElapsedMilliseconds - renderStart;
+
+                // Flip buffers
                 _renderer.Display();
 
-                MsDrawTime = _stopwatch.ElapsedMilliseconds - renderStart;
+                // Total frame time
                 MsFrameTime = _stopwatch.ElapsedMilliseconds - frameStartTime;
             }
 

@@ -12,6 +12,7 @@ namespace physics.Engine.Rendering
         public RenderWindow Window { get; private set; }
         public View GameView { get; private set; }
         public View UiView { get; private set; }
+        public View BackgroundView { get; private set; }
 
         private Text _reusableText;
         private Font _defaultFont;
@@ -40,6 +41,7 @@ namespace physics.Engine.Rendering
 
             GameView = new View(new FloatRect(0, 0, windowWidth, windowHeight));
             UiView = new View(new FloatRect(0, 0, windowWidth, windowHeight));
+            BackgroundView = new View(new FloatRect(0, 0, windowWidth, windowHeight));
             Window.SetFramerateLimit(144);
 
             _physicsSystem = physicsSystem;
@@ -119,10 +121,10 @@ namespace physics.Engine.Rendering
 
         #endregion
 
-        public void BeginFrame()
+        public void BeginFrame(Color backColor)
         {
-            Window.SetView(GameView);
-            Window.Clear(Color.Black);
+            Window.SetView(BackgroundView);
+            Window.Clear(backColor);
         }
 
         /// <summary>
