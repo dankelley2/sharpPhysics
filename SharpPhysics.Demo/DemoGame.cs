@@ -26,7 +26,7 @@ public class DemoGame : IGame
     private PlayerController _playerController = null!;
     private PersonColliderBridge? _personColliderBridge;
     private PrefabLoader _prefabLoader = null!;
-    private ParticleSystem _particleSystem = null!;
+    private AnimatedBackground _background = null!;
     private DemoSceneBuilder _sceneBuilder = null!;
     private SandboxDebugUI _debugUI = null!;
 
@@ -62,7 +62,7 @@ public class DemoGame : IGame
         _actionTemplates = new ActionTemplates(engine.PhysicsSystem);
         _prefabLoader = new PrefabLoader(engine, _objectTemplates);
         _sceneBuilder = new DemoSceneBuilder(engine, _objectTemplates);
-        _particleSystem = new ParticleSystem(engine.WindowWidth, engine.WindowHeight);
+        _background = new AnimatedBackground(engine.WindowWidth, engine.WindowHeight);
         _debugUI = new SandboxDebugUI(engine);
 
         _engine.Renderer.Window.MouseButtonPressed += OnMouseButtonPressed;
@@ -155,7 +155,7 @@ public class DemoGame : IGame
         _playerController.Update(inputManager);
         _personColliderBridge?.ProcessPendingUpdates();
         _demoCar?.Update(deltaTime, inputManager);
-        _particleSystem.Update(deltaTime);
+        _background.Update(deltaTime);
     }
 
     private void HandleViewPanning(InputManager inputManager)
@@ -205,7 +205,7 @@ public class DemoGame : IGame
 
     public void RenderBackground(Renderer renderer)
     {
-        _particleSystem.Draw(renderer.Window);
+        _background.Draw(renderer.Window);
     }
 
     public void Render(Renderer renderer)
@@ -241,7 +241,7 @@ public class DemoGame : IGame
         _engine.Renderer.Window.KeyPressed -= OnKeyPressed;
 
         _debugUI.Clear();
-        _particleSystem.Dispose();
+        _background.Dispose();
         _personColliderBridge?.Dispose();
     }
 

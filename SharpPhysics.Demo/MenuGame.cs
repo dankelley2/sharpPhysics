@@ -1,11 +1,11 @@
 #nullable enable
 using System.Numerics;
-using physics.Engine;
 using physics.Engine.Core;
 using physics.Engine.Input;
 using physics.Engine.Rendering;
 using physics.Engine.Rendering.UI;
 using SharpPhysics.Demo.Designer;
+using SharpPhysics.Demo.Helpers;
 using SFML.Graphics;
 using SFML.Window;
 
@@ -15,7 +15,7 @@ public class MenuGame : IGame
 {
     private GameEngine _engine = null!;
     private UiManager _uiManager = new();
-    private ParticleSystem _particleSystem = null!;
+    private AnimatedBackground _background = null!;
 
     private readonly List<UiMenuButton> _menuButtons = new();
     private float _animationTime;
@@ -36,7 +36,7 @@ public class MenuGame : IGame
         _engine.PhysicsSystem.Gravity = Vector2.Zero;
         _engine.PhysicsSystem.GravityScale = 0;
 
-        _particleSystem = new ParticleSystem(engine.WindowWidth, engine.WindowHeight);
+        _background = new AnimatedBackground(engine.WindowWidth, engine.WindowHeight);
         CreateMenuUI();
 
         Console.WriteLine("Menu loaded - click a button to start a game!");
@@ -87,7 +87,7 @@ public class MenuGame : IGame
     public void Update(float deltaTime, InputManager inputManager)
     {
         _animationTime += deltaTime;
-        _particleSystem.Update(deltaTime);
+        _background.Update(deltaTime);
 
         if (inputManager.IsMousePressed(Mouse.Button.Left))
             _uiManager.HandleClick(inputManager.MousePosition);
@@ -98,7 +98,7 @@ public class MenuGame : IGame
 
     public void RenderBackground(Renderer renderer)
     {
-        _particleSystem.Draw(renderer.Window);
+        _background.Draw(renderer.Window);
     }
 
     public void Render(Renderer renderer)
@@ -115,7 +115,7 @@ public class MenuGame : IGame
 
     public void Shutdown()
     {
-        _particleSystem.Dispose();
+        _background.Dispose();
         _uiManager.Clear();
         _menuButtons.Clear();
     }
