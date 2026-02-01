@@ -60,9 +60,6 @@ public class BubblePopGame : IGame
         _engine = engine;
         _physics = engine.PhysicsSystem;
 
-        // Hide debug UI for cleaner game experience
-        _engine.Renderer.ShowDebugUI = false;
-
         // Very light upward "gravity" for floating bubbles
         _physics.Gravity = new Vector2(0, -2f);
         _physics.GravityScale = 15f;

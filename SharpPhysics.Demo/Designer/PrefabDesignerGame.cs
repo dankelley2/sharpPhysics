@@ -58,9 +58,6 @@ public class PrefabDesignerGame : IGame
         _engine = engine;
         _designerRenderer = new DesignerRenderer(engine.WindowWidth, TOOLBAR_HEIGHT);
 
-        // Hide debug UI
-        _engine.Renderer.ShowDebugUI = false;
-
         // Pause physics simulation
         _engine.PhysicsSystem.IsPaused = true;
         _engine.PhysicsSystem.Gravity = Vector2.Zero;

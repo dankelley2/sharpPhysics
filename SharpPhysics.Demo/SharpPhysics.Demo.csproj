@@ -23,8 +23,4 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="PrefabDesignerGame\" />
-  </ItemGroup>
-
 </Project>

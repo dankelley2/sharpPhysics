@@ -79,9 +79,6 @@ public class RainCatcherGame : IGame
         _physics = engine.PhysicsSystem;
         _objectTemplates = new ObjectTemplates(_physics);
 
-        // Hide debug UI for cleaner game experience
-        _engine.Renderer.ShowDebugUI = false;
-
         // Reduce gravity for floaty fun feel
         _physics.Gravity = new Vector2(0, 6f);
         _physics.GravityScale = 25f;

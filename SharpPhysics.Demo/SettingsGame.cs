@@ -39,7 +39,6 @@ public class SettingsGame : IGame
         _engine = engine;
         _settings = GameSettings.Instance;
 
-        _engine.Renderer.ShowDebugUI = false;
         _engine.PhysicsSystem.Gravity = new Vector2(0, 0);
         _engine.PhysicsSystem.GravityScale = 0;
 

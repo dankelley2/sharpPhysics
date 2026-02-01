@@ -55,9 +55,6 @@ public class PlatformerGame : IGame
         _physics = engine.PhysicsSystem;
         _objectTemplates = new ObjectTemplates(_physics);
 
-        // Hide debug UI for clean game experience
-        _engine.Renderer.ShowDebugUI = false;
-
         // Normal gravity for platformer
         _physics.Gravity = new Vector2(0, 9.8f);
         _physics.GravityScale = 35f;

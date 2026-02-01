@@ -8,7 +8,6 @@ using System.Numerics;
 using physics.Engine.Shaders;
 using physics.Engine.Objects;
 using physics.Engine.Helpers;
-using System.Security.AccessControl;
 
 namespace physics.Engine.Rendering
 {
@@ -18,31 +17,14 @@ namespace physics.Engine.Rendering
         public View GameView { get; private set; }
         public View UiView { get; private set; }
 
-        private Text debugText;
-        private Text _reusableText; // Reusable text object for DrawText calls
-        private Font debugFont;
-        private UiManager _debugUiManager = new UiManager();
+        private Text _reusableText;
+        private Font _defaultFont;
         private PhysicsSystem _physicsSystem;
+        private Color _ConstraintAColor = new Color(255, 0, 0, 100);
+        private Color _ConstraintBColor = new Color(0, 255, 255, 100);
 
-        /// <summary>
-        /// Gets the debug UI manager. Games like DemoGame can use this for physics debug controls.
-        /// </summary>
-        public UiManager DebugUiManager => _debugUiManager;
+        public Font DefaultFont => _defaultFont;
 
-        /// <summary>
-        /// Gets the default font used for UI rendering.
-        /// </summary>
-        public Font DefaultFont => debugFont;
-
-        /// <summary>
-        /// Controls whether the debug UI (sliders, debug text) is shown.
-        /// </summary>
-        public bool ShowDebugUI { get; set; } = true;
-
-        /// <summary>
-        /// Draws text at the specified position (in screen coordinates).
-        /// Call this during game's Render method.
-        /// </summary>
         public void DrawText(string text, float x, float y, uint size = 24, Color? color = null)
         {
             Window.SetView(UiView);
@@ -60,21 +42,18 @@ namespace physics.Engine.Rendering
             Window = new RenderWindow(new VideoMode(windowWidth, windowHeight), windowTitle, Styles.Close, settings);
             Window.Closed += (s, e) => Window.Close();
 
-            // Create and set a view covering the whole window.
             GameView = new View(new FloatRect(0, 0, windowWidth, windowHeight));
             UiView = new View(new FloatRect(0, 0, windowWidth, windowHeight));
             Window.SetFramerateLimit(144);
 
             _physicsSystem = physicsSystem;
-            InitializeUi(windowWidth, windowHeight);
+
+            _defaultFont = new Font("Resources/good_timing_bd.otf");
+            _reusableText = new Text("", _defaultFont, 24);
         }
 
         #region View Pan/Zoom Methods
 
-        /// <summary>
-        /// Pans the game view by the specified delta in world coordinates.
-        /// </summary>
-        /// <param name="delta">Amount to pan the view.</param>
         public void PanView(Vector2 delta)
         {
             GameView.Center += new Vector2f(delta.X, delta.Y);
@@ -144,149 +123,20 @@ namespace physics.Engine.Rendering
 
         #endregion
 
-        /// <summary>
-        /// Initialize UI elements for the window
-        /// </summary>
-        /// <param name="windowWidth"></param>
-        /// <param name="windowHeight"></param>
-        private void InitializeUi(uint windowWidth, uint windowHeight)
+        public void BeginFrame()
         {
-            // Load the font from the embedded Resources folder.
-            // This path is relative to the working directory (usually the output folder).
-            debugFont = new Font("Resources/good_timing_bd.otf");
-            debugText = new Text("", debugFont, 12)
-            {
-                FillColor = Color.White,
-                Position = new Vector2f(40, 40)
-            };
-            _reusableText = new Text("", debugFont, 24); // Reusable text for DrawText calls
-
-            // Note: Debug UI elements are managed by _debugUiManager
-
-            UiElement roundedRect = new UiRoundedRectangle(new Vector2(140, 80), 5, 32)
-            {
-                OutlineColor = Color.Red
-            };
-            roundedRect.Position = new Vector2(30, 30);
-            _debugUiManager.Add(roundedRect);
-
-            // UI Elements for "Enable viewing normals"
-            var viewingNormalsLabel = new UiTextLabel("Contact Normals", debugFont)
-            {
-                Position = new Vector2(200, 30),
-                CharacterSize = 14 // optional customization
-            };
-            var viewingNormalsCheckbox = new UiCheckbox(new Vector2(350, 30), new Vector2(20, 20));
-            viewingNormalsCheckbox.IsChecked = SFMLPolyShader.DrawNormals;
-            viewingNormalsCheckbox.OnClick += (isChecked) =>
-            {
-                SFMLPolyShader.DrawNormals = isChecked;
-            };
-            _debugUiManager.Add(viewingNormalsLabel);
-            _debugUiManager.Add(viewingNormalsCheckbox);
-
-            // Add Gravity X control
-            var gravityXLabelPosition = new Vector2(200, 60);
-            var gravityXSliderPosition = new Vector2(200, 80);
-
-            var gravityXLabel = new UiTextLabel("Gravity X", debugFont)
-            {
-                Position = gravityXLabelPosition,
-                CharacterSize = 14
-            };
-            _debugUiManager.Add(gravityXLabel);
-
-            var gravityXSlider = new UiSlider(gravityXSliderPosition, new Vector2(150, 20), -20f, 20f, _physicsSystem.Gravity.X);
-            gravityXSlider.OnValueChanged += (value) =>
-            {
-                var currentGravity = _physicsSystem.Gravity;
-                _physicsSystem.Gravity = new Vector2(value, currentGravity.Y);
-            };
-            _debugUiManager.Add(gravityXSlider);
-
-            // Add Gravity Y control
-            var gravityYLabelPosition = new Vector2(400, 60);
-            var gravityYSliderPosition = new Vector2(400, 80);
-
-            var gravityYLabel = new UiTextLabel("Gravity Y", debugFont)
-            {
-                Position = gravityYLabelPosition,
-                CharacterSize = 14
-            };
-            _debugUiManager.Add(gravityYLabel);
-
-            var gravityYSlider = new UiSlider(gravityYSliderPosition, new Vector2(150, 20), -20f, 20f, _physicsSystem.Gravity.Y);
-            gravityYSlider.OnValueChanged += (value) =>
-            {
-                var currentGravity = _physicsSystem.Gravity;
-                _physicsSystem.Gravity = new Vector2(currentGravity.X, value);
-            };
-            _debugUiManager.Add(gravityYSlider);
-
-            // Add Simulation Speed control
-            var simSpeedLabelPosition = new Vector2(200, 110);
-            var simSpeedSliderPosition = new Vector2(200, 130);
-
-            var simSpeedLabel = new UiTextLabel("Simulation Speed", debugFont)
-            {
-                Position = simSpeedLabelPosition,
-                CharacterSize = 14
-            };
-            _debugUiManager.Add(simSpeedLabel);
-
-            var simSpeedSlider = new UiSlider(simSpeedSliderPosition, new Vector2(150, 20), 0.1f, 2f, _physicsSystem.TimeScale);
-            simSpeedSlider.OnValueChanged += (value) =>
-            {
-                _physicsSystem.TimeScale = value;
-            };
-            _debugUiManager.Add(simSpeedSlider);
-
-            // Add Pause/Resume button
-            var pauseButtonPosition = new Vector2(450, 30);
-            var pauseButton = new UiButton("Pause", debugFont, pauseButtonPosition, new Vector2(70, 20));
-            pauseButton.OnClick += (state) =>
-            {
-                _physicsSystem.IsPaused = !_physicsSystem.IsPaused;
-                pauseButton.Text = _physicsSystem.IsPaused ? "Resume" : "Pause";
-            };
-            _debugUiManager.Add(pauseButton);
+            Window.SetView(GameView);
+            Window.Clear(Color.Black);
         }
 
         /// <summary>
-        /// Render the game window view and UI elements view
+        /// Renders physics objects and constraints.
+        /// Called after game background rendering.
         /// </summary>
-        /// <param name="msPhysicsTime"></param>
-        /// <param name="msDrawTime"></param>
-        /// <param name="msFrameTime"></param>
-        public void Render(long msPhysicsTime, long msDrawTime, long msFrameTime)
+        public void RenderPhysicsObjects()
         {
-
-            // Draw Game View
-            DrawGameView();
-
-            DrawUiView(msPhysicsTime, msDrawTime, msFrameTime);
-
-            // Note: Window.Display() is called by GameEngine after game-specific rendering
-        }
-
-        /// <summary>
-        /// Presents the rendered frame to the screen.
-        /// Called by GameEngine after all rendering (engine + game) is complete.
-        /// </summary>
-        public void Display()
-        {
-            Window.Display();
-        }
-
-        private void DrawGameView()
-        {
-            // Switch to Game window view
             Window.SetView(GameView);
 
-            // Clear with black color
-            Window.Clear(Color.Black);
-
-            // Draw all static objects with their shaders.
             foreach (var obj in _physicsSystem.ListStaticObjects)
             {
                 var sfmlShader = obj.Shader;
@@ -298,17 +148,21 @@ namespace physics.Engine.Rendering
                 }
             }
 
-            // Draw all static objects with their shaders.
             foreach (var obj in _physicsSystem.Constraints)
             {
                 var a = obj.A.Center + PhysMath.RotateVector(obj.AnchorA, obj.A.Angle);
                 var b = obj.B.Center + PhysMath.RotateVector(obj.AnchorB, obj.B.Angle);
-                DrawLine(obj.A.Center, a, Color.Yellow, 1f);
-                DrawLine(obj.B.Center, b, Color.Red, 1f);
-            }
-        }
+                DrawLine(obj.A.Center, a, _ConstraintAColor, 2f);
+                    DrawLine(obj.B.Center, b, _ConstraintBColor, 2f);
+                    }
+                }
 
-        #region Public Primitive Drawing Methods
+                public void Display()
+                {
+                    Window.Display();
+                }
+
+                #region Public Primitive Drawing Methods
 
         /// <summary>
         /// Draws a line between two points in game coordinates.
@@ -509,25 +363,5 @@ namespace physics.Engine.Rendering
         }
 
         #endregion
-
-        private void DrawUiView(long msPhysicsTime, long msDrawTime, long msFrameTime)
-        {
-            // Switch to UI window view
-            Window.SetView(UiView);
-
-            // Draw debug info only if enabled
-            if (ShowDebugUI)
-            {
-                debugText.DisplayedString =
-                    $"ms physics time: {msPhysicsTime}\n" +
-                    $"ms draw time: {msDrawTime}\n" +
-                    $"frame rate: {1000 / Math.Max(msFrameTime, 1)}\n" +
-                    $"num objects: {_physicsSystem.ListStaticObjects.Count}";
-                Window.Draw(debugText);
-
-                // Draw debug UI elements
-                _debugUiManager.Draw(Window);
-            }
-        }
     }
 }

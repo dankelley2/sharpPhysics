@@ -192,16 +192,13 @@ namespace physics.Engine.Core
                 _physicsSystem.Tick(deltaTime);
                 MsPhysicsTime = _stopwatch.ElapsedMilliseconds - physicsStart;
 
-                // Rendering
+                // Rendering pipeline (layered)
                 long renderStart = _stopwatch.ElapsedMilliseconds;
 
-                // Engine rendering (physics objects, debug UI)
-                _renderer.Render(MsPhysicsTime, MsDrawTime, MsFrameTime);
-
-                // Game-specific rendering (skeleton overlay, score display, etc.)
+                _renderer.BeginFrame();
+                _currentGame.RenderBackground(_renderer);
+                _renderer.RenderPhysicsObjects();
                 _currentGame.Render(_renderer);
-
-                // Present the frame to screen (after all rendering is complete)
                 _renderer.Display();
 
                 MsDrawTime = _stopwatch.ElapsedMilliseconds - renderStart;
