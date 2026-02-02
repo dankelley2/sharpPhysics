@@ -1,6 +1,6 @@
-using SFML.Graphics;
 using System;
 using physics.Engine.Objects;
+using SFML.Graphics;
 using SFML.System;
 
 namespace SharpPhysics.Rendering.Shaders
@@ -20,9 +20,11 @@ namespace SharpPhysics.Rendering.Shaders
 
         public override void PostDraw(PhysicsObject obj, RenderTarget target)
         {
-            Rectangle.Size = new Vector2f(obj.Aabb.Max.X - obj.Aabb.Min.X, obj.Aabb.Max.Y - obj.Aabb.Min.Y);
-            Rectangle.Position = new Vector2f(obj.Aabb.Min.X, obj.Aabb.Min.Y);
-            Rectangle.Rotation = obj.Angle * 180 / (float)Math.PI;
+            var size = new Vector2f(obj.Aabb.Max.X - obj.Aabb.Min.X, obj.Aabb.Max.Y - obj.Aabb.Min.Y);
+            Rectangle.Size = size;
+            Rectangle.Origin = new Vector2f(size.X / 2f, size.Y / 2f);
+            Rectangle.Position = new Vector2f(obj.Center.X, obj.Center.Y);
+            Rectangle.Rotation = obj.Angle * 180f / MathF.PI;
             Rectangle.FillColor = GrayColor;
             target.Draw(Rectangle);
         }
