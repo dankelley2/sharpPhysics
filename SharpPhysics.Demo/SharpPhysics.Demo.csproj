@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\physics\SharpPhysics.csproj" />
+    <ProjectReference Include="..\SharpPhysics\SharpPhysics.csproj" />
     <ProjectReference Include="..\PoseIntegrator.Vision\PoseIntegrator.Vision.csproj" />
   </ItemGroup>
 

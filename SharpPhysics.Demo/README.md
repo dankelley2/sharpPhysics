@@ -7,9 +7,9 @@ A quick reference for creating games with the SharpPhysics engine.
 ### 1. Implement the `IGame` Interface
 
 ```csharp
-using physics.Engine.Core;
-using physics.Engine.Input;
-using physics.Engine.Rendering;
+using SharpPhysics.Engine.Core;
+using SharpPhysics.Engine.Input;
+using SharpPhysics.Engine.Rendering;
 
 public class MyGame : IGame
 {

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.3.11408.92
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpPhysics", "physics\SharpPhysics.csproj", "{394D2D64-62E0-419A-966E-0C6E8CA39F73}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpPhysics", "SharpPhysics\SharpPhysics.csproj", "{394D2D64-62E0-419A-966E-0C6E8CA39F73}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpPhysics.Tests", "SharpPhysics.Tests\SharpPhysics.Tests.csproj", "{5B5C116E-DE45-4D9C-A784-BF3B5E7C7B7A}"
 EndProject

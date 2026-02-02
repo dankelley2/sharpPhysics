@@ -1,6 +1,6 @@
 #nullable enable
 using System.Numerics;
-using physics.Engine.Objects;
+using SharpPhysics.Engine.Objects;
 
 namespace SharpPhysics.Demo.Integration
 {

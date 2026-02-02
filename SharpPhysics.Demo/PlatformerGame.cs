@@ -1,13 +1,12 @@
 #nullable enable
 using System.Numerics;
-using physics.Engine.Classes.ObjectTemplates;
-using physics.Engine.Core;
-using physics.Engine.Input;
-using physics.Engine.Objects;
+using SharpPhysics.Engine.Classes.ObjectTemplates;
+using SharpPhysics.Engine.Core;
+using SharpPhysics.Engine.Input;
+using SharpPhysics.Engine.Objects;
 using SharpPhysics.Engine.Player;
 using SFML.Graphics;
 using SFML.Window;
-using SharpPhysics.Engine.Core;
 using SharpPhysics.Rendering.Shaders;
 using SharpPhysics.Rendering;
 

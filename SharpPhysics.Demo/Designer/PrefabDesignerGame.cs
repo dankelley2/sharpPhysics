@@ -1,7 +1,7 @@
 #nullable enable
 using System.Numerics;
-using physics.Engine.Core;
-using physics.Engine.Input;
+using SharpPhysics.Engine.Core;
+using SharpPhysics.Engine.Input;
 using SharpPhysics.Demo.Helpers;
 using SFML.Graphics;
 using SFML.Window;

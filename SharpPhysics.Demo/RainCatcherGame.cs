@@ -1,14 +1,13 @@
 #nullable enable
 using System.Numerics;
-using physics.Engine.Classes.ObjectTemplates;
-using physics.Engine.Core;
-using physics.Engine.Input;
-using physics.Engine.Objects;
+using SharpPhysics.Engine.Classes.ObjectTemplates;
+using SharpPhysics.Engine.Core;
+using SharpPhysics.Engine.Input;
+using SharpPhysics.Engine.Objects;
 using SFML.Window;
 using SharpPhysics.Demo.Helpers;
 using SharpPhysics.Demo.Integration;
 using SharpPhysics.Demo.Settings;
-using SharpPhysics.Engine.Core;
 using SharpPhysics.Rendering.Shaders;
 using SharpPhysics.Engine.Player;
 using SharpPhysics.Rendering;
@@ -25,7 +24,7 @@ public class RainCatcherGame : IGame
     private PhysicsSystem _physics = null!;
     private ObjectTemplates _objectTemplates = null!;
     private PersonColliderBridge? _personColliderBridge;
-    private Random _random = new();
+    private readonly Random _random = new();
 
     // Game configuration
     private const float SPAWN_INTERVAL = 0.15f;      // Time between ball spawns

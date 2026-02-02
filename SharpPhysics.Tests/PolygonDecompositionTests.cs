@@ -2,7 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Numerics;
 using System.Collections.Generic;
-using physics.Engine.Helpers;
+using SharpPhysics.Engine.Helpers;
 
 namespace SharpPhysics.Tests
 {

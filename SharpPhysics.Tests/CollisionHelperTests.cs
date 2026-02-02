@@ -1,8 +1,8 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using physics.Engine.Classes;
-using physics.Engine.Objects;
-using physics.Engine.Shapes;
-using physics.Engine.Structs;
+using SharpPhysics.Engine.Classes;
+using SharpPhysics.Engine.Objects;
+using SharpPhysics.Engine.Shapes;
+using SharpPhysics.Engine.Structs;
 using System;
 using System.Collections.Generic;
 using System.Linq;

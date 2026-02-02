@@ -22,7 +22,7 @@
     <OutputPath>bin\x86\Release\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\physics\SharpPhysics.csproj" />
+    <ProjectReference Include="..\SharpPhysics\SharpPhysics.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CSFML" />

@@ -4,8 +4,8 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
-using physics.Engine.Input;
-using physics.Engine.Objects;
+using SharpPhysics.Engine.Input;
+using SharpPhysics.Engine.Objects;
 
 namespace SharpPhysics.Demo.DemoProps
 {

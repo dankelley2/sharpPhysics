@@ -1,10 +1,10 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Numerics;
-using physics.Engine.Shapes;
-using physics.Engine.Structs;
+using SharpPhysics.Engine.Shapes;
+using SharpPhysics.Engine.Structs;
 using System;
-using physics.Engine.Classes;
-using physics.Engine.Objects;
+using SharpPhysics.Engine.Classes;
+using SharpPhysics.Engine.Objects;
 using SharpPhysics.Engine.Core;
 
 namespace SharpPhysics.Tests

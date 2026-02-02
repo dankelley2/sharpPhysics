@@ -1,6 +1,6 @@
 ﻿using SharpPhysics.Demo;
 using SharpPhysics.Demo.Settings;
-using physics.Engine.Core;
+using SharpPhysics.Engine.Core;
 
 // Load settings
 var settings = GameSettings.Instance;

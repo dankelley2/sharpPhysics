@@ -1,9 +1,9 @@
 #nullable enable
 using System.Numerics;
-using physics.Engine;
-using physics.Engine.Classes.ObjectTemplates;
-using physics.Engine.Core;
-using physics.Engine.Objects;
+using SharpPhysics.Engine;
+using SharpPhysics.Engine.Classes.ObjectTemplates;
+using SharpPhysics.Engine.Core;
+using SharpPhysics.Engine.Objects;
 
 namespace SharpPhysics.Demo.DemoProps;
 

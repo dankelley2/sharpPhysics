@@ -2,11 +2,10 @@
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using physics.Engine;
-using physics.Engine.Classes.ObjectTemplates;
-using physics.Engine.Core;
-using physics.Engine.Helpers;
-using physics.Engine.Objects;
+using SharpPhysics.Engine.Classes.ObjectTemplates;
+using SharpPhysics.Engine.Core;
+using SharpPhysics.Engine.Helpers;
+using SharpPhysics.Engine.Objects;
 
 namespace SharpPhysics.Demo.Helpers;
 
