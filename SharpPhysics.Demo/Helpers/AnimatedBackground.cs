@@ -35,8 +35,8 @@ public class AnimatedBackground : IDisposable
         {
             X = _random.NextSingle() * _screenWidth,
             Y = _random.NextSingle() * _screenHeight,
-            VelX = (_random.NextSingle() - 0.5f) * 30f,
-            VelY = (_random.NextSingle() - 0.5f) * 30f,
+            VelX = (_random.NextSingle() - 0.5f) * 50f,
+            VelY = (_random.NextSingle() - 0.5f) * 50f,
             Size = size,
             Alpha = alpha,
             Hue = hue,
@@ -51,10 +51,27 @@ public class AnimatedBackground : IDisposable
             c.X += c.VelX * deltaTime;
             c.Y += c.VelY * deltaTime;
 
-            if (c.X < -50) c.X = _screenWidth + 50;
-            if (c.X > _screenWidth + 50) c.X = -50;
-            if (c.Y < -50) c.Y = _screenHeight + 50;
-            if (c.Y > _screenHeight + 50) c.Y = -50;
+            if (c.X < -50)
+            {
+                c.VelX = -c.VelX;
+                // impulse to avoid sticking to the edge
+                c.X += 1f;
+            }
+            if (c.X > _screenWidth + 50)
+            {
+                c.VelX = -c.VelX;
+                c.X -= 1f;
+            }
+            if (c.Y < -50)
+            {
+                c.VelY = -c.VelY;
+                c.Y += 1f;
+            }
+            if (c.Y > _screenHeight + 50)
+            {
+                c.VelY = -c.VelY;
+                c.Y -= 1f;
+            }
 
             c.Hue = (c.Hue + deltaTime * 0.05f) % 1f;
             c.Shape.FillColor = ColorUtils.HsvToColor(c.Hue, 0.6f, 0.8f, (byte)(c.Alpha * 255));
