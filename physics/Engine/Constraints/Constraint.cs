@@ -138,9 +138,7 @@ namespace physics.Engine.Constraints
     }
 
     /// <summary>
-    /// A weld constraint holds two objects together so that the world-space positions
-    /// of their respective local anchors remain coincident, and their relative angle remains constant.
-    /// Uses proper impulse-based constraint solving with Baumgarte stabilization.
+    /// Similar to the weld constraint, but acts like a spring due to the lower Baumgarte factors and MaxBiasVelocity.
     /// </summary>
     public class SpringConstraint : Constraint
     {
