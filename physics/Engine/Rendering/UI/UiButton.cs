@@ -8,9 +8,9 @@ namespace physics.Engine.Rendering.UI
 {
     public class UiButton : UiElement, IUiClickable
     {
-        private RectangleShape _background;
-        private Text _buttonText;
-        public event Action<bool> OnClick;
+        private readonly RectangleShape _background;
+        private readonly Text _buttonText;
+        public event Action<bool>? OnClick;
         public string Text 
         { 
             get => _buttonText.DisplayedString; 
