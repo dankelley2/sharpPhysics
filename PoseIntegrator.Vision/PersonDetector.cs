@@ -113,33 +113,6 @@ public sealed class PersonDetector : IDisposable
         _fixedVertexCount = Math.Max(3, fixedVertexCount);
     }
 
-    ///// <summary>
-    ///// Start detection with the specified camera.
-    ///// </summary>
-    ///// <param name="cameraIndex">Camera index (0 = first camera).</param>
-    ///// <param name="width">Frame width (default 640).</param>
-    ///// <param name="height">Frame height (default 480).</param>
-    ///// <param name="fps">Target FPS (default 30).</param>
-    //public void Start(int cameraIndex = 0, int width = 640, int height = 480, int? fps = 30)
-    //{
-    //    if (_isRunning)
-    //        throw new InvalidOperationException("Detector is already running. Call Stop() first.");
-
-    //    _camera = new OpenCvCameraFrameSource(cameraIndex, width, height, fps);
-    //    _segmenter = new OnnxPersonSegmenter(_segmentationOptions);
-    //    _extractor = new ConvexDecompositionExtractor(_simplifyEpsilon, _minDefectDepth, minPolygonArea: _minPolygonArea);
-
-    //    _cts = new CancellationTokenSource();
-    //    _isRunning = true;
-
-    //    _workerThread = new Thread(() => ProcessingLoop(_cts.Token))
-    //    {
-    //        Name = "PersonDetector-Worker",
-    //        IsBackground = true
-    //    };
-    //    _workerThread.Start();
-    //}
-
     /// <summary>
     /// Start detection with a custom frame source.
     /// </summary>
@@ -439,18 +412,12 @@ public sealed class PersonDetector : IDisposable
             // Resample at evenly-spaced intervals
             var resampled = new Vector2[targetVertexCount];
             float segmentLength = totalLength / targetVertexCount;
-
-            int currentEdge = 0;
             float distanceAlongEdge = 0f;
 
             for (int i = 0; i < targetVertexCount; i++)
             {
                 float targetDistance = i * segmentLength;
                 float accumulatedDistance = 0f;
-
-                // Find the edge containing this target distance
-                currentEdge = 0;
-                distanceAlongEdge = 0f;
 
                 for (int e = 0; e < polygon.Count; e++)
                 {

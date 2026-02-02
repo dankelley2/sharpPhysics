@@ -1,6 +1,6 @@
 using System;
 
-namespace physics.Engine.Shaders.Helpers {
+namespace SharpPhysics.Rendering.Shaders {
     public static class ShaderHelpers
     {
         /// <summary>

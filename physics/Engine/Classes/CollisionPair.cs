@@ -7,16 +7,14 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
+#pragma warning disable CS8767
+
 namespace physics.Engine.Classes
 {
     public sealed class CollisionPair : IEquatable<CollisionPair>
     {
         public PhysicsObject A { get; private set; }
         public PhysicsObject B { get; private set; }
-
-        public CollisionPair()
-        {
-        }
 
         public CollisionPair(PhysicsObject A, PhysicsObject B)
         {
@@ -69,3 +67,4 @@ namespace physics.Engine.Classes
 
     }
 }
+#pragma warning restore CS8767

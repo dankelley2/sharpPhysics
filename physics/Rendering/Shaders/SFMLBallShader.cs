@@ -6,7 +6,7 @@ using CircleShape = SFML.Graphics.CircleShape;
 using SFML.System;
 using physics.Engine.Helpers;
 
-namespace physics.Engine.Shaders
+namespace SharpPhysics.Rendering.Shaders
 {
     public class SFMLBallShader : SFMLShader
     {

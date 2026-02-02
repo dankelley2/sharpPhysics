@@ -3,11 +3,11 @@ using System.Numerics;
 using physics.Engine;
 using physics.Engine.Core;
 using physics.Engine.Input;
-using physics.Engine.Rendering;
-using physics.Engine.Rendering.UI;
 using SFML.Graphics;
 using SFML.Window;
 using SharpPhysics.Demo.Settings;
+using SharpPhysics.Rendering;
+using SharpPhysics.Rendering.UI;
 
 namespace SharpPhysics.Demo;
 
@@ -39,7 +39,6 @@ public class SettingsGame : IGame
         _engine = engine;
         _settings = GameSettings.Instance;
 
-        _engine.Renderer.ShowDebugUI = false;
         _engine.PhysicsSystem.Gravity = new Vector2(0, 0);
         _engine.PhysicsSystem.GravityScale = 0;
 

@@ -21,9 +21,15 @@ namespace physics.Engine.Shapes
 
             // Build local vertices approximating a circle with 'resolution' points
             // around local (0,0).
-            for (int i = 0; i < SEGMENTS; i++)
+            
+            // multiples of 20
+            var mulitplier = Math.Max(1,(int)radius / 20);
+
+            var segmentCount = SEGMENTS * mulitplier;
+
+            for (int i = 0; i < segmentCount; i++)
             {
-                float theta = (2f * (float)Math.PI * i) / SEGMENTS;
+                float theta = (2f * (float)Math.PI * i) / segmentCount;
                 float x = Radius * (float)Math.Cos(theta);
                 float y = Radius * (float)Math.Sin(theta);
                 LocalVertices.Add(new Vector2(x, y));

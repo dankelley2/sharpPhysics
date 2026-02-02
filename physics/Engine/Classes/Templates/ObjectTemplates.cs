@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using physics.Engine.Helpers;
 using physics.Engine.Objects;
-using physics.Engine.Shaders;
 using physics.Engine.Structs;
 using System.Numerics;
+using SharpPhysics.Engine.Core;
+using SharpPhysics.Rendering.Shaders;
 
 namespace physics.Engine.Classes.ObjectTemplates
 {

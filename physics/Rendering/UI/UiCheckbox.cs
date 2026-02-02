@@ -3,7 +3,7 @@ using SFML.Graphics;
 using System;
 using System.Numerics;
 
-namespace physics.Engine.Rendering.UI
+namespace SharpPhysics.Rendering.UI
 {
     public class UiCheckbox : UiElement, IUiClickable
     {
@@ -11,7 +11,7 @@ namespace physics.Engine.Rendering.UI
         public Vector2 Size { get; set; }
         
         // Implement the event from IUiClickable
-        public event Action<bool> OnClick;
+        public event Action<bool>? OnClick;
         
         public UiCheckbox(Vector2 position, Vector2 size)
         {

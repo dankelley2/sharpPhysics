@@ -3,9 +3,8 @@ using System;
 using physics.Engine.Objects;
 using physics.Engine.Helpers;
 using SFML.System;
-using physics.Engine.Shaders.Helpers;
 
-namespace physics.Engine.Shaders
+namespace SharpPhysics.Rendering.Shaders
 {
     public class SFMLBallVelocityShader : SFMLShader
     {

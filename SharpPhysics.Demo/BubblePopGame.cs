@@ -1,16 +1,16 @@
 #nullable enable
 using System.Numerics;
-using physics.Engine;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Core;
 using physics.Engine.Input;
 using physics.Engine.Objects;
-using physics.Engine.Rendering;
-using physics.Engine.Shaders;
 using SharpPhysics.Demo.Helpers;
 using SharpPhysics.Demo.Integration;
 using SharpPhysics.Demo.Settings;
 using SFML.Window;
+using SharpPhysics.Engine.Core;
+using SharpPhysics.Rendering.Shaders;
+using SharpPhysics.Rendering;
 
 namespace SharpPhysics.Demo;
 
@@ -59,9 +59,6 @@ public class BubblePopGame : IGame
     {
         _engine = engine;
         _physics = engine.PhysicsSystem;
-
-        // Hide debug UI for cleaner game experience
-        _engine.Renderer.ShowDebugUI = false;
 
         // Very light upward "gravity" for floating bubbles
         _physics.Gravity = new Vector2(0, -2f);
@@ -259,7 +256,7 @@ public class BubblePopGame : IGame
     {
         if (_personColliderBridge == null) return;
 
-        var trackingBalls = _personColliderBridge.TrackingBalls;
+        var trackingBalls = _personColliderBridge.GetTrackingBalls();
         var poppedBubbles = new List<PhysicsObject>();
         var chainSpawns = new List<Vector2>();
 

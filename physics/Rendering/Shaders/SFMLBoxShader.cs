@@ -5,12 +5,11 @@ using physics.Engine.Shapes;
 using SFML.System;
 using physics.Engine.Helpers;
 
-namespace physics.Engine.Shaders
+namespace SharpPhysics.Rendering.Shaders
 {
     public class SFMLBoxShader : SFMLShader
     {
         private static readonly RectangleShape Rectangle = new RectangleShape();
-        private static readonly RectangleShape Rectangle2 = new RectangleShape();
         private static readonly Color GrayColor = new Color(128, 128, 128);
         private static readonly Color RedColor = new Color(255, 50, 50);
         // Color for the contact point marker.
@@ -42,16 +41,6 @@ namespace physics.Engine.Shaders
             Rectangle.OutlineThickness = 1;
 
             target.Draw(Rectangle);
-
-            //// DEBUG FOR OG Bounding box
-            //// Calculate the size of the rectangle from the AABB.
-            //Rectangle2.Size = new Vector2(obj.Aabb.Max.X - obj.Aabb.Min.X, obj.Aabb.Max.Y - obj.Aabb.Min.Y);
-            //Rectangle2.Position = obj.Aabb.Min;
-            //Rectangle2.FillColor = Color.Transparent;
-            //Rectangle2.OutlineColor = Color.Magenta;
-            //Rectangle2.OutlineThickness = 1;
-
-            //target.Draw(Rectangle2);
         }
 
     }

@@ -13,13 +13,15 @@ namespace physics.Engine.Constraints
         public PhysicsObject A { get; protected set; }
         public PhysicsObject B { get; protected set; }
 
+        // Anchor points in local space of each object
         public Vector2 AnchorA { get; protected set; }
         public Vector2 AnchorB { get; protected set; }
 
+        // Arbitrary break point when the constraint is pushed past its limits
         public bool CanBreak { get; set; } = false;
         public bool IsBroken { get; protected set; } = false;
 
-        public Constraint(PhysicsObject a, PhysicsObject b)
+        protected Constraint(PhysicsObject a, PhysicsObject b)
         {
             A = a;
             B = b;
@@ -33,21 +35,16 @@ namespace physics.Engine.Constraints
             B.CanSleep = false;
         }
 
-            /// <summary>
-            /// Applies the constraint correction (via impulses or position/angle adjustments).
-            /// </summary>
-            public abstract void ApplyConstraint(float dt);
-
-            /// <summary>
-            /// Called once per physics tick before substeps begin. Used for warm starting.
-            /// </summary>
-            public virtual void PrepareForTick() { }
-        }
+        /// <summary>
+        /// Applies the constraint correction (via impulses or position/angle adjustments).
+        /// </summary>
+        public abstract void ApplyConstraint(float dt);
+    }
 
     /// <summary>
     /// A weld constraint holds two objects together so that the world-space positions
     /// of their respective local anchors remain coincident, and their relative angle remains constant.
-    /// Uses proper impulse-based constraint solving with Baumgarte stabilization.
+    /// Uses impulse-based constraint solving with Baumgarte stabilization.
     /// </summary>
     public class WeldConstraint : Constraint
     {
@@ -55,16 +52,103 @@ namespace physics.Engine.Constraints
 
         private const float BaumgarteBias = 0.23f;
         private const float AngularBias = 0.20f;
-        private const float MaxBiasVelocity = 700f;
-        private const float WarmStartFactor = 0.85f;
-
-        // Accumulated impulses for warm starting
-        private float _accumulatedImpulseX;
-        private float _accumulatedImpulseY;
-        private float _accumulatedAngularImpulse;
-        private bool _warmStartAppliedThisTick;
+        private const float MaxBiasVelocity = 400f;
 
         public WeldConstraint(PhysicsObject a, PhysicsObject b, Vector2 anchorA, Vector2 anchorB, bool canBreak = false)
+            : base(a, b)
+        {
+            AnchorA = anchorA;
+            AnchorB = anchorB;
+            InitialRelativeAngle = b.Angle - a.Angle;
+            CanBreak = canBreak;
+        }
+
+        public override void ApplyConstraint(float dt)
+        {
+            if (IsBroken) return;
+
+            Vector2 rA = PhysMath.RotateVector(AnchorA, A.Angle);
+            Vector2 rB = PhysMath.RotateVector(AnchorB, B.Angle);
+            Vector2 worldAnchorA = A.Center + rA;
+            Vector2 worldAnchorB = B.Center + rB;
+
+            Vector2 posError = worldAnchorB - worldAnchorA;
+            float angleError = (B.Angle - A.Angle) - InitialRelativeAngle;
+
+            if (CanBreak && (posError.LengthSquared() > 30f || Math.Abs(angleError) > 0.5f))
+            {
+                IsBroken = true;
+                return;
+            }
+
+            while (angleError > MathF.PI) angleError -= 2 * MathF.PI;
+            while (angleError < -MathF.PI) angleError += 2 * MathF.PI;
+
+            float invMassA = A.Locked ? 0f : A.IMass;
+            float invMassB = B.Locked ? 0f : B.IMass;
+            float invInertiaA = (A.Locked || !A.CanRotate) ? 0f : A.IInertia;
+            float invInertiaB = (B.Locked || !B.CanRotate) ? 0f : B.IInertia;
+
+            Vector2 vA = A.Velocity + PhysMath.Perpendicular(rA) * A.AngularVelocity;
+            Vector2 vB = B.Velocity + PhysMath.Perpendicular(rB) * B.AngularVelocity;
+            Vector2 relVel = vB - vA;
+
+            ApplyLinearImpulse(Vector2.UnitX, rA, rB, relVel.X, posError.X, invMassA, invMassB, invInertiaA, invInertiaB, dt);
+            ApplyLinearImpulse(Vector2.UnitY, rA, rB, relVel.Y, posError.Y, invMassA, invMassB, invInertiaA, invInertiaB, dt);
+
+            float angularEffectiveMass = invInertiaA + invInertiaB;
+            if (angularEffectiveMass < 1e-10f) return;
+
+            float relAngVel = B.AngularVelocity - A.AngularVelocity;
+            float angularBias = Math.Clamp((AngularBias / dt) * angleError, -MaxBiasVelocity, MaxBiasVelocity);
+            float angularImpulse = -(relAngVel + angularBias) / angularEffectiveMass;
+
+            if (!A.Locked && A.CanRotate)
+                A.AngularVelocity -= angularImpulse * invInertiaA;
+            if (!B.Locked && B.CanRotate)
+                B.AngularVelocity += angularImpulse * invInertiaB;
+        }
+
+        private void ApplyLinearImpulse(Vector2 axis, Vector2 rA, Vector2 rB, float velError, float posError,
+            float invMassA, float invMassB, float invInertiaA, float invInertiaB, float dt)
+        {
+            float rAxN = PhysMath.Cross(rA, axis);
+            float rBxN = PhysMath.Cross(rB, axis);
+            float effectiveMass = invMassA + invMassB + (rAxN * rAxN) * invInertiaA + (rBxN * rBxN) * invInertiaB;
+
+            if (effectiveMass < 1e-10f) return;
+
+            float bias = Math.Clamp(BaumgarteBias * posError / dt, -MaxBiasVelocity, MaxBiasVelocity);
+            float impulseMag = -(velError + bias) / effectiveMass;
+            Vector2 impulse = axis * impulseMag;
+
+            if (!A.Locked)
+            {
+                A.Velocity -= impulse * invMassA;
+                if (A.CanRotate)
+                    A.AngularVelocity -= PhysMath.Cross(rA, impulse) * invInertiaA;
+            }
+            if (!B.Locked)
+            {
+                B.Velocity += impulse * invMassB;
+                if (B.CanRotate)
+                    B.AngularVelocity += PhysMath.Cross(rB, impulse) * invInertiaB;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Similar to the weld constraint, but acts like a spring due to the lower Baumgarte factors and MaxBiasVelocity.
+    /// </summary>
+    public class SpringConstraint : Constraint
+    {
+        public float InitialRelativeAngle { get; private set; }
+
+        private const float BaumgarteBias = 0.013f;
+        private const float AngularBias = 0.010f;
+        private const float MaxBiasVelocity = 300f;
+
+        public SpringConstraint(PhysicsObject a, PhysicsObject b, Vector2 anchorA, Vector2 anchorB, bool canBreak = false)
             : base(a, b)
         {
             AnchorA = anchorA;
@@ -92,7 +176,7 @@ namespace physics.Engine.Constraints
             float angleError = (B.Angle - A.Angle) - InitialRelativeAngle;
 
             // break
-            if (CanBreak && (Math.Abs(posError.LengthSquared()) > 30f || Math.Abs(angleError) > 0.5f))
+            if (CanBreak && (Math.Abs(posError.Length()) > 80f || Math.Abs(angleError) > 1.5f))
             {
                 IsBroken = true;
             }
@@ -107,9 +191,6 @@ namespace physics.Engine.Constraints
             float invInertiaA = (A.Locked || !A.CanRotate) ? 0f : A.IInertia;
             float invInertiaB = (B.Locked || !B.CanRotate) ? 0f : B.IInertia;
 
-            // === WARM START: Apply cached impulses from previous frame ===
-            ApplyWarmStartImpulses(rA, rB, invMassA, invMassB, invInertiaA, invInertiaB);
-
             // Compute velocity at anchor points (after warm start)
             Vector2 vA = A.Velocity + PhysMath.Perpendicular(rA) * A.AngularVelocity;
             Vector2 vB = B.Velocity + PhysMath.Perpendicular(rB) * B.AngularVelocity;
@@ -118,10 +199,6 @@ namespace physics.Engine.Constraints
             // === LINEAR CONSTRAINT (solve X and Y axes separately for correct effective mass) ===
             float impulseX = ApplyLinearImpulse(Vector2.UnitX, rA, rB, relVel.X, posError.X, invMassA, invMassB, invInertiaA, invInertiaB, dt);
             float impulseY = ApplyLinearImpulse(Vector2.UnitY, rA, rB, relVel.Y, posError.Y, invMassA, invMassB, invInertiaA, invInertiaB, dt);
-
-            // Accumulate impulses for next frame's warm start
-            _accumulatedImpulseX += impulseX;
-            _accumulatedImpulseY += impulseY;
 
             // === ANGULAR CONSTRAINT ===
             float angularEffectiveMass = invInertiaA + invInertiaB;
@@ -133,104 +210,50 @@ namespace physics.Engine.Constraints
             angularBias = Math.Clamp(angularBias, -MaxBiasVelocity, MaxBiasVelocity);
             float angularImpulse = -(relAngVel + angularBias) / angularEffectiveMass;
 
-            // Accumulate angular impulse
-            _accumulatedAngularImpulse += angularImpulse;
-
             if (!A.Locked && A.CanRotate)
                 A.AngularVelocity -= angularImpulse * invInertiaA;
             if (!B.Locked && B.CanRotate)
                 B.AngularVelocity += angularImpulse * invInertiaB;
         }
 
-        private void ApplyWarmStartImpulses(Vector2 rA, Vector2 rB,
-            float invMassA, float invMassB, float invInertiaA, float invInertiaB)
+        private float ApplyLinearImpulse(Vector2 axis, Vector2 rA, Vector2 rB, float velError, float posError,
+            float invMassA, float invMassB, float invInertiaA, float invInertiaB, float dt)
         {
-            // Only apply warm start once per physics tick (not per substep)
-            if (_warmStartAppliedThisTick)
-                return;
-            _warmStartAppliedThisTick = true;
+            // Effective mass for this axis: K = mA^-1 + mB^-1 + (rA × axis)² * IA^-1 + (rB × axis)² * IB^-1
+            float rAxN = PhysMath.Cross(rA, axis);
+            float rBxN = PhysMath.Cross(rB, axis);
+            float effectiveMass = invMassA + invMassB +
+                                  (rAxN * rAxN) * invInertiaA +
+                                  (rBxN * rBxN) * invInertiaB;
 
-            // Scale accumulated impulses to prevent overshoot
-            float warmX = _accumulatedImpulseX * WarmStartFactor;
-            float warmY = _accumulatedImpulseY * WarmStartFactor;
-            float warmAngular = _accumulatedAngularImpulse * WarmStartFactor;
+            if (effectiveMass < 1e-10f)
+                return 0f;
 
-            // Reset accumulators (will be rebuilt this tick across all substeps)
-            _accumulatedImpulseX = 0;
-            _accumulatedImpulseY = 0;
-            _accumulatedAngularImpulse = 0;
+            // Baumgarte bias - clamped to prevent instability with large position errors
+            float bias = BaumgarteBias * posError / dt;
+            bias = Math.Clamp(bias, -MaxBiasVelocity, MaxBiasVelocity);
 
-            // Apply warm start linear impulses
-            Vector2 impulseX = Vector2.UnitX * warmX;
-            Vector2 impulseY = Vector2.UnitY * warmY;
-            Vector2 totalImpulse = impulseX + impulseY;
+            // Impulse magnitude along this axis
+            float impulseMag = -(velError + bias) / effectiveMass;
+            Vector2 impulse = axis * impulseMag;
 
+            // Apply impulse
             if (!A.Locked)
             {
-                A.Velocity -= totalImpulse * invMassA;
+                A.Velocity -= impulse * invMassA;
                 if (A.CanRotate)
-                    A.AngularVelocity -= PhysMath.Cross(rA, totalImpulse) * invInertiaA;
+                    A.AngularVelocity -= PhysMath.Cross(rA, impulse) * invInertiaA;
             }
             if (!B.Locked)
             {
-                B.Velocity += totalImpulse * invMassB;
+                B.Velocity += impulse * invMassB;
                 if (B.CanRotate)
-                    B.AngularVelocity += PhysMath.Cross(rB, totalImpulse) * invInertiaB;
+                    B.AngularVelocity += PhysMath.Cross(rB, impulse) * invInertiaB;
             }
 
-            // Apply warm start angular impulse
-            if (!A.Locked && A.CanRotate)
-                A.AngularVelocity -= warmAngular * invInertiaA;
-            if (!B.Locked && B.CanRotate)
-                B.AngularVelocity += warmAngular * invInertiaB;
+            return impulseMag;
         }
-
-        /// <summary>
-        /// Call at the start of each physics tick (before substeps) to enable warm starting.
-        /// </summary>
-        public void PrepareForTick()
-        {
-            _warmStartAppliedThisTick = false;
-        }
-
-            private float ApplyLinearImpulse(Vector2 axis, Vector2 rA, Vector2 rB, float velError, float posError,
-                float invMassA, float invMassB, float invInertiaA, float invInertiaB, float dt)
-            {
-                // Effective mass for this axis: K = mA^-1 + mB^-1 + (rA × axis)² * IA^-1 + (rB × axis)² * IB^-1
-                float rAxN = PhysMath.Cross(rA, axis);
-                float rBxN = PhysMath.Cross(rB, axis);
-                float effectiveMass = invMassA + invMassB +
-                                      (rAxN * rAxN) * invInertiaA +
-                                      (rBxN * rBxN) * invInertiaB;
-
-                if (effectiveMass < 1e-10f)
-                    return 0f;
-
-                // Baumgarte bias - clamped to prevent instability with large position errors
-                float bias = BaumgarteBias * posError / dt;
-                bias = Math.Clamp(bias, -MaxBiasVelocity, MaxBiasVelocity);
-
-                // Impulse magnitude along this axis
-                float impulseMag = -(velError + bias) / effectiveMass;
-                Vector2 impulse = axis * impulseMag;
-
-                // Apply impulse
-                if (!A.Locked)
-                {
-                    A.Velocity -= impulse * invMassA;
-                    if (A.CanRotate)
-                        A.AngularVelocity -= PhysMath.Cross(rA, impulse) * invInertiaA;
-                }
-                if (!B.Locked)
-                {
-                    B.Velocity += impulse * invMassB;
-                    if (B.CanRotate)
-                        B.AngularVelocity += PhysMath.Cross(rB, impulse) * invInertiaB;
-                }
-
-                return impulseMag;
-            }
-        }
+    }
 
     /// <summary>
     /// An AxisConstraint (revolute joint) pins two objects together at specified local anchor points,

@@ -1,7 +1,7 @@
 using SFML.Graphics;
 using physics.Engine.Objects;
 
-namespace physics.Engine.Shaders
+namespace SharpPhysics.Rendering.Shaders
 {
     public abstract class SFMLShader
     {

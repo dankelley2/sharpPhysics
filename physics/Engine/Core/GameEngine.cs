@@ -2,9 +2,9 @@
 using System;
 using System.Diagnostics;
 using physics.Engine.Input;
-using physics.Engine.Rendering;
-using physics.Engine.Rendering.UI;
-using physics.Engine.Objects;
+using SFML.Graphics;
+using SharpPhysics.Engine.Core;
+using SharpPhysics.Rendering;
 
 namespace physics.Engine.Core
 {
@@ -192,19 +192,22 @@ namespace physics.Engine.Core
                 _physicsSystem.Tick(deltaTime);
                 MsPhysicsTime = _stopwatch.ElapsedMilliseconds - physicsStart;
 
-                // Rendering
+                // Rendering pipeline (layered)
                 long renderStart = _stopwatch.ElapsedMilliseconds;
 
-                // Engine rendering (physics objects, debug UI)
-                _renderer.Render(MsPhysicsTime, MsDrawTime, MsFrameTime);
-
-                // Game-specific rendering (skeleton overlay, score display, etc.)
+                _renderer.BeginFrame(Color.Black);
+                _currentGame.RenderBackground(_renderer);
+                _renderer.RenderPhysicsObjects();
                 _currentGame.Render(_renderer);
 
-                // Present the frame to screen (after all rendering is complete)
+                // Counting rendering as just the draw calls (excluding buffer swap)
+                // Else it will always be high due to VSync wait.
+                MsDrawTime = _stopwatch.ElapsedMilliseconds - renderStart;
+
+                // Flip buffers
                 _renderer.Display();
 
-                MsDrawTime = _stopwatch.ElapsedMilliseconds - renderStart;
+                // Total frame time
                 MsFrameTime = _stopwatch.ElapsedMilliseconds - frameStartTime;
             }
 

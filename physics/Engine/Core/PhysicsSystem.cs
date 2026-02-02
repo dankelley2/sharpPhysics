@@ -5,11 +5,11 @@ using physics.Engine.Objects;
 using physics.Engine.Helpers;
 using physics.Engine.Shapes;
 using physics.Engine.Constraints;
-using physics.Engine.Shaders;
 using System.Numerics;
 using System.Linq;
+using SharpPhysics.Rendering.Shaders;
 
-namespace physics.Engine
+namespace SharpPhysics.Engine.Core
 {
     public class PhysicsSystem
     {
@@ -17,7 +17,6 @@ namespace physics.Engine
 
         public float GravityScale = 30F;
         public Vector2 Gravity { get; set; } = new Vector2(0, 9.8f);
-        public float Friction { get; set; }
         public float TimeScale { get; set; } = 1.0f;
         public bool IsPaused { get; set; } = false;
 
@@ -44,8 +43,8 @@ namespace physics.Engine
         public readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
         private readonly ManifoldPool _manifoldPool = new ManifoldPool();
         private readonly CollisionPairPool _collisionPairPool = new CollisionPairPool();
-        public List<Constraint> Constraints = new List<Constraint>();
-        private Queue<Constraint> _constraintRemovalQueue = new Queue<Constraint>();
+        public readonly List<Constraint> Constraints = new List<Constraint>();
+        private readonly Queue<Constraint> _constraintRemovalQueue = new Queue<Constraint>();
 
         internal IEnumerable<PhysicsObject> GetMoveableObjects()
         {
@@ -59,7 +58,7 @@ namespace physics.Engine
             }
         }
 
-        internal void SetVelocity(PhysicsObject physicsObject, Vector2 velocity)
+        internal static void SetVelocity(PhysicsObject physicsObject, Vector2 velocity)
         {
             physicsObject.Velocity = velocity;
         }
@@ -74,15 +73,6 @@ namespace physics.Engine
         private readonly Dictionary<(int, int), List<PhysicsObject>> _spatialHash = new Dictionary<(int, int), List<PhysicsObject>>();
         private readonly HashSet<(PhysicsObject, PhysicsObject)> _pairSet =
             new HashSet<(PhysicsObject, PhysicsObject)>(new PhysicsObjectPairComparer());
-
-        #endregion
-
-        #region Constructors
-
-        public PhysicsSystem()
-        {
-            Friction = 1F;
-        }
 
         #endregion
 
@@ -201,7 +191,7 @@ namespace physics.Engine
             // Weld adjacent pieces together
             if (compound.Parts.Count > 1)
             {
-                WeldAdjacentPieces(compound, convexPieces, origin, originalCentroid, canBreak);
+                WeldAdjacentPieces(compound, convexPieces, canBreak);
             }
 
             return compound;
@@ -211,7 +201,7 @@ namespace physics.Engine
         /// Finds and welds adjacent convex pieces that share edges or vertices.
         /// Uses a spanning tree approach to minimize constraints: only (n-1) welds for n pieces.
         /// </summary>
-        private void WeldAdjacentPieces(CompoundBody compound, List<Vector2[]> convexPieces, Vector2 origin, Vector2 originalCentroid, bool canBreak)
+        private void WeldAdjacentPieces(CompoundBody compound, List<Vector2[]> convexPieces, bool canBreak)
         {
             const float edgeTolerance = 0.1f;
             int n = convexPieces.Count;
@@ -233,10 +223,6 @@ namespace physics.Engine
             {
                 for (int j = i + 1; j < n; j++)
                 {
-                    // Skip if already in same component
-                    //if (Find(i) == Find(j))
-                    //    continue;
-
                     // Check for shared edge first (stronger connection)
                     bool adjacent = FindSharedEdge(convexPieces[i], convexPieces[j], edgeTolerance).HasValue;
 
@@ -404,10 +390,8 @@ namespace physics.Engine
 
         public void RemoveActiveObject()
         {
-            if (ListGravityObjects.Contains(ActiveObject))
-            {
-                ListGravityObjects.Remove(ActiveObject);
-            }
+            
+            _ = ListGravityObjects.Remove(ActiveObject);
 
             // Add to removal queue for proper removal
             RemovalQueue.Enqueue(ActiveObject);
@@ -461,15 +445,6 @@ namespace physics.Engine
 
             AddGravity(obj, dt);
 
-            var friction = Friction * dt;
-
-            // Store velocity in a temporary variable.
-            var velocity = obj.Velocity;
-            velocity.X += velocity.X == 0 ? 0 : velocity.X > 0 ? -friction : friction;
-            velocity.Y += velocity.Y == 0 ? 0 : velocity.Y > 0 ? -friction : friction;
-            // Assign the modified velocity back.
-            obj.Velocity = velocity;
-
             if (obj.Center.Y > 2000 || obj.Center.Y < -2000 || obj.Center.X > 2000 || obj.Center.X < -2000)
             {
                 RemovalQueue.Enqueue(obj);
@@ -505,17 +480,9 @@ namespace physics.Engine
             return forces;
         }
 
-        private PhysicsObject CheckObjectAtPoint(Vector2 p)
+        private PhysicsObject? CheckObjectAtPoint(Vector2 p)
         {
-            foreach (var physicsObject in ListStaticObjects)
-            {
-                if (physicsObject.Contains(p))
-                {
-                    return physicsObject;
-                }
-            }
-
-            return null;
+            return ListStaticObjects.FirstOrDefault(physicsObject => physicsObject.Contains(p));
         }
 
         private Vector2 GetGravityVector(PhysicsObject obj)
@@ -581,12 +548,6 @@ namespace physics.Engine
 
             // divide dt into substeps
             float dt_substep = dt / PHYSICS_ITERATIONS;
-
-            // Prepare constraints for this tick (enables warm starting)
-            foreach (var constraint in Constraints)
-            {
-                constraint.PrepareForTick();
-            }
 
             // Loop over physics iterations.
             for (int iter = 0; iter < PHYSICS_ITERATIONS; iter++)

@@ -1,17 +1,17 @@
 #nullable enable
 using System.Numerics;
-using physics.Engine;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Core;
 using physics.Engine.Input;
 using physics.Engine.Objects;
-using physics.Engine.Rendering;
-using physics.Engine.Shaders;
 using SFML.Window;
 using SharpPhysics.Demo.Helpers;
 using SharpPhysics.Demo.Integration;
 using SharpPhysics.Demo.Settings;
+using SharpPhysics.Engine.Core;
+using SharpPhysics.Rendering.Shaders;
 using SharpPhysics.Engine.Player;
+using SharpPhysics.Rendering;
 
 namespace SharpPhysics.Demo;
 
@@ -40,7 +40,6 @@ public class RainCatcherGame : IGame
     private float _comboTimer = 0f;
     private float _gameTime = 0f;
     private bool _rainbowMode = false;
-    private float _rainbowTimer = 0f;
     private float _gravityPulseTimer = 0f;
     private bool _isGravityReversed = false;
 
@@ -78,9 +77,6 @@ public class RainCatcherGame : IGame
         _engine = engine;
         _physics = engine.PhysicsSystem;
         _objectTemplates = new ObjectTemplates(_physics);
-
-        // Hide debug UI for cleaner game experience
-        _engine.Renderer.ShowDebugUI = false;
 
         // Reduce gravity for floaty fun feel
         _physics.Gravity = new Vector2(0, 6f);
@@ -143,6 +139,7 @@ public class RainCatcherGame : IGame
             new SFMLWallShader(),
             mass: 1000000
         );
+        ramp.Angle = angle;
         ramp.Restitution = 0.7f;
     }
 
@@ -243,12 +240,6 @@ public class RainCatcherGame : IGame
             {
                 DeactivatePowerUp();
             }
-        }
-
-        // Rainbow mode color cycling
-        if (_rainbowMode)
-        {
-            _rainbowTimer += deltaTime * 3f;
         }
 
         // Gravity pulse effect
@@ -377,7 +368,7 @@ public class RainCatcherGame : IGame
     {
         if (_personColliderBridge == null) return;
 
-        var trackingBalls = _personColliderBridge.TrackingBalls;
+        var trackingBalls = _personColliderBridge.GetTrackingBalls();
         var scoredBalls = new List<PhysicsObject>();
 
         foreach (var (ball, info) in _activeBalls)
