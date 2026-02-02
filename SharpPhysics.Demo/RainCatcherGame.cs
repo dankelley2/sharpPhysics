@@ -40,7 +40,6 @@ public class RainCatcherGame : IGame
     private float _comboTimer = 0f;
     private float _gameTime = 0f;
     private bool _rainbowMode = false;
-    private float _rainbowTimer = 0f;
     private float _gravityPulseTimer = 0f;
     private bool _isGravityReversed = false;
 
@@ -140,6 +139,7 @@ public class RainCatcherGame : IGame
             new SFMLWallShader(),
             mass: 1000000
         );
+        ramp.Angle = angle;
         ramp.Restitution = 0.7f;
     }
 
@@ -240,12 +240,6 @@ public class RainCatcherGame : IGame
             {
                 DeactivatePowerUp();
             }
-        }
-
-        // Rainbow mode color cycling
-        if (_rainbowMode)
-        {
-            _rainbowTimer += deltaTime * 3f;
         }
 
         // Gravity pulse effect
@@ -374,7 +368,7 @@ public class RainCatcherGame : IGame
     {
         if (_personColliderBridge == null) return;
 
-        var trackingBalls = _personColliderBridge.TrackingBalls;
+        var trackingBalls = _personColliderBridge.GetTrackingBalls();
         var scoredBalls = new List<PhysicsObject>();
 
         foreach (var (ball, info) in _activeBalls)

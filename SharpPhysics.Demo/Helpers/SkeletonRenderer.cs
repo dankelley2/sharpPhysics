@@ -41,7 +41,7 @@ public static class SkeletonRenderer
         foreach (var s in allSkeletons)
         {
             DrawFullSkeleton(renderer, s.Keypoints, s.Confidences,
-                connections, lineThickness, confidenceThreshold);
+                connections, confidenceThreshold);
         }
 
     }
@@ -54,7 +54,6 @@ public static class SkeletonRenderer
         Vector2[] keypoints, 
         float[] confidences, 
         (int, int)[] connections,
-        float lineThickness = 3f,
         float confidenceThreshold = 0.3f)
     {
         // Draw skeleton connections
@@ -72,7 +71,7 @@ public static class SkeletonRenderer
             // Choose color based on body part
             Color lineColor = GetConnectionColor(idx1, idx2);
 
-            renderer.DrawLine(pt1, pt2, lineColor, lineThickness);
+            renderer.DrawLine(pt1, pt2, lineColor);
         }
 
         // Draw keypoint circles

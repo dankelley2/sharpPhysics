@@ -172,16 +172,13 @@ namespace SharpPhysics.Demo.Integration
         /// <summary>
         /// All current tracking balls across all tracked people.
         /// </summary>
-        public IReadOnlyList<PhysicsObject> TrackingBalls
+        public IReadOnlyList<PhysicsObject> GetTrackingBalls()
         {
-            get
+            lock (_syncLock)
             {
-                lock (_syncLock)
-                {
-                    return _trackedPeople.Values
-                        .SelectMany(p => p.GetTrackingBalls())
-                        .ToList();
-                }
+                return _trackedPeople.Values
+                    .SelectMany(p => p.GetTrackingBalls())
+                    .ToList();
             }
         }
 
@@ -573,7 +570,7 @@ namespace SharpPhysics.Demo.Integration
                 }
             }
 
-            OnPersonBodyUpdated?.Invoke(this, TrackingBalls);
+            OnPersonBodyUpdated?.Invoke(this, GetTrackingBalls());
         }
 
         /// <summary>

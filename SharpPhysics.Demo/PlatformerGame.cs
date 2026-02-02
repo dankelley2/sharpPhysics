@@ -34,7 +34,6 @@ public class PlatformerGame : IGame
     private bool _levelComplete = false;
     private bool _gameOver = false;
     private float _messageTimer = 0f;
-    private string _message = "";
 
     // Collectibles and hazards
     private readonly List<PhysicsObject> _coins = new();
@@ -434,11 +433,9 @@ public class PlatformerGame : IGame
             int timeBonus = Math.Max(0, 5000 - (int)(_gameTime * 100));
             int coinBonus = _coinsCollected * 50;
             _score += timeBonus + coinBonus;
-
-            _message = $"LEVEL COMPLETE!\n\nCoins: {_coinsCollected}\nTime Bonus: {timeBonus}\nTotal Score: {_score}\n\nPress SPACE to continue";
             _messageTimer = 1f;
 
-            Console.WriteLine($"🏁 Level Complete! Final Score: {_score}");
+            Console.WriteLine($"Level Complete! Final Score: {_score}");
         }
     }
 
@@ -454,12 +451,11 @@ public class PlatformerGame : IGame
     {
         _lives--;
         AddFloatingText(_player.Center, $"-1 LIFE ({cause})", new Color(255, 50, 50));
-        Console.WriteLine($"💀 Player died: {cause} (Lives remaining: {_lives})");
+        Console.WriteLine($"Player died: {cause} (Lives remaining: {_lives})");
 
         if (_lives <= 0)
         {
             _gameOver = true;
-            _message = $"GAME OVER\n\nFinal Score: {_score}\nCoins: {_coinsCollected}\n\nPress SPACE to restart";
             _messageTimer = 1f;
         }
         else
@@ -619,6 +615,6 @@ public class PlatformerGame : IGame
         _coins.Clear();
         _hazards.Clear();
         _enemies.Clear();
-        Console.WriteLine($"🎮 Platformer ended. Final Score: {_score}");
+        Console.WriteLine($"Platformer ended. Final Score: {_score}");
     }
 }

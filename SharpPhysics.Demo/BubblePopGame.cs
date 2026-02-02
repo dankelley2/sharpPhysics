@@ -256,7 +256,7 @@ public class BubblePopGame : IGame
     {
         if (_personColliderBridge == null) return;
 
-        var trackingBalls = _personColliderBridge.TrackingBalls;
+        var trackingBalls = _personColliderBridge.GetTrackingBalls();
         var poppedBubbles = new List<PhysicsObject>();
         var chainSpawns = new List<Vector2>();
 

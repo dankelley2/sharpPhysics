@@ -18,7 +18,7 @@ public interface IGame
     /// <summary>
     /// Called each frame to update game logic.
     /// </summary>
-    void Update(float deltaTime, InputManager input);
+    void Update(float deltaTime, InputManager inputManager);
 
     /// <summary>
     /// Optional: Renders behind physics objects (backgrounds, parallax, skyboxes).
