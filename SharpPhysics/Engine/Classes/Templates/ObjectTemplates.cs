@@ -95,10 +95,15 @@ namespace SharpPhysics.Engine.Classes.ObjectTemplates
 
         public PhysicsObject CreateAttractor(float originX, float originY)
         {
-            int diameter = 50;
+            int diameter = 10;
             // Use a different shader type for attractors.
-            SFMLShader shader = GetShader<SFMLBallShader>(diameter);
-            var oPhysicsObject = _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.95F, true, shader);
+            SFMLShader shader = GetShader<SFMLPolyShader>(diameter);
+            var oPhysicsObject = _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.95F, true, shader, 50000f);
+            oPhysicsObject.ContactPointAdded += (obj, pointNormal) =>
+            {
+                // remove object once touching
+               _physicsSystem.RemovalQueue.Enqueue(obj);
+            };
             _physicsSystem.ListGravityObjects.Add(oPhysicsObject);
             return oPhysicsObject;
         }

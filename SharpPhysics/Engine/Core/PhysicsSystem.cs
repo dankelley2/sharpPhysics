@@ -622,12 +622,9 @@ namespace SharpPhysics.Engine.Core
                                 objB.Wake();
                         }
 
-                        // Add to object contact points once per physics tick
-                        if (iter == PHYSICS_ITERATIONS - 1)
-                        {
-                            m.A.AddContact(m.B, m.ContactPoint, m.Normal);
-                            m.B.AddContact(m.A, m.ContactPoint, -m.Normal);
-                        }
+                        // Accumulate contacts during substeps (finalized once per tick)
+                        m.A.AddContact(m.B, m.ContactPoint, m.Normal);
+                        m.B.AddContact(m.A, m.ContactPoint, -m.Normal);
 
                         // Resolve Collision
                         Collision.ResolveCollisionRotational(ref m);
@@ -652,6 +649,12 @@ namespace SharpPhysics.Engine.Core
                     ApplyConstants(staticObj, dt_substep);
                     staticObj.Update(dt_substep);
                 }
+            }
+
+            // Finalize contacts once per tick (not per substep) to fire events
+            for (int i = 0; i < ListStaticObjects.Count; i++)
+            {
+                ListStaticObjects[i].FinalizeContacts();
             }
         }
 

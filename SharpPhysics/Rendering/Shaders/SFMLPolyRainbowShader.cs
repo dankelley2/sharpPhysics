@@ -27,7 +27,7 @@ namespace SharpPhysics.Rendering.Shaders
             
             if (obj.Sleeping)
             {
-                _color = new Color(50,50,50);
+                _color = new Color(150,150,150);
             }
             else
             {

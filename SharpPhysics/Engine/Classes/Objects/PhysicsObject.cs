@@ -1,4 +1,4 @@
-﻿using SharpPhysics.Engine.Structs;
+using SharpPhysics.Engine.Structs;
 using SharpPhysics.Engine.Shapes;
 using System;
 using System.Collections.Generic;
@@ -108,7 +108,6 @@ namespace SharpPhysics.Engine.Objects
             
             // Update sleep state based on actual displacement (movement) rather than instantaneous velocity.
             UpdateSleepState(dt);
-            UpdateContactPoints();
             // Update the previous center for next frame comparison.
             _prevCenter = Center;
         }
@@ -264,11 +263,11 @@ namespace SharpPhysics.Engine.Objects
         }
 
         /// <summary>
-        /// Compares the current contact points to the previous frame’s contact points,
+        /// Compares the current contact points to the previous frame�s contact points,
         /// fires events for added and removed contacts, updates the cache, and then clears the current list.
         /// This method is written to be allocation-efficient.
         /// </summary>
-        public void UpdateContactPoints()
+        public void FinalizeContacts()
         {
             // If both the current and previous contacts are empty, there's nothing to do.
             if (_contactPoints.Count == 0 && _previousContactPoints.Count == 0)
@@ -294,9 +293,9 @@ namespace SharpPhysics.Engine.Objects
                 {
                     removedHandler?.Invoke(kv.Key, kv.Value);
 
-                    // Update support networks when contacts are lost
-                    // HashSet.Remove returns true if item was found and removed - single lookup
-                    if (_supportingObjects.Remove(kv.Key))
+                    // Preserve support relationships while both objects are sleeping
+                    // (sleeping pairs don't generate contacts, but are still physically stacked)
+                    if ((!Sleeping || !kv.Key.Sleeping) && _supportingObjects.Remove(kv.Key))
                     {
                         kv.Key._supportedObjects.Remove(this);
                     }
