@@ -4,8 +4,9 @@ using System;
 using SFML.Window;
 using System.Numerics;
 using physics.Engine.Helpers;
+using SharpPhysics.Engine.Core;
 
-namespace physics.Engine.Rendering
+namespace SharpPhysics.Rendering
 {
     public class Renderer
     {

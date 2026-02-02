@@ -4,7 +4,7 @@ using physics.Engine.Objects;
 using physics.Engine.Helpers;
 using SFML.System;
 
-namespace physics.Engine.Shaders
+namespace SharpPhysics.Rendering.Shaders
 {
     public class SFMLPolyShader : SFMLShader
     {

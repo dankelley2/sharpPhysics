@@ -2,12 +2,12 @@
 using System.Numerics;
 using physics.Engine.Core;
 using physics.Engine.Input;
-using physics.Engine.Rendering;
-using physics.Engine.Rendering.UI;
 using SharpPhysics.Demo.Designer;
 using SharpPhysics.Demo.Helpers;
 using SFML.Graphics;
 using SFML.Window;
+using SharpPhysics.Rendering;
+using SharpPhysics.Rendering.UI;
 
 namespace SharpPhysics.Demo;
 

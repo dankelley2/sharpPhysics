@@ -6,7 +6,6 @@ using physics.Engine.Core;
 using physics.Engine.Helpers;
 using physics.Engine.Input;
 using physics.Engine.Objects;
-using physics.Engine.Rendering;
 using SFML.Graphics;
 using SFML.Window;
 using SharpPhysics.Demo.DemoProps;
@@ -14,6 +13,7 @@ using SharpPhysics.Demo.Helpers;
 using SharpPhysics.Demo.Integration;
 using SharpPhysics.Demo.Settings;
 using SharpPhysics.Engine.Player;
+using SharpPhysics.Rendering;
 
 namespace SharpPhysics.Demo;
 

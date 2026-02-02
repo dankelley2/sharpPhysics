@@ -5,7 +5,7 @@ using physics.Engine.Shapes;
 using SFML.System;
 using physics.Engine.Helpers;
 
-namespace physics.Engine.Shaders
+namespace SharpPhysics.Rendering.Shaders
 {
     public class SFMLBoxShader : SFMLShader
     {

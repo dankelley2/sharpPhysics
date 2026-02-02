@@ -2,7 +2,7 @@ using physics.Engine.Helpers;
 using SFML.Graphics;
 using System;
 
-namespace physics.Engine.Rendering.UI
+namespace SharpPhysics.Rendering.UI
 {
     public class UiTextLabel : UiElement, IDisposable
     {

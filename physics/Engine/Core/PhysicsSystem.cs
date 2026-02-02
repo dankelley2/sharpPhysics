@@ -5,11 +5,11 @@ using physics.Engine.Objects;
 using physics.Engine.Helpers;
 using physics.Engine.Shapes;
 using physics.Engine.Constraints;
-using physics.Engine.Shaders;
 using System.Numerics;
 using System.Linq;
+using SharpPhysics.Rendering.Shaders;
 
-namespace physics.Engine
+namespace SharpPhysics.Engine.Core
 {
     public class PhysicsSystem
     {

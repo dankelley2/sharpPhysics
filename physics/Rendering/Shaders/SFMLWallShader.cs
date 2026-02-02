@@ -3,7 +3,7 @@ using System;
 using physics.Engine.Objects;
 using SFML.System;
 
-namespace physics.Engine.Shaders
+namespace SharpPhysics.Rendering.Shaders
 {
     public class SFMLWallShader : SFMLShader
     {

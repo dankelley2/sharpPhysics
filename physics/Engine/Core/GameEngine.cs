@@ -2,8 +2,9 @@
 using System;
 using System.Diagnostics;
 using physics.Engine.Input;
-using physics.Engine.Rendering;
 using SFML.Graphics;
+using SharpPhysics.Engine.Core;
+using SharpPhysics.Rendering;
 
 namespace physics.Engine.Core
 {

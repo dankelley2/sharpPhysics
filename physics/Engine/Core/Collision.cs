@@ -6,7 +6,7 @@ using physics.Engine.Objects;
 using physics.Engine.Shapes;
 using physics.Engine.Structs;
 
-namespace physics.Engine
+namespace SharpPhysics.Engine.Core
 {
     public static class Collision
     {

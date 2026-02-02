@@ -1,14 +1,12 @@
 #nullable enable
 using System.Numerics;
-using physics.Engine;
 using physics.Engine.Core;
 using physics.Engine.Input;
-using physics.Engine.Rendering;
-using physics.Engine.Rendering.UI;
-using physics.Engine.Classes.ObjectTemplates;
 using SharpPhysics.Demo.Helpers;
 using SFML.Graphics;
 using SFML.Window;
+using SharpPhysics.Rendering;
+using SharpPhysics.Rendering.UI;
 
 namespace SharpPhysics.Demo.Designer;
 

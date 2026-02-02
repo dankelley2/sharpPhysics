@@ -1,9 +1,9 @@
 #nullable enable
 using System.Numerics;
-using physics.Engine.Rendering;
 using SharpPhysics.Demo.Helpers;
 using SFML.Graphics;
 using SFML.System;
+using SharpPhysics.Rendering;
 
 namespace SharpPhysics.Demo.Designer;
 

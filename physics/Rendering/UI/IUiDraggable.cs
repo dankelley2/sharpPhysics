@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace physics.Engine.Rendering.UI
+namespace SharpPhysics.Rendering.UI
 {
     public interface IUiDraggable
     {

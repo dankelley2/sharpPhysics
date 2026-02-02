@@ -3,7 +3,7 @@ using System.Numerics;
 using SFML.Graphics;
 using SFML.System;
 
-namespace physics.Engine.Rendering.UI
+namespace SharpPhysics.Rendering.UI
 {
     /// <summary>
     /// A large, styled menu button for game selection screens.

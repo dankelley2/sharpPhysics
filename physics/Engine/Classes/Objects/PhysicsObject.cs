@@ -2,8 +2,9 @@
 using physics.Engine.Shapes;
 using System;
 using System.Collections.Generic;
-using physics.Engine.Shaders;
 using System.Numerics;
+using SharpPhysics.Engine.Core;
+using SharpPhysics.Rendering.Shaders;
 
 namespace physics.Engine.Objects
 {

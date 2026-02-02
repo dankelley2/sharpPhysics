@@ -1,6 +1,6 @@
 #nullable enable
 using physics.Engine.Input;
-using physics.Engine.Rendering;
+using SharpPhysics.Rendering;
 
 namespace physics.Engine.Core;
 

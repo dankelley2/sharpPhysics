@@ -5,13 +5,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
-using physics.Engine;
 using physics.Engine.Objects;
-using physics.Engine.Shaders;
 using PoseIntegrator.Vision.Models;
 using PoseIntegrator.Vision.PoseDetection;
 using PoseIntegrator.Vision.FrameSources;
 using PoseIntegrator.Vision.Abstractions;
+using SharpPhysics.Engine.Core;
+using SharpPhysics.Rendering.Shaders;
 
 namespace SharpPhysics.Demo.Integration
 {

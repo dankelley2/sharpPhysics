@@ -1,6 +1,6 @@
 ﻿
 using physics.Engine.Objects;
-using physics.Engine.Shaders;
+using SharpPhysics.Engine.Core;
 using System.Numerics;
 
 namespace physics.Engine.Classes.ObjectTemplates

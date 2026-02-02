@@ -1,17 +1,17 @@
 #nullable enable
 using System.Numerics;
-using physics.Engine;
 using physics.Engine.Classes.ObjectTemplates;
 using physics.Engine.Core;
 using physics.Engine.Input;
 using physics.Engine.Objects;
-using physics.Engine.Rendering;
-using physics.Engine.Shaders;
 using SFML.Window;
 using SharpPhysics.Demo.Helpers;
 using SharpPhysics.Demo.Integration;
 using SharpPhysics.Demo.Settings;
+using SharpPhysics.Engine.Core;
+using SharpPhysics.Rendering.Shaders;
 using SharpPhysics.Engine.Player;
+using SharpPhysics.Rendering;
 
 namespace SharpPhysics.Demo;
 

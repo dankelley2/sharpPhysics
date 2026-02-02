@@ -4,7 +4,7 @@ using System.Numerics;
 using SFML.Graphics;
 using SFML.System;
 
-namespace physics.Engine.Rendering.UI
+namespace SharpPhysics.Rendering.UI
 {
     public class UiButton : UiElement, IUiClickable
     {

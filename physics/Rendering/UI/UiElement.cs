@@ -1,10 +1,9 @@
-﻿using physics.Engine.Rendering.UI;
-using SFML.Graphics;
+﻿using SFML.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace physics.Engine.Rendering.UI
+namespace SharpPhysics.Rendering.UI
 {
     public abstract class UiElement
     {

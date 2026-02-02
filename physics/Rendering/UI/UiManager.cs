@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using SFML.Graphics;
 
-namespace physics.Engine.Rendering.UI
+namespace SharpPhysics.Rendering.UI
 {
     /// <summary>
     /// Manages UI elements for a specific context (game, menu, etc.).

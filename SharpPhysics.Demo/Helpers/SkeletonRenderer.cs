@@ -1,7 +1,7 @@
 using System.Numerics;
-using physics.Engine.Rendering;
 using SharpPhysics.Demo.Integration;
 using SFML.Graphics;
+using SharpPhysics.Rendering;
 
 namespace SharpPhysics.Demo.Helpers;
 
