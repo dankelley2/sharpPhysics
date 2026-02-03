@@ -29,6 +29,10 @@ namespace SharpPhysics.Engine.Constraints
             if (!B.ConnectedObjects.Contains(A))
                 B.ConnectedObjects.Add(A);
 
+            // Add constraints for tracking
+            A.Constraints.Add(this);
+            B.Constraints.Add(this);
+
             A.CanSleep = false;
             B.CanSleep = false;
         }

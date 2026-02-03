@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using SharpPhysics.Engine.Core;
 using SharpPhysics.Rendering.Shaders;
+using SharpPhysics.Engine.Constraints;
 
 namespace SharpPhysics.Engine.Objects
 {
@@ -22,6 +23,7 @@ namespace SharpPhysics.Engine.Objects
         public SFMLShader Shader { get; set; }
         public bool CanRotate { get; internal set; } = false;
         public List<PhysicsObject> ConnectedObjects { get; private set; } = new List<PhysicsObject>();
+        public List<Constraint> Constraints {get ; private set; } = new List<Constraint>();
         public float AngularVelocity { get; set; }
         public float Inertia { get; private set; }
         public float IInertia { get; private set; }
@@ -263,7 +265,7 @@ namespace SharpPhysics.Engine.Objects
         }
 
         /// <summary>
-        /// Compares the current contact points to the previous frame’s contact points,
+        /// Compares the current contact points to the previous frameï¿½s contact points,
         /// fires events for added and removed contacts, updates the cache, and then clears the current list.
         /// This method is written to be allocation-efficient.
         /// </summary>

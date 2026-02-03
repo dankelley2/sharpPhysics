@@ -495,17 +495,14 @@ namespace SharpPhysics.Engine.Core
             while (RemovalQueue.Count > 0)
             {
                 var obj = RemovalQueue.Dequeue();
-                if (obj.ConnectedObjects.Any())
+                if (obj.Constraints.Count != 0)
                 {
-                    foreach (var connectedObj in obj.ConnectedObjects)
+                    foreach (var constraint in obj.Constraints)
                     {
-                        var constraintToRemove = Constraints.FirstOrDefault(c => (c.A == obj && c.B == connectedObj) || (c.B == obj && c.A == connectedObj));
-                        if (constraintToRemove != null)
-                        {
-                            _constraintRemovalQueue.Enqueue(constraintToRemove);
-                        }
+                        _constraintRemovalQueue.Enqueue(constraint);
                     }
                 }
+
                 ListStaticObjects.Remove(obj);
                 ListGravityObjects.Remove(obj);
             }
