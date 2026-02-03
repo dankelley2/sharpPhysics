@@ -189,7 +189,6 @@ public class DesignerRenderer : IDisposable
         var shapeB = shapes[constraint.ShapeIndexB];
         Vector2 centerA = ShapeGeometry.GetShapeCenter(shapeA);
         Vector2 centerB = ShapeGeometry.GetShapeCenter(shapeB);
-        Vector2 pivot = constraint.AnchorA;
 
         Color colorA = constraint.Type switch
         {
@@ -205,53 +204,66 @@ public class DesignerRenderer : IDisposable
             _ => new Color(100, 255, 100, 200)                     // Green for axis (object B - the rotating part)
         };
 
-        // For spring constraints, draw a zigzag line between shape centers
+        // For spring constraints, draw zigzag between actual anchor points
         if (constraint.Type == ConstraintType.Spring)
         {
-            DrawSpringLine(renderer, centerA, centerB, colorA);
+            Vector2 anchorA = constraint.AnchorA;
+            Vector2 anchorB = constraint.AnchorB;
+
+            // Draw lines from shape centers to their anchor points
+            DrawLine(renderer, centerA, anchorA, new Color(100, 255, 100, 100));
+            DrawLine(renderer, centerB, anchorB, new Color(100, 255, 100, 100));
+
+            // Draw the spring between anchor points
+            DrawSpringLine(renderer, anchorA, anchorB, colorA);
+
+            // Draw anchor points on each shape
+            DrawCircle(renderer, anchorA, 3f, new Color(150, 255, 150, 100), Color.White);
+            DrawCircle(renderer, anchorB, 3f, new Color(150, 255, 150, 100), Color.White);
+
+            // Draw shape index labels near anchors
+            var screenPosA = renderer.Window.MapCoordsToPixel(new Vector2f(anchorA.X, anchorA.Y), renderer.GameView);
+            var screenPosB = renderer.Window.MapCoordsToPixel(new Vector2f(anchorB.X, anchorB.Y), renderer.GameView);
+            renderer.DrawText($"[{constraint.ShapeIndexA}]", screenPosA.X - 10, screenPosA.Y - 20, 12, colorA);
+            renderer.DrawText($"[{constraint.ShapeIndexB}]", screenPosB.X - 10, screenPosB.Y - 20, 12, colorB);
         }
         else
         {
+            // Weld/Axis: both anchors point to same pivot location
+            Vector2 pivot = constraint.AnchorA;
+
             // Draw lines from each shape center to the pivot point
             DrawLine(renderer, centerA, pivot, colorA);
             DrawLine(renderer, centerB, pivot, colorB);
+
+            // Draw the pivot/anchor point
+            float pivotRadius = constraint.Type == ConstraintType.Weld ? 2f : 3f;
+            Color pivotColor = constraint.Type == ConstraintType.Weld
+                ? new Color(255, 150, 150, 50)
+                : new Color(255, 255, 100, 50); // Yellow pivot for axis
+            DrawCircle(renderer, pivot, pivotRadius, pivotColor, Color.White);
+
+            // For axis constraints, draw rotation indicator around pivot
+            if (constraint.Type == ConstraintType.Axis)
+            {
+                DrawCircle(renderer, pivot, 5f, new Color(0, 0, 0, 0), colorB);
+
+                // Draw small arrow/indicator on B's line to show it rotates
+                Vector2 dirB = Vector2.Normalize(centerB - pivot);
+                Vector2 perpB = new Vector2(-dirB.Y, dirB.X);
+                Vector2 arrowPos = pivot + dirB * 20f;
+                DrawLine(renderer, arrowPos, arrowPos + perpB * 12f, colorB);
+                DrawLine(renderer, arrowPos, arrowPos - perpB * 8f, colorB);
+            }
+
+            // Draw shape index labels near the constraint lines
+            Vector2 labelWorldA = Vector2.Lerp(centerA, pivot, 0.3f);
+            Vector2 labelWorldB = Vector2.Lerp(centerB, pivot, 0.3f);
+            var screenPosA = renderer.Window.MapCoordsToPixel(new Vector2f(labelWorldA.X, labelWorldA.Y), renderer.GameView);
+            var screenPosB = renderer.Window.MapCoordsToPixel(new Vector2f(labelWorldB.X, labelWorldB.Y), renderer.GameView);
+            renderer.DrawText($"[{constraint.ShapeIndexA}]", screenPosA.X - 10, screenPosA.Y - 8, 12, colorA);
+            renderer.DrawText($"[{constraint.ShapeIndexB}]", screenPosB.X - 10, screenPosB.Y - 8, 12, colorB);
         }
-
-        // Draw the pivot/anchor point
-        float pivotRadius = constraint.Type switch
-        {
-            ConstraintType.Weld => 2f,
-            ConstraintType.Spring => 3f,
-            _ => 3f
-        };
-        Color pivotColor = constraint.Type switch
-        {
-            ConstraintType.Weld => new Color(255, 150, 150, 50),
-            ConstraintType.Spring => new Color(150, 255, 150, 50),
-            _ => new Color(255, 255, 100, 50) // Yellow pivot for axis
-        };
-        DrawCircle(renderer, pivot, pivotRadius, pivotColor, Color.White);
-
-        // For axis constraints, draw rotation indicator around pivot
-        if (constraint.Type == ConstraintType.Axis)
-        {
-            DrawCircle(renderer, pivot, 5f, new Color(0, 0, 0, 0), colorB);
-
-            // Draw small arrow/indicator on B's line to show it rotates
-            Vector2 dirB = Vector2.Normalize(centerB - pivot);
-            Vector2 perpB = new Vector2(-dirB.Y, dirB.X);
-            Vector2 arrowPos = pivot + dirB * 20f;
-            DrawLine(renderer, arrowPos, arrowPos + perpB * 12f, colorB);
-            DrawLine(renderer, arrowPos, arrowPos - perpB * 8f, colorB);
-        }
-
-        // Draw shape index labels near the constraint lines (convert world to screen coords)
-        Vector2 labelWorldA = Vector2.Lerp(centerA, pivot, 0.3f);
-        Vector2 labelWorldB = Vector2.Lerp(centerB, pivot, 0.3f);
-        var screenPosA = renderer.Window.MapCoordsToPixel(new Vector2f(labelWorldA.X, labelWorldA.Y), renderer.GameView);
-        var screenPosB = renderer.Window.MapCoordsToPixel(new Vector2f(labelWorldB.X, labelWorldB.Y), renderer.GameView);
-        renderer.DrawText($"[{constraint.ShapeIndexA}]", screenPosA.X - 10, screenPosA.Y - 8, 12, colorA);
-        renderer.DrawText($"[{constraint.ShapeIndexB}]", screenPosB.X - 10, screenPosB.Y - 8, 12, colorB);
 
         // Restore GameView after DrawText (which switches to UiView internally)
         renderer.Window.SetView(renderer.GameView);

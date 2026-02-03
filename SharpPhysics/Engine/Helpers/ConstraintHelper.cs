@@ -26,12 +26,19 @@ public static class ConstraintHelpers
         return weldConstraint;
     }
 
+    public static Constraint AddSpringConstraint(this GameEngine engine, PhysicsObject objA, PhysicsObject objB, Vector2 localAnchorA, Vector2 localAnchorB)
+    {
+        var springConstraint = new SpringConstraint(objA, objB, localAnchorA, localAnchorB);
+        engine.PhysicsSystem.Constraints.Add(springConstraint);
+        return springConstraint;
+    }
+
     public static Constraint AddSpringConstraint(this GameEngine engine, PhysicsObject objA, PhysicsObject objB)
     {
         var halfdiff = (objB.Center - objA.Center) / 2f;
-        var weldConstraint = new SpringConstraint(objA, objB, halfdiff, -halfdiff);
-        engine.PhysicsSystem.Constraints.Add(weldConstraint);
-        return weldConstraint;
+        var springConstraint = new SpringConstraint(objA, objB, halfdiff, -halfdiff);
+        engine.PhysicsSystem.Constraints.Add(springConstraint);
+        return springConstraint;
     }
 
     public static Constraint AddAxisConstraint(this GameEngine engine, PhysicsObject objA, PhysicsObject objB, Vector2 localAnchorA, Vector2 localAnchorB)

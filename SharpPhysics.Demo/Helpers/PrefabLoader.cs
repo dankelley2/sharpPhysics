@@ -288,13 +288,25 @@ public class PrefabLoader
                     }
                     else if (constraint.Type == ConstraintType.Spring)
                     {
-                        // Spring: Both anchors point to the same world position
-                        Vector2 worldAnchor = constraint.AnchorA + offset;
+                        // Spring: Each anchor is on its respective shape
+                        Vector2 worldAnchorA = constraint.AnchorA + offset;
+                        Vector2 worldAnchorB = constraint.AnchorB + offset;
 
-                        var objA = FindClosestObject(objectsA, worldAnchor);
-                        var objB = FindClosestObject(objectsB, worldAnchor);
+                        var objA = FindClosestObject(objectsA, worldAnchorA);
+                        var objB = FindClosestObject(objectsB, worldAnchorB);
 
-                        _engine.AddSpringConstraint(objA, objB);
+                        // Convert world anchors to local space for each object
+                        Vector2 worldOffsetA = worldAnchorA - objA.Center;
+                        Vector2 worldOffsetB = worldAnchorB - objB.Center;
+                        Vector2 localAnchorA = PhysMath.RotateVector(worldOffsetA, -objA.Angle);
+                        Vector2 localAnchorB = PhysMath.RotateVector(worldOffsetB, -objB.Angle);
+
+                        Console.WriteLine($"  Spring constraint: Shape[{constraint.ShapeIndexA}] -> Shape[{constraint.ShapeIndexB}]");
+                        Console.WriteLine($"    AnchorA: {worldAnchorA}, AnchorB: {worldAnchorB}");
+                        Console.WriteLine($"    ObjA center: {objA.Center}, localAnchor: {localAnchorA}");
+                        Console.WriteLine($"    ObjB center: {objB.Center}, localAnchor: {localAnchorB}");
+
+                        _engine.AddSpringConstraint(objA, objB, localAnchorA, localAnchorB);
                     }
                 }
             }

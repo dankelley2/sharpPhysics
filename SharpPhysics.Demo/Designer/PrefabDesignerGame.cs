@@ -409,7 +409,7 @@ public class PrefabDesignerGame : IGame
             string hint = _currentMode == DrawMode.Axis
                 ? $"Selected BASE shape [{clickedIndex.Value}] (cyan) at pivot - now click the ROTATING shape"
                 : _currentMode == DrawMode.Spring
-                ? $"Selected shape [{clickedIndex.Value}] - now click second shape for spring connection"
+                ? $"Selected shape [{clickedIndex.Value}] at anchor - now click second shape at its anchor point"
                 : $"Selected shape [{clickedIndex.Value}] - now click second shape at the weld point";
             Console.WriteLine(hint);
         }
@@ -422,11 +422,11 @@ public class PrefabDesignerGame : IGame
                 return;
             }
 
-            CreateConstraint(clickedIndex.Value);
+            CreateConstraint(clickedIndex.Value, snappedPos);
         }
     }
 
-    private void CreateConstraint(int secondShapeIndex)
+    private void CreateConstraint(int secondShapeIndex, Vector2 secondAnchorPoint)
     {
         var constraintType = _currentMode switch
         {
@@ -436,21 +436,28 @@ public class PrefabDesignerGame : IGame
             _ => ConstraintType.Weld
         };
 
+        // For springs, use separate anchor points on each shape
+        // For weld/axis, both anchors point to the same pivot location
+        Vector2 anchorA = _firstAnchorPoint!.Value;
+        Vector2 anchorB = constraintType == ConstraintType.Spring 
+            ? secondAnchorPoint 
+            : _firstAnchorPoint!.Value;
+
         var constraint = new PrefabConstraint
         {
             Type = constraintType,
             ShapeIndexA = _firstSelectedShapeIndex!.Value,
             ShapeIndexB = secondShapeIndex,
-            AnchorA = _firstAnchorPoint!.Value,
-            AnchorB = _firstAnchorPoint!.Value
+            AnchorA = anchorA,
+            AnchorB = anchorB
         };
         _constraints.Add(constraint);
 
         string description = constraintType switch
         {
-            ConstraintType.Axis => $"Created Axis: [{_firstSelectedShapeIndex.Value}] (base/cyan) <-> [{secondShapeIndex}] (rotating/green) at pivot {_firstAnchorPoint!.Value}",
-            ConstraintType.Spring => $"Created Spring: [{_firstSelectedShapeIndex.Value}] <-> [{secondShapeIndex}] at {_firstAnchorPoint!.Value}",
-            _ => $"Created Weld: [{_firstSelectedShapeIndex.Value}] <-> [{secondShapeIndex}] at {_firstAnchorPoint!.Value}"
+            ConstraintType.Axis => $"Created Axis: [{_firstSelectedShapeIndex.Value}] (base/cyan) <-> [{secondShapeIndex}] (rotating/green) at pivot {anchorA}",
+            ConstraintType.Spring => $"Created Spring: [{_firstSelectedShapeIndex.Value}] at {anchorA} <-> [{secondShapeIndex}] at {anchorB}",
+            _ => $"Created Weld: [{_firstSelectedShapeIndex.Value}] <-> [{secondShapeIndex}] at {anchorA}"
         };
         Console.WriteLine(description);
 
