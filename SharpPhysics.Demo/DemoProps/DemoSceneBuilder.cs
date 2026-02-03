@@ -2,6 +2,7 @@
 using System.Numerics;
 using SharpPhysics.Engine;
 using SharpPhysics.Engine.Classes.ObjectTemplates;
+using SharpPhysics.Engine.Constraints;
 using SharpPhysics.Engine.Core;
 using SharpPhysics.Engine.Objects;
 
@@ -106,8 +107,16 @@ public class DemoSceneBuilder
             for (int y = 0; y < countY; y++)
             {
                 grid[x][y] = _templates.CreateSmallBall(origin.X + x * spacing, origin.Y + y * spacing);
-                if (x > 0) _engine.AddSpringConstraint(grid[x - 1][y], grid[x][y]);
-                if (y > 0) _engine.AddSpringConstraint(grid[x][y - 1], grid[x][y]);
+                if (x > 0)
+                {
+                    var c = _engine.AddSpringConstraint(grid[x - 1][y], grid[x][y]);
+                    ((SpringConstraint)c).AngularFrequency = 15f;
+                }
+                if (y > 0)
+                {
+                    var c =_engine.AddSpringConstraint(grid[x][y - 1], grid[x][y]);
+                    ((SpringConstraint)c).AngularFrequency = 15f;
+                }
             }
         }
     }
