@@ -21,11 +21,11 @@ public class PrefabDesignerGame : IGame
     private DesignerRenderer _designerRenderer = null!;
 
     // Grid settings
-    private int _gridSize { get ; set; } = 10;
+    private int _gridSize { get ; set; } = 8;
     private const int TOOLBAR_HEIGHT = 70;
 
     // Drawing/interaction modes
-    private enum DrawMode { None, Polygon, Circle, Rectangle, Weld, Axis, Select }
+    private enum DrawMode { None, Polygon, Circle, Rectangle, Weld, Axis, Spring, Select }
     private DrawMode _currentMode = DrawMode.None;
 
     // Drawing state
@@ -81,8 +81,8 @@ public class PrefabDesignerGame : IGame
         float spacing = 6f;
         float toolbarY = 5f;
 
-        // Calculate starting X to center the toolbar (10 buttons now)
-        int numButtons = 10;
+        // Calculate starting X to center the toolbar (11 buttons now)
+        int numButtons = 11;
         float totalWidth = (buttonWidth * numButtons) + (spacing * (numButtons - 1));
         float startX = centerX - totalWidth / 2f;
         int btnIdx = 0;
@@ -113,6 +113,10 @@ public class PrefabDesignerGame : IGame
         // Axis button (A) - rotating joint
         AddToolbarButton("A", startX, ref btnIdx, buttonWidth, buttonHeight, spacing, toolbarY, font,
             () => SetDrawMode(DrawMode.Axis));
+
+        // Spring button (Sp) - spring connection
+        AddToolbarButton("Sp", startX, ref btnIdx, buttonWidth, buttonHeight, spacing, toolbarY, font,
+            () => SetDrawMode(DrawMode.Spring));
 
         // Separator space
         btnIdx++;
@@ -160,6 +164,7 @@ public class PrefabDesignerGame : IGame
             DrawMode.Rectangle => "Rectangle: Click and drag to draw",
             DrawMode.Weld => "Weld: Click first shape, then second shape (rigid connection)",
             DrawMode.Axis => "Axis: Click first shape, then second shape (rotating joint)",
+            DrawMode.Spring => "Spring: Click first shape, then second shape (spring connection)",
             DrawMode.Select => "Select: Click shape to select, Delete/Backspace to remove",
             _ => "Select a tool"
         };
@@ -213,13 +218,13 @@ public class PrefabDesignerGame : IGame
     private void HandleGridControls(InputManager inputManager)
     {
         if (inputManager.IsKeyPressedBuffered(Keyboard.Key.Hyphen)){
-            _gridSize = Math.Max(5, _gridSize >> 1);
+            _gridSize = Math.Max(2, _gridSize >> 1);
             inputManager.ConsumeKeyPress(Keyboard.Key.Hyphen);
         }
 
         if (inputManager.IsKeyPressedBuffered(Keyboard.Key.Equal))
         {
-            _gridSize = Math.Min(80, _gridSize << 1);
+            _gridSize = Math.Min(128, _gridSize << 1);
             inputManager.ConsumeKeyPress(Keyboard.Key.Equal);
         }
     }
@@ -343,6 +348,7 @@ public class PrefabDesignerGame : IGame
 
             case DrawMode.Weld:
             case DrawMode.Axis:
+            case DrawMode.Spring:
                 HandleConstraintClick(mousePos, snappedPos);
                 break;
 
@@ -402,6 +408,8 @@ public class PrefabDesignerGame : IGame
 
             string hint = _currentMode == DrawMode.Axis
                 ? $"Selected BASE shape [{clickedIndex.Value}] (cyan) at pivot - now click the ROTATING shape"
+                : _currentMode == DrawMode.Spring
+                ? $"Selected shape [{clickedIndex.Value}] - now click second shape for spring connection"
                 : $"Selected shape [{clickedIndex.Value}] - now click second shape at the weld point";
             Console.WriteLine(hint);
         }
@@ -420,7 +428,13 @@ public class PrefabDesignerGame : IGame
 
     private void CreateConstraint(int secondShapeIndex)
     {
-        var constraintType = _currentMode == DrawMode.Weld ? ConstraintType.Weld : ConstraintType.Axis;
+        var constraintType = _currentMode switch
+        {
+            DrawMode.Weld => ConstraintType.Weld,
+            DrawMode.Axis => ConstraintType.Axis,
+            DrawMode.Spring => ConstraintType.Spring,
+            _ => ConstraintType.Weld
+        };
 
         var constraint = new PrefabConstraint
         {
@@ -432,9 +446,12 @@ public class PrefabDesignerGame : IGame
         };
         _constraints.Add(constraint);
 
-        string description = constraintType == ConstraintType.Axis
-            ? $"Created Axis: [{_firstSelectedShapeIndex.Value}] (base/cyan) <-> [{secondShapeIndex}] (rotating/green) at pivot {_firstAnchorPoint!.Value}"
-            : $"Created Weld: [{_firstSelectedShapeIndex.Value}] <-> [{secondShapeIndex}] at {_firstAnchorPoint!.Value}";
+        string description = constraintType switch
+        {
+            ConstraintType.Axis => $"Created Axis: [{_firstSelectedShapeIndex.Value}] (base/cyan) <-> [{secondShapeIndex}] (rotating/green) at pivot {_firstAnchorPoint!.Value}",
+            ConstraintType.Spring => $"Created Spring: [{_firstSelectedShapeIndex.Value}] <-> [{secondShapeIndex}] at {_firstAnchorPoint!.Value}",
+            _ => $"Created Weld: [{_firstSelectedShapeIndex.Value}] <-> [{secondShapeIndex}] at {_firstAnchorPoint!.Value}"
+        };
         Console.WriteLine(description);
 
         _firstSelectedShapeIndex = null;
@@ -681,22 +698,28 @@ public class PrefabDesignerGame : IGame
         if (!_firstSelectedShapeIndex.HasValue || _firstSelectedShapeIndex.Value >= _shapes.Count)
             return;
 
-        Color highlightColor = _currentMode == DrawMode.Axis
-            ? new Color(100, 200, 255, 150)  // Cyan for axis base
-            : new Color(255, 100, 100, 150); // Red for weld
+        Color highlightColor = _currentMode switch
+        {
+            DrawMode.Axis => new Color(100, 200, 255, 150),   // Cyan for axis base
+            DrawMode.Spring => new Color(100, 255, 100, 150), // Green for spring
+            _ => new Color(255, 100, 100, 150)               // Red for weld
+        };
 
         _designerRenderer.DrawShapeHighlight(renderer, _shapes[_firstSelectedShapeIndex.Value], highlightColor);
 
         if (_firstAnchorPoint.HasValue)
         {
-            Color anchorColor = _currentMode == DrawMode.Axis
-                ? new Color(255, 255, 100, 255)  // Yellow pivot
-                : new Color(255, 150, 150, 255); // Light red weld point
+            Color anchorColor = _currentMode switch
+            {
+                DrawMode.Axis => new Color(255, 255, 100, 255),   // Yellow pivot
+                DrawMode.Spring => new Color(150, 255, 150, 255), // Light green
+                _ => new Color(255, 150, 150, 255)               // Light red weld point
+            };
 
-            _designerRenderer.DrawCircle(renderer, _firstAnchorPoint.Value, 8f, anchorColor, Color.White, 2f);
+            _designerRenderer.DrawCircle(renderer, _firstAnchorPoint.Value, 3f, anchorColor, Color.White);
 
             Vector2 center = ShapeGeometry.GetShapeCenter(_shapes[_firstSelectedShapeIndex.Value]);
-            _designerRenderer.DrawLine(renderer, center, _firstAnchorPoint.Value, highlightColor, 2f);
+            _designerRenderer.DrawLine(renderer, center, _firstAnchorPoint.Value, highlightColor);
         }
     }
 
@@ -713,10 +736,13 @@ public class PrefabDesignerGame : IGame
             DrawMode.Axis => _firstSelectedShapeIndex.HasValue
                 ? "Mode: Axis - Click second shape"
                 : "Mode: Axis - Click first shape",
+            DrawMode.Spring => _firstSelectedShapeIndex.HasValue
+                ? "Mode: Spring - Click second shape"
+                : "Mode: Spring - Click first shape",
             DrawMode.Select => _selectedShapeIndex.HasValue
                 ? $"Mode: Select - Shape [{_selectedShapeIndex.Value}] selected (Del to remove)"
                 : "Mode: Select - Click a shape to select",
-            _ => "Select a tool from the toolbar (S/P/C/R for shapes, W/A for constraints)"
+            _ => "Select a tool from the toolbar (S/P/C/R for shapes, W/A/Sp for constraints)"
         };
         renderer.DrawText(modeText, 10, _engine.WindowHeight - 30, 14, Color.White);
 

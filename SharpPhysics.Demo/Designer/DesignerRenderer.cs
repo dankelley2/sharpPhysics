@@ -13,7 +13,7 @@ namespace SharpPhysics.Demo.Designer;
 public class DesignerRenderer : IDisposable
 {
     // Cached SFML shapes to avoid GC pressure
-    private readonly RectangleShape _cachedLine = new();
+    private readonly VertexArray _cachedLine = new VertexArray(PrimitiveType.Lines);
     private readonly CircleShape _cachedCircle = new();
     private readonly RectangleShape _cachedRect = new();
     private readonly ConvexShape _cachedConvex = new();
@@ -31,46 +31,42 @@ public class DesignerRenderer : IDisposable
 
     #region Basic Shape Drawing
 
-    public void DrawLine(Renderer renderer, Vector2 start, Vector2 end, Color color, float thickness)
+    public void DrawLine(Renderer renderer, Vector2 start, Vector2 end, Color color)
     {
         var direction = end - start;
         var length = direction.Length();
         if (length < 0.001f) return;
 
-        var angle = MathF.Atan2(direction.Y, direction.X) * 180f / MathF.PI;
-
-        _cachedLine.Size = new Vector2f(length, thickness);
-        _cachedLine.Position = new Vector2f(start.X, start.Y);
-        _cachedLine.FillColor = color;
-        _cachedLine.Rotation = angle;
-        _cachedLine.Origin = new Vector2f(0, thickness / 2);
+        _cachedLine.Clear();
+        _cachedLine.Append(new Vertex(new Vector2f(start.X, start.Y), color));
+        _cachedLine.Append(new Vertex(new Vector2f(end.X, end.Y), color));
 
         renderer.Window.Draw(_cachedLine);
     }
 
-    public void DrawCircle(Renderer renderer, Vector2 center, float radius, Color fillColor, Color outlineColor, float outlineThickness)
+    public void DrawCircle(Renderer renderer, Vector2 center, float radius, Color fillColor, Color outlineColor)
     {
         _cachedCircle.Radius = radius;
         _cachedCircle.Position = new Vector2f(center.X - radius, center.Y - radius);
         _cachedCircle.FillColor = fillColor;
         _cachedCircle.OutlineColor = outlineColor;
-        _cachedCircle.OutlineThickness = outlineThickness;
+        _cachedCircle.OutlineThickness = 0.2f;
 
         renderer.Window.Draw(_cachedCircle);
     }
 
-    public void DrawRectangle(Renderer renderer, Vector2 position, Vector2 size, Color fillColor, Color outlineColor, float outlineThickness)
+    public void DrawRectangle(Renderer renderer, Vector2 position, Vector2 size, Color fillColor, Color outlineColor)
     {
         _cachedRect.Size = new Vector2f(size.X, size.Y);
         _cachedRect.Position = new Vector2f(position.X, position.Y);
         _cachedRect.FillColor = fillColor;
         _cachedRect.OutlineColor = outlineColor;
-        _cachedRect.OutlineThickness = outlineThickness;
+        _cachedRect.OutlineThickness = 0.2f;
 
         renderer.Window.Draw(_cachedRect);
     }
 
-    public void DrawPolygon(Renderer renderer, Vector2[] points, Color fillColor, Color outlineColor, float outlineThickness)
+    public void DrawPolygon(Renderer renderer, Vector2[] points, Color fillColor, Color outlineColor)
     {
         if (points.Length < 3) return;
 
@@ -81,7 +77,7 @@ public class DesignerRenderer : IDisposable
         }
         _cachedConvex.FillColor = fillColor;
         _cachedConvex.OutlineColor = outlineColor;
-        _cachedConvex.OutlineThickness = outlineThickness;
+        _cachedConvex.OutlineThickness = 0.2f;
 
         renderer.Window.Draw(_cachedConvex);
     }
@@ -98,14 +94,14 @@ public class DesignerRenderer : IDisposable
         for (int x = 0; x <= width; x += gridSize)
         {
             Color color = (x % (gridSize * 5) == 0) ? _gridMajorColor : _gridColor;
-            DrawLine(renderer, new Vector2(x, toolbarHeight), new Vector2(x, height), color, 1f);
+            DrawLine(renderer, new Vector2(x, toolbarHeight), new Vector2(x, height), color);
         }
 
         // Draw horizontal lines - start at toolbarHeight and align to grid
         for (int y = toolbarHeight; y <= height; y += gridSize)
         {
             Color color = ((y - toolbarHeight) % (gridSize * 5) == 0) ? _gridMajorColor : _gridColor;
-            DrawLine(renderer, new Vector2(0, y), new Vector2(width, y), color, 1f);
+            DrawLine(renderer, new Vector2(0, y), new Vector2(width, y), color);
         }
     }
 
@@ -120,20 +116,20 @@ public class DesignerRenderer : IDisposable
             case ShapeType.Polygon when shape.Points is { Length: >= 3 }:
                 DrawPolygon(renderer, shape.Points, 
                     new Color(100, 200, 100, 50), 
-                    new Color(100, 200, 100), 2f);
+                    new Color(100, 200, 100));
                 break;
 
             case ShapeType.Circle:
                 DrawCircle(renderer, shape.Center, shape.Radius,
                     new Color(100, 150, 200, 50),
-                    new Color(100, 150, 200), 2f);
+                    new Color(100, 150, 200));
                 break;
 
             case ShapeType.Rectangle:
                 DrawRectangle(renderer, shape.Position,
                     new Vector2(shape.Width, shape.Height),
                     new Color(200, 150, 100, 50),
-                    new Color(200, 150, 100), 2f);
+                    new Color(200, 150, 100));
                 break;
         }
     }
@@ -153,20 +149,20 @@ public class DesignerRenderer : IDisposable
         switch (shape.Type)
         {
             case ShapeType.Circle:
-                DrawCircle(renderer, shape.Center, shape.Radius + 3, highlightColor, highlightColor, 2f);
+                DrawCircle(renderer, shape.Center, shape.Radius + 3, highlightColor, highlightColor);
                 break;
 
             case ShapeType.Rectangle:
                 DrawRectangle(renderer, shape.Position - new Vector2(3, 3),
                     new Vector2(shape.Width + 6, shape.Height + 6),
-                    new Color(0, 0, 0, 0), highlightColor, 2f);
+                    new Color(0, 0, 0, 0), highlightColor);
                 break;
 
             case ShapeType.Polygon when shape.Points is { Length: >= 3 }:
                 for (int i = 0; i < shape.Points.Length; i++)
                 {
                     int next = (i + 1) % shape.Points.Length;
-                    DrawLine(renderer, shape.Points[i], shape.Points[next], highlightColor, 2f);
+                    DrawLine(renderer, shape.Points[i], shape.Points[next], highlightColor);
                 }
                 break;
         }
@@ -195,36 +191,58 @@ public class DesignerRenderer : IDisposable
         Vector2 centerB = ShapeGeometry.GetShapeCenter(shapeB);
         Vector2 pivot = constraint.AnchorA;
 
-        Color colorA = constraint.Type == ConstraintType.Weld
-            ? new Color(255, 100, 100, 200)  // Red for weld
-            : new Color(100, 200, 255, 200); // Cyan for axis (object A - the anchor/base)
+        Color colorA = constraint.Type switch
+        {
+            ConstraintType.Weld => new Color(255, 100, 100, 200),   // Red for weld
+            ConstraintType.Spring => new Color(100, 255, 100, 200), // Green for spring
+            _ => new Color(100, 200, 255, 200)                     // Cyan for axis (object A - the anchor/base)
+        };
 
-        Color colorB = constraint.Type == ConstraintType.Weld
-            ? new Color(255, 100, 100, 200)  // Red for weld
-            : new Color(100, 255, 100, 200); // Green for axis (object B - the rotating part)
+        Color colorB = constraint.Type switch
+        {
+            ConstraintType.Weld => new Color(255, 100, 100, 200),   // Red for weld
+            ConstraintType.Spring => new Color(100, 255, 100, 200), // Green for spring
+            _ => new Color(100, 255, 100, 200)                     // Green for axis (object B - the rotating part)
+        };
 
-        // Draw lines from each shape center to the pivot point
-        DrawLine(renderer, centerA, pivot, colorA, 1f);
-        DrawLine(renderer, centerB, pivot, colorB, 1f);
+        // For spring constraints, draw a zigzag line between shape centers
+        if (constraint.Type == ConstraintType.Spring)
+        {
+            DrawSpringLine(renderer, centerA, centerB, colorA);
+        }
+        else
+        {
+            // Draw lines from each shape center to the pivot point
+            DrawLine(renderer, centerA, pivot, colorA);
+            DrawLine(renderer, centerB, pivot, colorB);
+        }
 
-        // Draw the pivot point
-        float pivotRadius = constraint.Type == ConstraintType.Weld ? 3f : 6f;
-        Color pivotColor = constraint.Type == ConstraintType.Weld
-            ? new Color(255, 150, 150, 50)
-            : new Color(255, 255, 100, 50); // Yellow pivot for axis
-        DrawCircle(renderer, pivot, pivotRadius, pivotColor, Color.White, 2f);
+        // Draw the pivot/anchor point
+        float pivotRadius = constraint.Type switch
+        {
+            ConstraintType.Weld => 2f,
+            ConstraintType.Spring => 3f,
+            _ => 3f
+        };
+        Color pivotColor = constraint.Type switch
+        {
+            ConstraintType.Weld => new Color(255, 150, 150, 50),
+            ConstraintType.Spring => new Color(150, 255, 150, 50),
+            _ => new Color(255, 255, 100, 50) // Yellow pivot for axis
+        };
+        DrawCircle(renderer, pivot, pivotRadius, pivotColor, Color.White);
 
         // For axis constraints, draw rotation indicator around pivot
         if (constraint.Type == ConstraintType.Axis)
         {
-            DrawCircle(renderer, pivot, 8f, new Color(0, 0, 0, 0), colorB, 2f);
+            DrawCircle(renderer, pivot, 5f, new Color(0, 0, 0, 0), colorB);
 
             // Draw small arrow/indicator on B's line to show it rotates
             Vector2 dirB = Vector2.Normalize(centerB - pivot);
             Vector2 perpB = new Vector2(-dirB.Y, dirB.X);
             Vector2 arrowPos = pivot + dirB * 20f;
-            DrawLine(renderer, arrowPos, arrowPos + perpB * 8f, colorB, 1f);
-            DrawLine(renderer, arrowPos, arrowPos - perpB * 8f, colorB, 1f);
+            DrawLine(renderer, arrowPos, arrowPos + perpB * 12f, colorB);
+            DrawLine(renderer, arrowPos, arrowPos - perpB * 8f, colorB);
         }
 
         // Draw shape index labels near the constraint lines (convert world to screen coords)
@@ -239,13 +257,45 @@ public class DesignerRenderer : IDisposable
         renderer.Window.SetView(renderer.GameView);
     }
 
+    private void DrawSpringLine(Renderer renderer, Vector2 start, Vector2 end, Color color)
+    {
+        Vector2 direction = end - start;
+        float length = direction.Length();
+        if (length < 1f) return;
+
+        Vector2 unitDir = direction / length;
+        Vector2 perpendicular = new Vector2(-unitDir.Y, unitDir.X);
+
+        int coilCount = Math.Max(4, (int)(length / 15f));
+        float coilWidth = 6f;
+        float segmentLength = length / (coilCount * 2 + 2);
+
+        // Start with a straight segment
+        Vector2 currentPos = start;
+        Vector2 nextPos = start + unitDir * segmentLength;
+        DrawLine(renderer, currentPos, nextPos, color);
+        currentPos = nextPos;
+
+        // Draw the zigzag coils
+        for (int i = 0; i < coilCount * 2; i++)
+        {
+            float side = (i % 2 == 0) ? coilWidth : -coilWidth;
+            nextPos = currentPos + unitDir * segmentLength + perpendicular * side;
+            DrawLine(renderer, currentPos, nextPos, color);
+            currentPos = nextPos;
+        }
+
+        // End with a straight segment
+        DrawLine(renderer, currentPos, end, color);
+    }
+
     #endregion
 
     #region Preview Drawing
 
     public void DrawCursorIndicator(Renderer renderer, Vector2 position)
     {
-        DrawCircle(renderer, position, 3, Color.Yellow, Color.White, 1f);
+        DrawCircle(renderer, position, 2, Color.Yellow, Color.White);
     }
 
     public void DrawPolygonPreview(Renderer renderer, IReadOnlyList<Vector2> points, Vector2 snappedMouse, int gridSize)
@@ -257,17 +307,17 @@ public class DesignerRenderer : IDisposable
         {
             // Draw point
             DrawCircle(renderer, points[i], 4,
-                i == 0 ? Color.Green : Color.Cyan, Color.White, 1f);
+                i == 0 ? Color.Green : Color.Cyan, Color.White);
 
             // Draw line to next point
             if (i < points.Count - 1)
             {
-                DrawLine(renderer, points[i], points[i + 1], new Color(100, 200, 100), 2f);
+                DrawLine(renderer, points[i], points[i + 1], new Color(100, 200, 100));
             }
         }
 
         // Draw line from last point to mouse
-        DrawLine(renderer, points[^1], snappedMouse, new Color(100, 200, 100, 128), 2f);
+        DrawLine(renderer, points[^1], snappedMouse, new Color(100, 200, 100, 128));
 
         // If close to first point, highlight it
         if (points.Count >= 3)
@@ -275,7 +325,7 @@ public class DesignerRenderer : IDisposable
             float distToFirst = Vector2.Distance(snappedMouse, points[0]);
             if (distToFirst < gridSize)
             {
-                DrawCircle(renderer, points[0], 6, new Color(0, 255, 0, 100), Color.Green, 2f);
+                DrawCircle(renderer, points[0], 6, new Color(0, 255, 0, 100), Color.Green);
             }
         }
     }
@@ -288,7 +338,7 @@ public class DesignerRenderer : IDisposable
 
         DrawCircle(renderer, center, radius,
             new Color(100, 150, 200, 50),
-            new Color(100, 150, 200, 200), 2f);
+            new Color(100, 150, 200, 200));
     }
 
     public void DrawRectanglePreview(Renderer renderer, Vector2 start, Vector2 end)
@@ -302,7 +352,7 @@ public class DesignerRenderer : IDisposable
             new Vector2(minX, minY),
             new Vector2(width, height),
             new Color(200, 150, 100, 50),
-            new Color(200, 150, 100, 200), 2f);
+            new Color(200, 150, 100, 200));
     }
 
     #endregion

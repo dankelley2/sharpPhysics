@@ -21,7 +21,8 @@ public enum ShapeType
 public enum ConstraintType
 {
     Weld,
-    Axis
+    Axis,
+    Spring
 }
 
 public class PrefabShape
@@ -284,6 +285,16 @@ public class PrefabLoader
                         Console.WriteLine($"    ObjB center: {objB.Center}, localAnchor: {localAnchorB}, Locked: {objB.Locked}");
 
                         _engine.AddAxisConstraint(objA, objB, localAnchorA, localAnchorB);
+                    }
+                    else if (constraint.Type == ConstraintType.Spring)
+                    {
+                        // Spring: Both anchors point to the same world position
+                        Vector2 worldAnchor = constraint.AnchorA + offset;
+
+                        var objA = FindClosestObject(objectsA, worldAnchor);
+                        var objB = FindClosestObject(objectsB, worldAnchor);
+
+                        _engine.AddSpringConstraint(objA, objB);
                     }
                 }
             }
