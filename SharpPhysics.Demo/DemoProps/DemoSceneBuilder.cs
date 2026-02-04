@@ -153,14 +153,15 @@ public class DemoSceneBuilder
     public void CreateBridge(Vector2 start, int segments = 12, int segmentSpacing = 25)
     {
         PhysicsObject? prevObject = null;
+        List<PhysicsObject> links = new List<PhysicsObject>();
 
         for (int i = 0; i < segments; i++)
         {
             var currentObj = _templates.CreateMedBall(start.X + (i * segmentSpacing), start.Y);
-            if (prevObject != null)
-                _engine.AddWeldConstraint(prevObject, currentObj);
-            prevObject = currentObj;
+            links.Add(currentObj);
         }
+
+        _templates.CreateCompoundBody(new Vector2(start.X, start.Y), links, canRotate: true);
     }
 
     public void CreateConcavePolygonDemo(Vector2 position)
@@ -170,13 +171,13 @@ public class DemoSceneBuilder
             new(0, 0), new(60, 0), new(60, 25),
             new(25, 25), new(25, 60), new(0, 60)
         };
-        _templates.CreateConcavePolygon(position, lShapeVertices, canRotate: true, canBreak: true);
+        _templates.CreateConcavePolygon(position, lShapeVertices, canRotate: true);
 
         var starVertices = new Vector2[]
         {
             new(25, 0), new(30, 18), new(50, 18), new(35, 30), new(40, 50),
             new(25, 38), new(10, 50), new(15, 30), new(0, 18), new(20, 18)
         };
-        _templates.CreateConcavePolygon(position + new Vector2(-100, 0), starVertices, canRotate: true, canBreak: true);
+        _templates.CreateConcavePolygon(position + new Vector2(-100, 0), starVertices, canRotate: true);
     }
 }

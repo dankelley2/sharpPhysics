@@ -1,4 +1,4 @@
-Ôªøusing System;
+using System;
 using System.Numerics;
 using SharpPhysics.Engine.Classes;
 using SharpPhysics.Engine.Helpers;
@@ -24,7 +24,7 @@ namespace SharpPhysics.Engine.Core
         public static bool PolygonVsPolygon(ref Manifold m)
         {
             /*
-            * 1) Get the shapes (both assumed to be ‚Äúpolygons‚Äù here).
+            * 1) Get the shapes (both assumed to be ìpolygonsî here).
             *    - If a shape is BoxPhysShape, you can generate the 4 corners via CollisionHelpers.GetRectangleCorners.
             *    - If a shape is PolygonPhysShape, create a method GetTransformedVertices(PhysicsObject) that returns
             *      all vertices in world space.
@@ -340,16 +340,6 @@ namespace SharpPhysics.Engine.Core
         }
 
         /// <summary>
-        /// Calculates the squared distance from a point to a line segment.
-        /// </summary>
-        private static float DistancePointToSegmentSquared(Vector2 a, Vector2 b, Vector2 p)
-        {
-            // Reuse the closest point calculation to maintain consistency
-            Vector2 closest = ClosestPointOnSegment(a, b, p);
-            return Vector2.DistanceSquared(p, closest);
-        }
-
-        /// <summary>
         /// Helper: Returns the point on the segment [a, b] that is closest to point p.
         /// </summary>
         private static Vector2 ClosestPointOnSegment(Vector2 a, Vector2 b, Vector2 p)
@@ -508,6 +498,502 @@ namespace SharpPhysics.Engine.Core
                 float signB = Math.Sign(PhysMath.Cross(rB, m.Normal));
                 m.B.Angle += angularCorrectionPercent * angularErrorB * signB;
             }
+        }
+
+        /// <summary>
+        /// Tests collision between a compound body and another physics object.
+        /// Tests each child shape of the compound against the other object.
+        /// Returns the deepest penetration found.
+        /// </summary>
+        public static bool CompoundVsOther(ref Manifold m, CompoundShape compoundShape, bool compoundIsA)
+        {
+            var compound = compoundIsA ? m.A : m.B;
+            var other = compoundIsA ? m.B : m.A;
+
+            bool anyCollision = false;
+            float deepestPenetration = 0f;
+            Vector2 bestNormal = Vector2.Zero;
+            Vector2 bestContactPoint = Vector2.Zero;
+
+            // Track the colliding child's vertices for accurate contact point calculation
+            Vector2[]? bestChildPolyA = null;
+            Vector2[]? bestChildPolyB = null;
+            Vector2 bestChildCenterA = Vector2.Zero;
+            Vector2 bestChildCenterB = Vector2.Zero;
+
+            // Handle compound vs compound case
+            if (other.Shape.ShapeType == ShapeTypeEnum.Compound)
+            {
+                var otherCompound = (CompoundShape)other.Shape;
+
+                // Test each child of this compound against each child of the other compound
+                for (int i = 0; i < compoundShape.Children.Count; i++)
+                {
+                    var childA = compoundShape.Children[i];
+                    var (childACenter, childAAngle) = compoundShape.GetChildWorldTransform(i, compound.Center, compound.Angle);
+
+                    for (int j = 0; j < otherCompound.Children.Count; j++)
+                    {
+                        var childB = otherCompound.Children[j];
+                        var (childBCenter, childBAngle) = otherCompound.GetChildWorldTransform(j, other.Center, other.Angle);
+
+                        Manifold childManifold = new Manifold();
+                        bool childCollision = TestChildVsChild(
+                            childA.Shape, childACenter, childAAngle,
+                            childB.Shape, childBCenter, childBAngle,
+                            ref childManifold);
+
+                        if (childCollision && childManifold.Penetration > deepestPenetration)
+                        {
+                            anyCollision = true;
+                            deepestPenetration = childManifold.Penetration;
+                            bestNormal = childManifold.Normal;
+                            bestContactPoint = childManifold.ContactPoint;
+
+                            // Store child vertices for accurate contact point
+                            bestChildPolyA = childA.Shape.GetTransformedVertices(childACenter, childAAngle);
+                            bestChildPolyB = childB.Shape.GetTransformedVertices(childBCenter, childBAngle);
+                            bestChildCenterA = childACenter;
+                            bestChildCenterB = childBCenter;
+                        }
+                    }
+                }
+
+                if (anyCollision)
+                {
+                    m.Penetration = deepestPenetration;
+                    m.Normal = compoundIsA ? bestNormal : -bestNormal;
+
+                    // Compute accurate contact point using the actual colliding child's vertices
+                    if (bestChildPolyA != null && bestChildPolyB != null)
+                    {
+                        m.ContactPoint = CollisionHelpers.ComputeContactPoint(
+                            bestChildPolyA, bestChildPolyB, bestChildCenterA, bestChildCenterB);
+                    }
+                    else
+                    {
+                        m.ContactPoint = bestContactPoint;
+                    }
+                }
+
+                return anyCollision;
+            }
+
+            // Test each child shape against the other (non-compound) object
+            for (int i = 0; i < compoundShape.Children.Count; i++)
+            {
+                var child = compoundShape.Children[i];
+                var (childCenter, childAngle) = compoundShape.GetChildWorldTransform(i, compound.Center, compound.Angle);
+
+                Manifold childManifold = new Manifold();
+                bool childCollision = false;
+
+                if (child.Shape.ShapeType == ShapeTypeEnum.Circle)
+                {
+                    if (other.Shape.ShapeType == ShapeTypeEnum.Circle)
+                    {
+                        childCollision = TestChildCircleVsCircle(child.Shape, childCenter, other, ref childManifold);
+                    }
+                    else if (other.Shape.ShapeType == ShapeTypeEnum.Box || other.Shape.ShapeType == ShapeTypeEnum.Polygon)
+                    {
+                        childCollision = TestChildCircleVsPolygon(child.Shape, childCenter, other, ref childManifold);
+                    }
+                }
+                else if (child.Shape.ShapeType == ShapeTypeEnum.Box || child.Shape.ShapeType == ShapeTypeEnum.Polygon)
+                {
+                    if (other.Shape.ShapeType == ShapeTypeEnum.Circle)
+                    {
+                        childCollision = TestChildPolygonVsCircle(child.Shape, childCenter, childAngle, other, ref childManifold);
+                    }
+                    else if (other.Shape.ShapeType == ShapeTypeEnum.Box || other.Shape.ShapeType == ShapeTypeEnum.Polygon)
+                    {
+                        childCollision = TestChildPolygonVsPolygon(child.Shape, childCenter, childAngle, other, ref childManifold);
+                    }
+                }
+
+                if (childCollision && childManifold.Penetration > deepestPenetration)
+                {
+                    anyCollision = true;
+                    deepestPenetration = childManifold.Penetration;
+                    bestNormal = childManifold.Normal;
+                    bestContactPoint = childManifold.ContactPoint;
+
+                    // Store child vertices for accurate contact point (polygon cases only)
+                    if (child.Shape.ShapeType == ShapeTypeEnum.Box || child.Shape.ShapeType == ShapeTypeEnum.Polygon)
+                    {
+                        bestChildPolyA = child.Shape.GetTransformedVertices(childCenter, childAngle);
+                        bestChildCenterA = childCenter;
+                    }
+                    else
+                    {
+                        bestChildPolyA = null;
+                    }
+
+                    if (other.Shape.ShapeType == ShapeTypeEnum.Box || other.Shape.ShapeType == ShapeTypeEnum.Polygon)
+                    {
+                        bestChildPolyB = other.Shape.GetTransformedVertices(other.Center, other.Angle);
+                        bestChildCenterB = other.Center;
+                    }
+                    else
+                    {
+                        bestChildPolyB = null;
+                    }
+                }
+            }
+
+            if (anyCollision)
+            {
+                m.Penetration = deepestPenetration;
+                m.Normal = compoundIsA ? bestNormal : -bestNormal;
+
+                // Compute accurate contact point using the actual colliding child's vertices
+                if (bestChildPolyA != null && bestChildPolyB != null)
+                {
+                    m.ContactPoint = CollisionHelpers.ComputeContactPoint(
+                        bestChildPolyA, bestChildPolyB, bestChildCenterA, bestChildCenterB);
+                }
+                else
+                {
+                    // For circle collisions, use the contact point from the child test
+                    m.ContactPoint = bestContactPoint;
+                }
+            }
+
+            return anyCollision;
+        }
+
+        /// <summary>
+        /// Tests collision between two child shapes (for compound vs compound).
+        /// </summary>
+        private static bool TestChildVsChild(
+            IShape shapeA, Vector2 centerA, float angleA,
+            IShape shapeB, Vector2 centerB, float angleB,
+            ref Manifold m)
+        {
+            if (shapeA.ShapeType == ShapeTypeEnum.Circle && shapeB.ShapeType == ShapeTypeEnum.Circle)
+            {
+                var circleA = (CirclePhysShape)shapeA;
+                var circleB = (CirclePhysShape)shapeB;
+
+                Vector2 n = centerB - centerA;
+                float rSum = circleA.Radius + circleB.Radius;
+
+                if (n.LengthSquared() > rSum * rSum)
+                    return false;
+
+                float d = n.Length();
+                if (d != 0)
+                {
+                    m.Penetration = rSum - d;
+                    m.Normal = n / d;
+                    m.ContactPoint = centerA + m.Normal * circleA.Radius;
+                }
+                else
+                {
+                    m.Penetration = circleA.Radius;
+                    m.Normal = new Vector2(1, 0);
+                    m.ContactPoint = centerA;
+                }
+                return true;
+            }
+
+            if (shapeA.ShapeType == ShapeTypeEnum.Circle && 
+                (shapeB.ShapeType == ShapeTypeEnum.Box || shapeB.ShapeType == ShapeTypeEnum.Polygon))
+            {
+                return TestChildCircleVsChildPolygon(shapeA, centerA, shapeB, centerB, angleB, ref m);
+            }
+
+            if ((shapeA.ShapeType == ShapeTypeEnum.Box || shapeA.ShapeType == ShapeTypeEnum.Polygon) && 
+                shapeB.ShapeType == ShapeTypeEnum.Circle)
+            {
+                bool result = TestChildCircleVsChildPolygon(shapeB, centerB, shapeA, centerA, angleA, ref m);
+                if (result)
+                    m.Normal = -m.Normal;
+                return result;
+            }
+
+            if ((shapeA.ShapeType == ShapeTypeEnum.Box || shapeA.ShapeType == ShapeTypeEnum.Polygon) &&
+                (shapeB.ShapeType == ShapeTypeEnum.Box || shapeB.ShapeType == ShapeTypeEnum.Polygon))
+            {
+                return TestChildPolygonVsChildPolygon(shapeA, centerA, angleA, shapeB, centerB, angleB, ref m);
+            }
+
+            return false;
+        }
+
+        private static bool TestChildCircleVsChildPolygon(
+            IShape circleShape, Vector2 circleCenter,
+            IShape polyShape, Vector2 polyCenter, float polyAngle,
+            ref Manifold m)
+        {
+            var circle = (CirclePhysShape)circleShape;
+            Vector2[] poly = polyShape.GetTransformedVertices(polyCenter, polyAngle);
+            float radius = circle.Radius;
+
+            float minDistSq = float.MaxValue;
+            Vector2 closestPoint = Vector2.Zero;
+
+            for (int i = 0; i < poly.Length; i++)
+            {
+                int next = (i + 1) % poly.Length;
+                Vector2 cp = ClosestPointOnSegment(poly[i], poly[next], circleCenter);
+                float distSq = Vector2.DistanceSquared(cp, circleCenter);
+                if (distSq < minDistSq)
+                {
+                    minDistSq = distSq;
+                    closestPoint = cp;
+                }
+            }
+
+            float dist = (float)Math.Sqrt(minDistSq);
+            bool inside = IsPointInsidePolygon(circleCenter, poly);
+
+            if (inside)
+            {
+                m.Penetration = radius + dist;
+                m.Normal = dist > 0.0001f ? (circleCenter - closestPoint) / dist : new Vector2(1, 0);
+                m.ContactPoint = closestPoint;
+                return true;
+            }
+            else if (dist <= radius)
+            {
+                m.Penetration = radius - dist;
+                m.Normal = dist > 0.0001f ? -(circleCenter - closestPoint) / dist : new Vector2(1, 0);
+                m.ContactPoint = closestPoint;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TestChildPolygonVsChildPolygon(
+            IShape shapeA, Vector2 centerA, float angleA,
+            IShape shapeB, Vector2 centerB, float angleB,
+            ref Manifold m)
+        {
+            Vector2[] polyA = shapeA.GetTransformedVertices(centerA, angleA);
+            Vector2[] polyB = shapeB.GetTransformedVertices(centerB, angleB);
+
+            float minPenetration = float.MaxValue;
+            Vector2 bestAxis = Vector2.Zero;
+
+            for (int i = 0; i < polyA.Length; i++)
+            {
+                int next = (i + 1) % polyA.Length;
+                Vector2 edge = polyA[next] - polyA[i];
+                Vector2 axis = Vector2.Normalize(new Vector2(-edge.Y, edge.X));
+
+                if (!ProjectAndCheckOverlap(polyA, polyB, axis, ref minPenetration, ref bestAxis))
+                    return false;
+            }
+
+            for (int i = 0; i < polyB.Length; i++)
+            {
+                int next = (i + 1) % polyB.Length;
+                Vector2 edge = polyB[next] - polyB[i];
+                Vector2 axis = Vector2.Normalize(new Vector2(-edge.Y, edge.X));
+
+                if (!ProjectAndCheckOverlap(polyA, polyB, axis, ref minPenetration, ref bestAxis))
+                    return false;
+            }
+
+            Vector2 centerDiff = centerB - centerA;
+            if (Vector2.Dot(centerDiff, bestAxis) < 0)
+                bestAxis = -bestAxis;
+
+            m.Normal = bestAxis;
+            m.Penetration = minPenetration;
+            m.ContactPoint = ComputePolygonContactPoint(polyA, polyB, bestAxis);
+
+            return true;
+        }
+
+        private static Vector2 ComputePolygonContactPoint(Vector2[] polyA, Vector2[] polyB, Vector2 normal)
+        {
+            // Find the support point on polyA along the normal direction (furthest in normal direction)
+            float maxProjA = float.MinValue;
+            Vector2 supportA = Vector2.Zero;
+            foreach (var v in polyA)
+            {
+                float proj = Vector2.Dot(v, normal);
+                if (proj > maxProjA)
+                {
+                    maxProjA = proj;
+                    supportA = v;
+                }
+            }
+
+            // Find the support point on polyB along the negative normal (closest in normal direction)
+            float minProjB = float.MaxValue;
+            Vector2 supportB = Vector2.Zero;
+            foreach (var v in polyB)
+            {
+                float proj = Vector2.Dot(v, normal);
+                if (proj < minProjB)
+                {
+                    minProjB = proj;
+                    supportB = v;
+                }
+            }
+
+            // Use the midpoint of the support points as contact
+            return (supportA + supportB) * 0.5f;
+        }
+
+        private static bool TestChildCircleVsCircle(IShape childShape, Vector2 childCenter, PhysicsObject other, ref Manifold m)
+        {
+            var childCircle = (CirclePhysShape)childShape;
+            var otherCircle = (CirclePhysShape)other.Shape;
+
+            Vector2 n = other.Center - childCenter;
+            float rSum = childCircle.Radius + otherCircle.Radius;
+
+            if (n.LengthSquared() > rSum * rSum)
+                return false;
+
+            float d = n.Length();
+            if (d != 0)
+            {
+                m.Penetration = rSum - d;
+                m.Normal = n / d;
+                m.ContactPoint = childCenter + m.Normal * childCircle.Radius;
+            }
+            else
+            {
+                m.Penetration = childCircle.Radius;
+                m.Normal = new Vector2(1, 0);
+                m.ContactPoint = childCenter;
+            }
+            return true;
+        }
+
+        private static bool TestChildCircleVsPolygon(IShape childShape, Vector2 childCenter, PhysicsObject polyObj, ref Manifold m)
+        {
+            var circle = (CirclePhysShape)childShape;
+            Vector2[] poly = polyObj.Shape.GetTransformedVertices(polyObj.Center, polyObj.Angle);
+            float radius = circle.Radius;
+
+            // Find closest point on polygon to circle center
+            float minDistSq = float.MaxValue;
+            Vector2 closestPoint = Vector2.Zero;
+
+            for (int i = 0; i < poly.Length; i++)
+            {
+                int next = (i + 1) % poly.Length;
+                Vector2 cp = ClosestPointOnSegment(poly[i], poly[next], childCenter);
+                float distSq = Vector2.DistanceSquared(cp, childCenter);
+                if (distSq < minDistSq)
+                {
+                    minDistSq = distSq;
+                    closestPoint = cp;
+                }
+            }
+
+            float dist = (float)Math.Sqrt(minDistSq);
+            bool inside = IsPointInsidePolygon(childCenter, poly);
+
+            if (inside)
+            {
+                m.Penetration = radius + dist;
+                m.Normal = dist > 0.0001f ? -(childCenter - closestPoint) / dist : new Vector2(1, 0);
+                m.ContactPoint = closestPoint;
+                return true;
+            }
+            else if (dist <= radius)
+            {
+                m.Penetration = radius - dist;
+                m.Normal = dist > 0.0001f ? -(childCenter - closestPoint) / dist : new Vector2(1, 0);
+                m.ContactPoint = closestPoint;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TestChildPolygonVsCircle(IShape childShape, Vector2 childCenter, float childAngle, PhysicsObject circleObj, ref Manifold m)
+        {
+            var circle = (CirclePhysShape)circleObj.Shape;
+            Vector2[] poly = childShape.GetTransformedVertices(childCenter, childAngle);
+            Vector2 circleCenter = circleObj.Center;
+            float radius = circle.Radius;
+
+            // Find closest point on polygon to circle center
+            float minDistSq = float.MaxValue;
+            Vector2 closestPoint = Vector2.Zero;
+
+            for (int i = 0; i < poly.Length; i++)
+            {
+                int next = (i + 1) % poly.Length;
+                Vector2 cp = ClosestPointOnSegment(poly[i], poly[next], circleCenter);
+                float distSq = Vector2.DistanceSquared(cp, circleCenter);
+                if (distSq < minDistSq)
+                {
+                    minDistSq = distSq;
+                    closestPoint = cp;
+                }
+            }
+
+            float dist = (float)Math.Sqrt(minDistSq);
+            bool inside = IsPointInsidePolygon(circleCenter, poly);
+
+            if (inside)
+            {
+                m.Penetration = radius + dist;
+                m.Normal = dist > 0.0001f ? (circleCenter - closestPoint) / dist : new Vector2(1, 0);
+                m.ContactPoint = closestPoint;
+                return true;
+            }
+            else if (dist <= radius)
+            {
+                m.Penetration = radius - dist;
+                m.Normal = dist > 0.0001f ? (circleCenter - closestPoint) / dist : new Vector2(1, 0);
+                m.ContactPoint = closestPoint;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TestChildPolygonVsPolygon(IShape childShape, Vector2 childCenter, float childAngle, PhysicsObject other, ref Manifold m)
+        {
+            Vector2[] polyA = childShape.GetTransformedVertices(childCenter, childAngle);
+            Vector2[] polyB = other.Shape.GetTransformedVertices(other.Center, other.Angle);
+
+            float minPenetration = float.MaxValue;
+            Vector2 bestAxis = Vector2.Zero;
+
+            // SAT: Check edges from polyA
+            for (int i = 0; i < polyA.Length; i++)
+            {
+                int next = (i + 1) % polyA.Length;
+                Vector2 edge = polyA[next] - polyA[i];
+                Vector2 axis = Vector2.Normalize(new Vector2(-edge.Y, edge.X));
+
+                if (!ProjectAndCheckOverlap(polyA, polyB, axis, ref minPenetration, ref bestAxis))
+                    return false;
+            }
+
+            // SAT: Check edges from polyB
+            for (int i = 0; i < polyB.Length; i++)
+            {
+                int next = (i + 1) % polyB.Length;
+                Vector2 edge = polyB[next] - polyB[i];
+                Vector2 axis = Vector2.Normalize(new Vector2(-edge.Y, edge.X));
+
+                if (!ProjectAndCheckOverlap(polyA, polyB, axis, ref minPenetration, ref bestAxis))
+                    return false;
+            }
+
+            // Ensure normal points from child to other
+            Vector2 centerDiff = other.Center - childCenter;
+            if (Vector2.Dot(centerDiff, bestAxis) < 0)
+                bestAxis = -bestAxis;
+
+            m.Normal = bestAxis;
+            m.Penetration = minPenetration;
+            m.ContactPoint = ComputePolygonContactPoint(polyA, polyB, bestAxis);
+
+            return true;
         }
     }
 }

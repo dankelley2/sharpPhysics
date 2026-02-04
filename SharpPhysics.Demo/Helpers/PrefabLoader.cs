@@ -368,14 +368,14 @@ public class PrefabLoader
                 }
 
                 // Create at world position (centroid + offset) using CreateConcavePolygon
+                // CompoundBody now derives from PhysicsObject, so it IS the physics object
                 var compoundBody = _objectTemplates.CreateConcavePolygon(
                     centroid + offset,
                     localVertices,
-                    canRotate: true,
-                    canBreak: false);
+                    canRotate: true);
 
-                // Return ALL parts from the compound body, not just RootPart
-                result.AddRange(compoundBody.Parts);
+                // CompoundBody is now a single PhysicsObject
+                result.Add(compoundBody);
                 break;
 
             case ShapeType.Circle:

@@ -175,6 +175,22 @@ public static class CollisionHelpers
         }
     }
 
+    /// <summary>
+    /// Computes the contact point using specific polygon arrays.
+    /// Use this for compound bodies where you need to use the colliding child's vertices,
+    /// not the entire compound's vertices.
+    /// </summary>
+    public static Vector2 ComputeContactPoint(Vector2[] polyA, Vector2[] polyB, Vector2 fallbackA, Vector2 fallbackB)
+    {
+        List<Vector2> intersection = SutherlandHodgmanClip(polyA, polyB);
+        if (intersection.Count == 0)
+        {
+            // Fallback: use midpoint between centers.
+            return (fallbackA + fallbackB) * 0.5f;
+        }
+        return ComputeCentroid(intersection);
+    }
+
     // Helper: 2D cross product returning a scalar.
     public static float Cross(Vector2 a, Vector2 b)
     {

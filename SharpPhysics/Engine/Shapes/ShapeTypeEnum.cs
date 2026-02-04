@@ -10,6 +10,7 @@ namespace SharpPhysics.Engine.Shapes
     {
         Circle,
         Box,
-        Polygon
+        Polygon,
+        Compound
     }
 }

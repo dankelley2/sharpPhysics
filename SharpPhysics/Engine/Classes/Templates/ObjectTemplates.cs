@@ -144,25 +144,28 @@ namespace SharpPhysics.Engine.Classes.ObjectTemplates
 
         /// <summary>
         /// Creates a compound physics object from a potentially concave polygon.
-        /// The polygon is decomposed into convex pieces which are welded together.
+        /// The compound body moves as a single rigid body with aggregated mass and inertia.
         /// </summary>
         /// <param name="origin">World position for the compound object center.</param>
         /// <param name="vertices">Local-space vertices of the concave polygon.</param>
         /// <param name="canRotate">Whether the compound can rotate.</param>
-        /// <param name="canBreak">Whether the weld constraints can break under stress.</param>
-        /// <returns>A CompoundBody containing all the pieces and their constraints.</returns>
-        public CompoundBody CreateConcavePolygon(Vector2 origin, Vector2[] vertices, bool canRotate = true, bool canBreak = false)
+        /// <returns>A CompoundBody that derives from PhysicsObject.</returns>
+        public CompoundBody CreateConcavePolygon(Vector2 origin, Vector2[] vertices, bool canRotate = true)
         {
-            SFMLShader shader = GetShader<SFMLPolyShader>(0);
-            return _physicsSystem.CreateConcavePolygon(origin, vertices, shader, canRotate, canBreak);
+            return _physicsSystem.CreateConcavePolygon(origin, vertices, new SFMLCompoundShader(), canRotate);
+        }
+
+        public CompoundBody CreateCompoundBody(Vector2 origin, List<PhysicsObject> physicsObjects, bool canRotate = true)
+        {
+            return _physicsSystem.CreateCompoundBody(origin, physicsObjects, new SFMLCompoundShader(), canRotate);
         }
 
         /// <summary>
         /// Creates a compound physics object from a potentially concave polygon with a custom shader.
         /// </summary>
-        public CompoundBody CreateConcavePolygon(Vector2 origin, Vector2[] vertices, SFMLShader shader, bool canRotate = true, bool canBreak = false)
+        public CompoundBody CreateConcavePolygon(Vector2 origin, Vector2[] vertices, SFMLShader shader, bool canRotate = true)
         {
-            return _physicsSystem.CreateConcavePolygon(origin, vertices, shader, canRotate, canBreak);
+            return _physicsSystem.CreateConcavePolygon(origin, vertices, shader, canRotate);
         }
 
     }

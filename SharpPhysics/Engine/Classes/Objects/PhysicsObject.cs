@@ -25,8 +25,8 @@ namespace SharpPhysics.Engine.Objects
         public List<PhysicsObject> ConnectedObjects { get; private set; } = new List<PhysicsObject>();
         public List<Constraint> Constraints {get ; private set; } = new List<Constraint>();
         public float AngularVelocity { get; set; }
-        public float Inertia { get; private set; }
-        public float IInertia { get; private set; }
+        public float Inertia { get; protected set; }
+        public float IInertia { get; protected set; }
 
         // Friction, in newtons
         public float Friction { get; set; }= 0.5f;

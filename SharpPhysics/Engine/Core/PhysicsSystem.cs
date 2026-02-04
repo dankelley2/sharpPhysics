@@ -147,162 +147,50 @@ namespace SharpPhysics.Engine.Core
 
         /// <summary>
         /// Creates a compound body from a potentially concave polygon by decomposing it
-        /// into convex pieces and welding them together.
+        /// into convex pieces. The compound body moves as a single rigid body with
+        /// aggregated mass and inertia - no internal constraints needed.
         /// </summary>
         /// <param name="origin">World position for the compound body.</param>
         /// <param name="vertices">Local-space vertices of the (possibly concave) polygon.</param>
-        /// <param name="shader">Shader to use for rendering all pieces.</param>
-        /// <param name="canRotate">Whether the pieces can rotate.</param>
-        /// <param name="canBreak">Whether the weld constraints can break under stress.</param>
-        /// <returns>A CompoundBody containing all pieces and their constraints.</returns>
-        public CompoundBody CreateConcavePolygon(Vector2 origin, Vector2[] vertices, SFMLShader shader, bool canRotate = true, bool canBreak = false)
+        /// <param name="shader">Shader to use for rendering.</param>
+        /// <param name="canRotate">Whether the compound body can rotate.</param>
+        /// <returns>A CompoundBody that derives from PhysicsObject.</returns>
+        public CompoundBody CreateConcavePolygon(Vector2 origin, Vector2[] vertices, SFMLShader shader, bool canRotate = true)
         {
-            var compound = new CompoundBody();
-
             // Decompose the concave polygon into convex pieces
             var convexPieces = PolygonDecomposition.DecomposeToConvex(vertices);
 
             if (convexPieces.Count == 0)
             {
-                // Fallback: treat as convex
-                var obj = CreatePolygon(origin, vertices, shader, false, canRotate);
-                compound.Parts.Add(obj);
-                return compound;
+                // Fallback: treat as convex (single piece)
+                convexPieces = new List<Vector2[]> { vertices };
             }
 
-            // Calculate the centroid of the original polygon to use as reference
-            Vector2 originalCentroid = PolygonDecomposition.ComputeCentroid(vertices);
+            // Create compound body from the convex pieces
+            var compound = CompoundBody.FromConvexPieces(origin, convexPieces, shader, canRotate);
 
-            // Create physics objects for each convex piece
-            foreach (var pieceVertices in convexPieces)
-            {
-                // Calculate the centroid of this piece (in the original local space)
-                Vector2 pieceCentroid = PolygonDecomposition.ComputeCentroid(pieceVertices);
-
-                // Calculate world position for this piece's centroid
-                // The piece will be centered around its own centroid by PolygonPhysShape
-                Vector2 pieceWorldPos = origin + (pieceCentroid - originalCentroid);
-
-                // Pass the raw piece vertices - PolygonPhysShape will center them automatically
-                var piece = CreatePolygon(pieceWorldPos, pieceVertices, shader, false, canRotate);
-                compound.Parts.Add(piece);
-            }
-
-            // Weld adjacent pieces together
-            if (compound.Parts.Count > 1)
-            {
-                WeldAdjacentPieces(compound, convexPieces, canBreak);
-            }
+            // Add to physics system
+            ListStaticObjects.Add(compound);
 
             return compound;
         }
 
         /// <summary>
-        /// Finds and welds adjacent convex pieces that share edges or vertices.
-        /// Uses a spanning tree approach to minimize constraints: only (n-1) welds for n pieces.
+        /// Creates a compound body from pre-decomposed convex pieces.
+        /// Use this if you've already decomposed your polygon or want manual control.
         /// </summary>
-        private void WeldAdjacentPieces(CompoundBody compound, List<Vector2[]> convexPieces, bool canBreak)
+        public CompoundBody CreateCompoundBody(Vector2 origin, List<Vector2[]> convexPieces, SFMLShader shader, bool canRotate = true)
         {
-            const float edgeTolerance = 0.1f;
-            int n = convexPieces.Count;
-
-            // Union-Find to track connected components
-            int[] parent = new int[n];
-            for (int i = 0; i < n; i++) parent[i] = i;
-
-            int Find(int x) => parent[x] == x ? x : parent[x] = Find(parent[x]);
-
-            void Union(int a, int b)
-            {
-                int pa = Find(a), pb = Find(b);
-                if (pa != pb) parent[pa] = pb;
-            }
-
-            // First pass: find all adjacencies and build spanning tree
-            for (int i = 0; i < n; i++)
-            {
-                for (int j = i + 1; j < n; j++)
-                {
-                    // Check for shared edge first (stronger connection)
-                    bool adjacent = FindSharedEdge(convexPieces[i], convexPieces[j], edgeTolerance).HasValue;
-
-                    // If no shared edge, check for shared vertex
-                    if (!adjacent)
-                        adjacent = FindSharedVertex(convexPieces[i], convexPieces[j], edgeTolerance).HasValue;
-
-                    if (adjacent)
-                    {
-                        // Connect these pieces
-                        Union(i, j);
-
-                        var partA = compound.Parts[i];
-                        var partB = compound.Parts[j];
-                        var halfdiff = (partB.Center - partA.Center) / 2f;
-                        var weld = new WeldConstraint(partA, partB, halfdiff, -halfdiff, canBreak);
-                        Constraints.Add(weld);
-                        compound.Constraints.Add(weld);
-                    }
-                }
-            }
+            var compound = CompoundBody.FromConvexPieces(origin, convexPieces, shader, canRotate);
+            ListStaticObjects.Add(compound);
+            return compound;
         }
 
-        /// <summary>
-        /// Finds a shared vertex between two polygons (for star-shaped decompositions where pieces meet at a point).
-        /// </summary>
-        private Vector2? FindSharedVertex(Vector2[] polyA, Vector2[] polyB, float tolerance)
+        public CompoundBody CreateCompoundBody(Vector2 origin, List<PhysicsObject> physicsObjects, SFMLShader shader, bool canRotate = true)
         {
-            float toleranceSq = tolerance * tolerance;
-
-            foreach (var vertA in polyA)
-            {
-                foreach (var vertB in polyB)
-                {
-                    if (Vector2.DistanceSquared(vertA, vertB) < toleranceSq)
-                    {
-                        return vertA;
-                    }
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Finds a shared edge between two polygons, if one exists.
-        /// Returns the two endpoints of the shared edge, or null if no shared edge.
-        /// </summary>
-        private (Vector2, Vector2)? FindSharedEdge(Vector2[] polyA, Vector2[] polyB, float tolerance)
-        {
-            float toleranceSq = tolerance * tolerance;
-
-            for (int i = 0; i < polyA.Length; i++)
-            {
-                int nextI = (i + 1) % polyA.Length;
-                Vector2 a1 = polyA[i];
-                Vector2 a2 = polyA[nextI];
-
-                for (int j = 0; j < polyB.Length; j++)
-                {
-                    int nextJ = (j + 1) % polyB.Length;
-                    Vector2 b1 = polyB[j];
-                    Vector2 b2 = polyB[nextJ];
-
-                    // Check if edges match (in opposite direction for adjacent polygons)
-                    if (Vector2.DistanceSquared(a1, b2) < toleranceSq &&
-                        Vector2.DistanceSquared(a2, b1) < toleranceSq)
-                    {
-                        return (a1, a2);
-                    }
-
-                    // Also check same direction (depending on winding)
-                    if (Vector2.DistanceSquared(a1, b1) < toleranceSq &&
-                        Vector2.DistanceSquared(a2, b2) < toleranceSq)
-                    {
-                        return (a1, a2);
-                    }
-                }
-            }
-
-            return null;
+            var compound = CompoundBody.FromPhysicsObjects(origin, physicsObjects, shader, canRotate);
+            ListStaticObjects.Add(compound);
+            return compound;
         }
 
 
@@ -585,7 +473,16 @@ namespace SharpPhysics.Engine.Core
                     var shapeB2 = m.B.Shape;
 
                     // Determine collision detection method based on shape types.
-                    if (shapeA2.ShapeType == ShapeTypeEnum.Box || shapeA2.ShapeType == ShapeTypeEnum.Polygon)
+                    // Handle compound shapes first
+                    if (shapeA2.ShapeType == ShapeTypeEnum.Compound)
+                    {
+                        collision = Collision.CompoundVsOther(ref m, (CompoundShape)shapeA2, compoundIsA: true);
+                    }
+                    else if (shapeB2.ShapeType == ShapeTypeEnum.Compound)
+                    {
+                        collision = Collision.CompoundVsOther(ref m, (CompoundShape)shapeB2, compoundIsA: false);
+                    }
+                    else if (shapeA2.ShapeType == ShapeTypeEnum.Box || shapeA2.ShapeType == ShapeTypeEnum.Polygon)
                     {
                         if (shapeB2.ShapeType == ShapeTypeEnum.Box || shapeB2.ShapeType == ShapeTypeEnum.Polygon)
                         {
