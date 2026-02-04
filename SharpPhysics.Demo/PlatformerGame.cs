@@ -225,7 +225,7 @@ public class PlatformerGame : IGame
     {
         if (_player != null)
         {
-            _physics.RemovalQueue.Enqueue(_player);
+            _physics.DestroyObject(_player);
         }
 
         var shader = new SFMLPolyShader();
@@ -357,7 +357,7 @@ public class PlatformerGame : IGame
             if (distance < collectRadius)
             {
                 // Collect coin!
-                _physics.RemovalQueue.Enqueue(coin);
+                _physics.DestroyObject(coin);
                 _coins.RemoveAt(i);
                 
                 _coinsCollected++;

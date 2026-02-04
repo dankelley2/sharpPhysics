@@ -108,17 +108,13 @@ namespace SharpPhysics.Engine.Core
             // Clear all physics objects
             foreach (var obj in _physicsSystem.ListStaticObjects.ToArray())
             {
-                _physicsSystem.RemovalQueue.Enqueue(obj);
+                _physicsSystem.DestroyObject(obj);
             }
             _physicsSystem.ListGravityObjects.Clear();
             _physicsSystem.Constraints.Clear();
 
             // Process removal queue
-            while (_physicsSystem.RemovalQueue.Count > 0)
-            {
-                var obj = _physicsSystem.RemovalQueue.Dequeue();
-                _physicsSystem.ListStaticObjects.Remove(obj);
-            }
+            _physicsSystem.ProcessRemovalQueue();
 
             // Reset physics properties
             _physicsSystem.Gravity = new System.Numerics.Vector2(0, 9.8f);

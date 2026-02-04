@@ -8,12 +8,15 @@ namespace SharpPhysics.Engine.Constraints
     /// </summary>
     public abstract class Constraint
     {
-        public PhysicsObject A { get; protected set; }
-        public PhysicsObject B { get; protected set; }
+        public PhysicsObject A { get; set; }
+        public PhysicsObject B { get; set; }
 
         // Anchor points in local space of each object
-        public Vector2 AnchorA { get; protected set; }
-        public Vector2 AnchorB { get; protected set; }
+        public Vector2 AnchorA { get; set; }
+        public Vector2 AnchorB { get; set; }
+
+        // Initial relative angle between the two objects (B.Angle - A.Angle at creation time)
+        public float InitialRelativeAngle { get; set; }
 
         // Arbitrary break point when the constraint is pushed past its limits
         public bool CanBreak { get; set; } = false;
@@ -23,6 +26,10 @@ namespace SharpPhysics.Engine.Constraints
         {
             A = a;
             B = b;
+
+            // Store the initial relative angle
+            InitialRelativeAngle = b.Angle - a.Angle;
+
             // Mark the objects as connected so that collisions between them are ignored.
             A.ConnectedObjects.Add(B);
             B.ConnectedObjects.Add(A);

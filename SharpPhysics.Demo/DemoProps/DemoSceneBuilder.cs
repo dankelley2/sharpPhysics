@@ -107,21 +107,18 @@ public class DemoSceneBuilder
             for (int y = 0; y < countY; y++)
             {
                 grid[x][y] = _templates.CreateSmallBall(origin.X + x * spacing, origin.Y + y * spacing);
-                //if (x > 0)
-                //{
-                //    var c = _engine.AddSpringConstraint(grid[x - 1][y], grid[x][y]);
-                //    ((SpringConstraint)c).AngularFrequency = 15f;
-                //}
-                //if (y > 0)
-                //{
-                //    var c =_engine.AddSpringConstraint(grid[x][y - 1], grid[x][y]);
-                //    ((SpringConstraint)c).AngularFrequency = 15f;
-                //}
+                if (x > 0)
+                {
+                    var c = _engine.AddSpringConstraint(grid[x - 1][y], grid[x][y]);
+                    ((SpringConstraint)c).AngularFrequency = 15f;
+                }
+                if (y > 0)
+                {
+                    var c = _engine.AddSpringConstraint(grid[x][y - 1], grid[x][y]);
+                    ((SpringConstraint)c).AngularFrequency = 15f;
+                }
             }
         }
-
-        List<PhysicsObject> list = grid.SelectMany(x => x.ToList()).ToList();
-        _templates.CreateCompoundBody(origin, list, canRotate: true);
     }
 
     public void CreateChain(Vector2 start, int links = 12, int linkSpacing = 25)
@@ -164,7 +161,7 @@ public class DemoSceneBuilder
             links.Add(currentObj);
         }
 
-        _templates.CreateCompoundBody(new Vector2(start.X, start.Y), links, canRotate: true);
+        _templates.CreateCompoundBody(links, canRotate: true);
     }
 
     public void CreateConcavePolygonDemo(Vector2 position)

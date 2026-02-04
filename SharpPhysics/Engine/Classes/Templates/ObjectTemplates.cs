@@ -102,7 +102,7 @@ namespace SharpPhysics.Engine.Classes.ObjectTemplates
             oPhysicsObject.ContactPointAdded += (obj, pointNormal) =>
             {
                 // remove object once touching
-               _physicsSystem.RemovalQueue.Enqueue(obj);
+               _physicsSystem.DestroyObject(obj);
             };
             _physicsSystem.ListGravityObjects.Add(oPhysicsObject);
             return oPhysicsObject;
@@ -155,9 +155,9 @@ namespace SharpPhysics.Engine.Classes.ObjectTemplates
             return _physicsSystem.CreateConcavePolygon(origin, vertices, new SFMLCompoundShader(), canRotate);
         }
 
-        public CompoundBody CreateCompoundBody(Vector2 origin, List<PhysicsObject> physicsObjects, bool canRotate = true)
+        public CompoundBody CreateCompoundBody(List<PhysicsObject> physicsObjects, bool canRotate = true)
         {
-            return _physicsSystem.CreateCompoundBody(origin, physicsObjects, new SFMLCompoundShader(), canRotate);
+            return _physicsSystem.CreateCompoundBody(physicsObjects, new SFMLCompoundShader(), canRotate);
         }
 
         /// <summary>

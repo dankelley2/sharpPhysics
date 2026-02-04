@@ -246,7 +246,7 @@ public class BubblePopGame : IGame
         foreach (var bubble in toRemove)
         {
             _activeBubbles.Remove(bubble);
-            _physics.RemovalQueue.Enqueue(bubble);
+            _physics.DestroyObject(bubble);
         }
     }
 
@@ -301,7 +301,7 @@ public class BubblePopGame : IGame
         foreach (var bubble in poppedBubbles)
         {
             _activeBubbles.Remove(bubble);
-            _physics.RemovalQueue.Enqueue(bubble);
+            _physics.DestroyObject(bubble);
         }
 
         // Spawn chain bubbles

@@ -13,6 +13,7 @@ using SharpPhysics.Demo.Integration;
 using SharpPhysics.Demo.Settings;
 using SharpPhysics.Engine.Player;
 using SharpPhysics.Rendering;
+using SharpPhysics.Rendering.Shaders;
 
 namespace SharpPhysics.Demo;
 
@@ -92,10 +93,10 @@ public class DemoGame : IGame
         _playerController = new PlayerController(player);
 
         _demoCar = _sceneBuilder.CreateCar();
-        //_sceneBuilder.CreateBridge(new Vector2(150, 150));
-        //_sceneBuilder.CreateChain(new Vector2(150, 300));
-        //_sceneBuilder.CreateSprocket(new Vector2(800, 300));
-        //_sceneBuilder.CreateConcavePolygonDemo(new Vector2(600, 100));
+        _sceneBuilder.CreateBridge(new Vector2(150, 150));
+        _sceneBuilder.CreateChain(new Vector2(150, 300));
+        _sceneBuilder.CreateSprocket(new Vector2(800, 300));
+        _sceneBuilder.CreateConcavePolygonDemo(new Vector2(600, 100));
         _sceneBuilder.CreateBlanket(new Vector2(700, 400));
     }
 
@@ -276,7 +277,7 @@ public class DemoGame : IGame
             Vector2 localAnchorB = PhysMath.RotateVector(worldOffsetB, -clickedObject.Angle);
 
             if (_constraintMode == ConstraintMode.Weld)
-                _engine.AddWeldConstraint(_firstSelectedObject, clickedObject, localAnchorA, localAnchorB);
+                _engine.PhysicsSystem.CreateCompoundBody([clickedObject, _firstSelectedObject], new SFMLCompoundShader());
             else if (_constraintMode == ConstraintMode.Axis)
                 _engine.AddAxisConstraint(_firstSelectedObject, clickedObject, localAnchorA, localAnchorB);
 

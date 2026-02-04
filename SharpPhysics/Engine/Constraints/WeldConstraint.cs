@@ -12,8 +12,6 @@ namespace SharpPhysics.Engine.Constraints
     /// </summary>
     public class WeldConstraint : Constraint
     {
-        public float InitialRelativeAngle { get; private set; }
-
         private const float BaumgarteBias = 0.23f;
         private const float AngularBias = 0.20f;
         private const float MaxBiasVelocity = 400f;
@@ -23,7 +21,6 @@ namespace SharpPhysics.Engine.Constraints
         {
             AnchorA = anchorA;
             AnchorB = anchorB;
-            InitialRelativeAngle = b.Angle - a.Angle;
             CanBreak = canBreak;
         }
 

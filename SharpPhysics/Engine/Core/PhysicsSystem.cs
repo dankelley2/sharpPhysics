@@ -38,13 +38,15 @@ namespace SharpPhysics.Engine.Core
         private double accumulator = 0;
 
         public PhysicsObject? ActiveObject;
-        private readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
-        public readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
         public readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
+        public readonly List<Constraint> Constraints = new List<Constraint>();
+        public readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
+
+        private readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
         private readonly ManifoldPool _manifoldPool = new ManifoldPool();
         private readonly CollisionPairPool _collisionPairPool = new CollisionPairPool();
-        public readonly List<Constraint> Constraints = new List<Constraint>();
         private readonly Queue<Constraint> _constraintRemovalQueue = new Queue<Constraint>();
+        private readonly Queue<Object> RemovalQueue = new Queue<Object>();
 
         internal IEnumerable<PhysicsObject> GetMoveableObjects()
         {
@@ -62,8 +64,6 @@ namespace SharpPhysics.Engine.Core
         {
             physicsObject.Velocity = velocity;
         }
-
-        public readonly Queue<PhysicsObject> RemovalQueue = new Queue<PhysicsObject>();
 
         #endregion
 
@@ -188,8 +188,28 @@ namespace SharpPhysics.Engine.Core
 
         public CompoundBody CreateCompoundBody(Vector2 origin, List<PhysicsObject> physicsObjects, SFMLShader shader, bool canRotate = true)
         {
-            var compound = CompoundBody.FromPhysicsObjects(origin, physicsObjects, shader, canRotate);
+            var (compound, trashHeap) = CompoundBody.FromPhysicsObjects(origin, physicsObjects, shader, canRotate);
             ListStaticObjects.Add(compound);
+            // Remove from static objects list since now part of compound
+            foreach (var obj in trashHeap)
+            {
+                RemovalQueue.Enqueue(obj);
+            }
+            return compound;
+        }
+
+        /// <summary>
+        /// Creates a compound body from multiple physics objects, preserving their exact world positions.
+        /// The compound's center is placed at the mass-weighted centroid of all input objects.
+        /// </summary>
+        public CompoundBody CreateCompoundBody(List<PhysicsObject> physicsObjects, SFMLShader shader, bool canRotate = true)
+        {
+            var (compound, trashHeap) = CompoundBody.FromPhysicsObjects(physicsObjects, shader, canRotate);
+            ListStaticObjects.Add(compound);
+            foreach (var obj in trashHeap)
+            {
+                RemovalQueue.Enqueue(obj);
+            }
             return compound;
         }
 
@@ -276,11 +296,17 @@ namespace SharpPhysics.Engine.Core
             ActiveObject = null;
         }
 
+        public void DestroyObject(object obj)
+        {
+            if (obj is PhysicsObject po)
+            {
+                po.IsDestroyed = true;
+            }
+            RemovalQueue.Enqueue(obj);
+        }
+
         public void RemoveActiveObject()
         {
-            
-            _ = ListGravityObjects.Remove(ActiveObject);
-
             // Add to removal queue for proper removal
             RemovalQueue.Enqueue(ActiveObject);
             ActiveObject = null;
@@ -378,21 +404,25 @@ namespace SharpPhysics.Engine.Core
             return CalculatePointGravity(obj) + Gravity * GravityScale;
         }
 
-        private void ProcessRemovalQueue()
+        public void ProcessRemovalQueue()
         {
             while (RemovalQueue.Count > 0)
             {
                 var obj = RemovalQueue.Dequeue();
-                if (obj.Constraints.Count != 0)
+                if (obj is PhysicsObject physicsObject)
                 {
-                    foreach (var constraint in obj.Constraints)
+                    if (physicsObject.Constraints.Count != 0)
                     {
-                        _constraintRemovalQueue.Enqueue(constraint);
+                        physicsObject.Constraints.ForEach(constraint => _constraintRemovalQueue.Enqueue(constraint));
                     }
-                }
 
-                ListStaticObjects.Remove(obj);
-                ListGravityObjects.Remove(obj);
+                    ListStaticObjects.Remove(physicsObject);
+                    ListGravityObjects.Remove(physicsObject);
+                }
+                else if (obj is Constraint constraint)
+                {
+                    _constraintRemovalQueue.Enqueue(constraint);
+                }
             }
 
             while (_constraintRemovalQueue.Count > 0)
@@ -573,6 +603,10 @@ namespace SharpPhysics.Engine.Core
             // Populate the spatial hash.
             foreach (var obj in ListStaticObjects)
             {
+                // Skip objects marked for destruction.
+                if (obj.IsDestroyed)
+                    continue;
+
                 // Get min / max extents, divide by cellSize for grid coordinates.
                 int minX = (int)Math.Floor(obj.Aabb.Min.X / cellSize);
                 int minY = (int)Math.Floor(obj.Aabb.Min.Y / cellSize);

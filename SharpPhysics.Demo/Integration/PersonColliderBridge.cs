@@ -322,15 +322,15 @@ namespace SharpPhysics.Demo.Integration
         {
             if (person.HeadBall != null)
             {
-                _physicsSystem.RemovalQueue.Enqueue(person.HeadBall);
+                _physicsSystem.DestroyObject(person.HeadBall);
             }
             if (person.LeftHandBall != null)
             {
-                _physicsSystem.RemovalQueue.Enqueue(person.LeftHandBall);
+                _physicsSystem.DestroyObject(person.LeftHandBall);
             }
             if (person.RightHandBall != null)
             {
-                _physicsSystem.RemovalQueue.Enqueue(person.RightHandBall);
+                _physicsSystem.DestroyObject(person.RightHandBall);
             }
         }
 

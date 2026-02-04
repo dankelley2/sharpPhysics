@@ -63,6 +63,9 @@ namespace SharpPhysics.Engine.Objects
         // Whether to validate supports next frame
         private bool _validateSupportsNextFrame = false;
 
+        // Is in the process of being destroyed, will not collide
+        internal bool IsDestroyed = false;
+
         public PhysicsObject(IShape shape, Vector2 center, float restitution, bool locked, SFMLShader shader, float mass = 0, bool canRotate = false)
         {
             Shape = shape;
@@ -87,6 +90,9 @@ namespace SharpPhysics.Engine.Objects
         /// </summary>
         public void Update(float dt)
         {
+            if (IsDestroyed)
+                return;
+
             if (!Sleeping)
             {
                 Move(dt);

@@ -359,7 +359,7 @@ public class RainCatcherGame : IGame
         foreach (var ball in ballsToRemove)
         {
             _activeBalls.Remove(ball);
-            _physics.RemovalQueue.Enqueue(ball);
+            _physics.DestroyObject(ball);
         }
     }
 
@@ -412,7 +412,7 @@ public class RainCatcherGame : IGame
         foreach (var ball in scoredBalls)
         {
             _activeBalls.Remove(ball);
-            _physics.RemovalQueue.Enqueue(ball);
+            _physics.DestroyObject(ball);
         }
     }
 

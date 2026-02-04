@@ -231,7 +231,7 @@ public class CompoundShape : IShape
         // Check if this specific child is already cached
         else if (_cachedChildTransforms[childIndex].HasValue)
         {
-            return _cachedChildTransforms[childIndex].Value;
+            return _cachedChildTransforms[childIndex]!.Value;
         }
 
         // Compute and cache only the requested child

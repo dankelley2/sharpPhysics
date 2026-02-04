@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using SharpPhysics.Engine.Constraints;
 using SharpPhysics.Engine.Helpers;
 using SharpPhysics.Engine.Shapes;
 using SharpPhysics.Rendering.Shaders;
@@ -69,30 +70,166 @@ public class CompoundBody : PhysicsObject
     }
 
     /// <summary>
-    /// Creates a compound body from multiple convex polygon vertices.
-    /// Each polygon is converted to a child shape with proper local offset.
+    /// Creates a compound body from multiple physics objects, placing the compound at the
+    /// mass-weighted centroid of all input objects. This preserves the exact world positions
+    /// of all child shapes.
+    /// If any input object is a CompoundBody, its children are flattened into the new compound.
     /// </summary>
-    public static CompoundBody FromPhysicsObjects(
+    public static (CompoundBody, List<Object> trashHeap) FromPhysicsObjects(
+        List<PhysicsObject> physicsObjects,
+        SFMLShader shader,
+        bool canRotate = true,
+        float restitution = 0.2f)
+    {
+        Vector2 overallCentroid = ComputeOverallCentroid(physicsObjects);
+        return FromPhysicsObjects(overallCentroid, physicsObjects, shader, canRotate, restitution);
+    }
+
+    /// <summary>
+    /// Creates a compound body from multiple physics objects at a specified world center.
+    /// Note: For exact position preservation, use the overload without worldCenter parameter.
+    /// If any input object is a CompoundBody, its children are flattened into the new compound.
+    /// External constraints (to objects not being merged) are preserved with recalculated anchors.
+    /// </summary>
+    public static (CompoundBody, List<Object> trashHeap) FromPhysicsObjects(
         Vector2 worldCenter,
         List<PhysicsObject> physicsObjects,
         SFMLShader shader,
         bool canRotate = true,
         float restitution = 0.2f)
     {
+        List<object> trashHeap = new List<object>();
+
         var compoundShape = new CompoundShape();
+        var mergedObjects = new HashSet<PhysicsObject>(physicsObjects);
 
         // Calculate the overall centroid of all pieces combined
         Vector2 overallCentroid = ComputeOverallCentroid(physicsObjects);
 
+        // Collect constraints to transfer (external constraints only)
+        var constraintsToTransfer = new List<(Constraint constraint, PhysicsObject oldObject, bool isObjectA)>();
+
         foreach (var piece in physicsObjects)
         {
-            // Local offset is relative to the compound's center of mass
-            Vector2 localOffset = piece.Center - overallCentroid;
+            // Check if this piece is a CompoundBody with children to merge
+            if (piece is CompoundBody compoundBody && compoundBody.Shape.Children.Count > 0)
+            {
+                // Flatten the compound's children into the new compound
+                for (int i = 0; i < compoundBody.Shape.Children.Count; i++)
+                {
+                    var child = compoundBody.Shape.Children[i];
+                    var (childWorldCenter, childWorldAngle) = compoundBody.GetChildWorldTransform(i);
 
-            compoundShape.AddChild(piece.Shape, localOffset, 0f, piece.Mass);
+                    // Local offset relative to the new compound's center of mass
+                    Vector2 localOffset = childWorldCenter - overallCentroid;
+
+                    compoundShape.AddChild(child.Shape, localOffset, childWorldAngle, child.Mass);
+                }
+            }
+            else
+            {
+                // Regular physics object - add as a single child
+                Vector2 localOffset = piece.Center - overallCentroid;
+                compoundShape.AddChild(piece.Shape, localOffset, piece.Angle, piece.Mass);
+            }
+
+            // Collect external constraints from this piece
+            foreach (var constraint in piece.Constraints)
+            {
+                bool isObjectA = constraint.A == piece;
+                var otherObject = isObjectA ? constraint.B : constraint.A;
+
+                // Only transfer if the other object is NOT being merged
+                if (!mergedObjects.Contains(otherObject))
+                {
+                    // Avoid duplicates (constraint might be seen from both sides)
+                    if (!constraintsToTransfer.Exists(c => c.constraint == constraint))
+                    {
+                        constraintsToTransfer.Add((constraint, piece, isObjectA));
+                    }
+                }
+                else
+                {
+                    // Add to trashheap for removal 
+                    trashHeap.Add(constraint);
+                }
+            }
         }
 
-        return new CompoundBody(compoundShape, worldCenter, restitution, false, shader, canRotate);
+        var compound = new CompoundBody(compoundShape, worldCenter, restitution, false, shader, canRotate);
+
+        // Transfer external constraints to the new compound body
+        foreach (var (constraint, oldObject, isObjectA) in constraintsToTransfer)
+        {
+            // Get the anchor in the old object's local space
+            Vector2 oldAnchorLocal = isObjectA ? constraint.AnchorA : constraint.AnchorB;
+
+            // Convert old anchor to world space
+            Vector2 anchorWorld = oldObject.Center + PhysMath.RotateVector(oldAnchorLocal, oldObject.Angle);
+
+            // Convert world anchor to new compound's local space
+            Vector2 newAnchorLocal = PhysMath.RotateVector(anchorWorld - compound.Center, -compound.Angle);
+
+            // Calculate the angle difference between old object and new compound
+            // This adjusts InitialRelativeAngle to maintain the same world-space constraint behavior
+            float angleDelta = oldObject.Angle - compound.Angle;
+
+            // Update the constraint to reference the new compound
+            if (isObjectA)
+            {
+                // Remove old object from constraint tracking
+                constraint.A.Constraints.Remove(constraint);
+                constraint.A.ConnectedObjects.Remove(constraint.B);
+                constraint.B.ConnectedObjects.Remove(constraint.A);
+
+                // Update constraint to use compound
+                constraint.A = compound;
+                constraint.AnchorA = newAnchorLocal;
+
+                // Adjust InitialRelativeAngle: was (B.Angle - oldA.Angle), now needs (B.Angle - compound.Angle)
+                // Since compound.Angle = oldA.Angle - angleDelta, the new relative angle increases by angleDelta
+                constraint.InitialRelativeAngle += angleDelta;
+
+                // Add new connections
+                compound.Constraints.Add(constraint);
+                compound.ConnectedObjects.Add(constraint.B);
+                constraint.B.ConnectedObjects.Add(compound);
+            }
+            else
+            {
+                // Remove old object from constraint tracking
+                constraint.B.Constraints.Remove(constraint);
+                constraint.B.ConnectedObjects.Remove(constraint.A);
+                constraint.A.ConnectedObjects.Remove(constraint.B);
+
+                // Update constraint to use compound
+                constraint.B = compound;
+                constraint.AnchorB = newAnchorLocal;
+
+                // Adjust InitialRelativeAngle: was (oldB.Angle - A.Angle), now needs (compound.Angle - A.Angle)
+                // Since compound.Angle = oldB.Angle - angleDelta, the new relative angle decreases by angleDelta
+                constraint.InitialRelativeAngle -= angleDelta;
+
+                // Add new connections
+                compound.Constraints.Add(constraint);
+                compound.ConnectedObjects.Add(constraint.A);
+                constraint.A.ConnectedObjects.Add(compound);
+            }
+        }
+
+        // Clean up constraints and connections from merged objects
+        foreach (var piece in physicsObjects)
+        {
+            // Remove internal constraints (between merged objects)
+            piece.Constraints.RemoveAll(c => mergedObjects.Contains(c.A) && mergedObjects.Contains(c.B));
+
+            // Clear connected objects that were merged
+            piece.ConnectedObjects.RemoveWhere(o => mergedObjects.Contains(o));
+        }
+
+        trashHeap.AddRange(physicsObjects);
+
+        return (compound, trashHeap);
     }
 
     /// <summary>
@@ -115,22 +252,36 @@ public class CompoundBody : PhysicsObject
     }
 
     /// <summary>
-    /// Computes the overall centroid of multiple convex pieces weighted by area.
+    /// Computes the overall centroid of multiple physics objects weighted by mass.
+    /// Handles CompoundBody objects by including all their children.
     /// </summary>
     private static Vector2 ComputeOverallCentroid(List<PhysicsObject> pieces)
     {
         Vector2 weightedSum = Vector2.Zero;
-        float totalArea = 0f;
+        float totalMass = 0f;
 
         foreach (var piece in pieces)
         {
-            var centroid = piece.Center;
-            float area = piece.Mass;
-            weightedSum += centroid * area;
-            totalArea += area;
+            if (piece is CompoundBody compoundBody && compoundBody.Shape.Children.Count > 0)
+            {
+                // Include each child's contribution
+                for (int i = 0; i < compoundBody.Shape.Children.Count; i++)
+                {
+                    var child = compoundBody.Shape.Children[i];
+                    var (childWorldCenter, _) = compoundBody.GetChildWorldTransform(i);
+
+                    weightedSum += childWorldCenter * child.Mass;
+                    totalMass += child.Mass;
+                }
+            }
+            else
+            {
+                weightedSum += piece.Center * piece.Mass;
+                totalMass += piece.Mass;
+            }
         }
 
-        return totalArea > 0 ? weightedSum / totalArea : Vector2.Zero;
+        return totalMass > 0 ? weightedSum / totalMass : Vector2.Zero;
     }
 
     /// <summary>
