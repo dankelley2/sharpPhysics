@@ -89,7 +89,7 @@ public class RainCatcherGame : IGame
         }
 
         Console.WriteLine("═══════════════════════════════════════");
-        Console.WriteLine("   🌧️  RAIN CATCHER GAME  🌧️");
+        Console.WriteLine("      RAIN CATCHER GAME   ");
         Console.WriteLine("═══════════════════════════════════════");
         Console.WriteLine("Use your body to catch the falling balls!");
         Console.WriteLine("Different colors = Different points!");
@@ -179,13 +179,13 @@ public class RainCatcherGame : IGame
                     fps: settings.CameraDeviceFps);
             }
 
-            Console.WriteLine("🎮 Body tracking initialized!");
+            Console.WriteLine("Body tracking initialized!");
             Console.WriteLine($"Camera: {(settings.CameraSourceType == "url" ? settings.CameraUrl : $"Device {settings.CameraDeviceIndex}")}");
-            Console.WriteLine("👋 Wave your hands to catch balls!");
+            Console.WriteLine("Wave your hands to catch balls!");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"⚠️ Body tracking not available: {ex.Message}");
+            Console.WriteLine($"Body tracking not available: {ex.Message}");
             Console.WriteLine("Game will run without body tracking.");
             _personColliderBridge = null;
         }
@@ -400,7 +400,7 @@ public class RainCatcherGame : IGame
                     // Visual feedback - console for now
                     if (_combo > 3)
                     {
-                        Console.WriteLine($"🔥 {_combo}x COMBO! +{points} (Total: {_score})");
+                        Console.WriteLine($"{_combo}x COMBO! +{points} (Total: {_score})");
                     }
 
                     scoredBalls.Add(ball);
@@ -421,7 +421,7 @@ public class RainCatcherGame : IGame
         var powerUp = PowerUpTypes.FirstOrDefault(p => p.Name == powerUpName);
         if (powerUp == null) return;
 
-        Console.WriteLine($"⚡ {powerUp.Message}");
+        Console.WriteLine($"{powerUp.Message}");
 
         _activePowerUp = powerUpName;
         _powerUpTimer = powerUp.Duration;
@@ -503,7 +503,7 @@ public class RainCatcherGame : IGame
             var powerUp = PowerUpTypes.FirstOrDefault(p => p.Name == _activePowerUp);
             if (powerUp != null)
             {
-                string powerUpText = $"⚡ {powerUp.Message}";
+                string powerUpText = $"{powerUp.Message}";
                 renderer.DrawText(powerUpText, _engine.WindowWidth / 2 - 150, 30, 28, powerUp.Color);
 
                 // Power-up timer bar
@@ -526,7 +526,7 @@ public class RainCatcherGame : IGame
 
     public void Shutdown()
     {
-        Console.WriteLine($"\n🎮 GAME OVER! Final Score: {_score}");
+        Console.WriteLine($"\nGAME OVER! Final Score: {_score}");
         _personColliderBridge?.Dispose();
     }
 
