@@ -17,6 +17,11 @@ namespace SharpPhysics.Rendering.UI
             set => _buttonText.DisplayedString = value;
         }
 
+        public void SetBackgroundColor(Color color)
+        {
+            _background.FillColor = color;
+        }
+
         public UiButton(string text, Font font, Vector2 position, Vector2 size)
         {
             Position = position;
@@ -64,7 +69,6 @@ namespace SharpPhysics.Rendering.UI
             if (clickPos.X >= bounds.Left && clickPos.X <= bounds.Left + bounds.Width &&
                 clickPos.Y >= bounds.Top && clickPos.Y <= bounds.Top + bounds.Height)
             {
-                _background.FillColor = new Color(100, 100, 100);
                 OnClick?.Invoke(true);
                 return true;
             }

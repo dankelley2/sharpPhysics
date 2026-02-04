@@ -40,6 +40,8 @@ public class PrefabDesignerGame : IGame
     // Constraints between shapes
     private readonly List<PrefabConstraint> _constraints = new();
 
+    private Stack<object> _undoStack = new();
+
     // Constraint creation state
     private int? _firstSelectedShapeIndex;
     private Vector2? _firstAnchorPoint;
@@ -88,7 +90,11 @@ public class PrefabDesignerGame : IGame
         int btnIdx = 0;
 
         // Select button (S) - first for easy access
-        AddToolbarButton("S", startX, ref btnIdx, buttonWidth, buttonHeight, spacing, toolbarY, font, 
+        AddToolbarButton("Undo", startX, ref btnIdx, buttonWidth, buttonHeight, spacing, toolbarY, font,
+            () => UndoLast());
+
+        // Select button (S) - first for easy access
+        AddToolbarButton("S", startX, ref btnIdx, buttonWidth, buttonHeight, spacing, toolbarY, font,
             () => SetDrawMode(DrawMode.Select));
 
         // Polygon button (P)
@@ -142,13 +148,50 @@ public class PrefabDesignerGame : IGame
         _uiManager.Add(hintLabel);
     }
 
+    private void UndoLast()
+    {
+        if (_undoStack.Count == 0)
+        {
+            return;
+        }
+
+        var obj = _undoStack.Pop();
+        if (obj is PrefabShape ps)
+        {
+            _shapes.Remove(ps);
+            Console.WriteLine("Undid last shape creation");
+
+        }
+        else if (obj is PrefabConstraint pc)
+        {
+            _constraints.Remove(pc);
+            Console.WriteLine("Undid last constraint creation");
+        }
+        else {
+            Console.WriteLine("Unknown object in undo stack");
+        }
+    }
+
     private void AddToolbarButton(string label, float startX, ref int btnIdx, float buttonWidth, 
         float buttonHeight, float spacing, float toolbarY, Font font, Action onClick)
     {
+
         var button = new UiButton(label, font,
             new Vector2(startX + (buttonWidth + spacing) * btnIdx++, toolbarY),
             new Vector2(buttonWidth, buttonHeight));
-        button.OnClick += _ => onClick();
+
+        void clickWithColorChange()
+        {
+            button.SetBackgroundColor(new Color(100, 100, 100));
+            onClick();
+            Task.Run(async () =>
+            {
+                await Task.Delay(100);
+                button.SetBackgroundColor(new Color(80, 80, 80));
+            });
+        }
+
+        button.OnClick += _ => clickWithColorChange();
         _uiManager.Add(button);
     }
 
@@ -188,6 +231,7 @@ public class PrefabDesignerGame : IGame
     {
         _shapes.Clear();
         _constraints.Clear();
+        _undoStack.Clear();
         _selectedShapeIndex = null;
         CancelCurrentDrawing();
         Console.WriteLine("Cleared all shapes and constraints");
@@ -452,6 +496,7 @@ public class PrefabDesignerGame : IGame
             AnchorB = anchorB
         };
         _constraints.Add(constraint);
+        _undoStack.Push(constraint);
 
         string description = constraintType switch
         {
@@ -479,6 +524,7 @@ public class PrefabDesignerGame : IGame
                 Points = _currentPolygonPoints.ToArray()
             };
             _shapes.Add(shape);
+            _undoStack.Push(shape);
             Console.WriteLine($"Created polygon with {_currentPolygonPoints.Count} vertices");
         }
 
@@ -517,6 +563,7 @@ public class PrefabDesignerGame : IGame
                 Radius = size / 2
             };
             _shapes.Add(shape);
+            _undoStack.Push(shape);
             Console.WriteLine($"Created circle with radius {shape.Radius}");
         }
     }
@@ -541,6 +588,7 @@ public class PrefabDesignerGame : IGame
                 Height = height
             };
             _shapes.Add(shape);
+            _undoStack.Push(shape);
             Console.WriteLine($"Created rectangle {width}x{height}");
         }
     }

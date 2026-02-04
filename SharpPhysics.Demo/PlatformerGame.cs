@@ -303,7 +303,7 @@ public class PlatformerGame : IGame
         _gameTime += deltaTime;
 
         // Update player
-        _playerController.Update(inputManager);
+        _playerController.Update(deltaTime, inputManager);
 
         // Update enemies (patrol movement)
         UpdateEnemies(deltaTime);

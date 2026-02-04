@@ -9,7 +9,7 @@ namespace SharpPhysics.Engine.Player
 {
     public class PlayerController
     {
-        private float _speed = 170.0f;
+        private float _speed = 200.0f;
         private float _jumpForce = 250.0f;
         private bool _isGrounded => _groundObjects.Count > 0;
         private PhysicsObject _player;
@@ -19,6 +19,8 @@ namespace SharpPhysics.Engine.Player
         private float _horizontalInput = 0f;
 
         private List<PhysicsObject> _groundObjects = new List<PhysicsObject>();
+        private bool _canJump;
+        private float _timer;
 
         public PlayerController(PhysicsObject player)
         {
@@ -35,7 +37,6 @@ namespace SharpPhysics.Engine.Player
             if (normal.Y > 0.5f)
             {
                 _groundObjects.Add(obj);
-                //_player.Velocity = new Vector2(_player.Velocity.X, 0);
                 return;
             }
         }
@@ -45,8 +46,16 @@ namespace SharpPhysics.Engine.Player
             _ = _groundObjects.Remove(obj);
         }
 
-        public void Update(InputManager inputManager)
+        public void Update(float deltaTime, InputManager inputManager)
         {
+
+            _timer += deltaTime;
+            if ( _timer > 0.1f)
+            {
+                _canJump = true;
+            }
+
+
             if (_player.Sleeping)
             {
                 _player.Wake();
@@ -93,9 +102,11 @@ namespace SharpPhysics.Engine.Player
 
         private void Jump()
         {
-            if (_isGrounded)
+            if (_isGrounded && _canJump)
             {
-                _player.Velocity = new Vector2(_player.Velocity.X, -_jumpForce);
+                _player.Velocity = new Vector2(_player.Velocity.X, _player.Velocity.Y - _jumpForce);
+                _canJump = false;
+                _timer = 0f;
             }
         }
 

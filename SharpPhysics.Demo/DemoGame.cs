@@ -150,7 +150,7 @@ public class DemoGame : IGame
         HandleScrollZoom(inputManager);
         HandleSandboxInput(deltaTime, inputManager);
 
-        _playerController.Update(inputManager);
+        _playerController.Update(deltaTime, inputManager);
         _personColliderBridge?.ProcessPendingUpdates();
         _demoCar?.Update(deltaTime, inputManager);
         _background.Update(deltaTime);
