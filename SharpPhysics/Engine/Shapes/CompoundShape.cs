@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using SharpPhysics.Engine.Structs;
 
 namespace SharpPhysics.Engine.Shapes;
@@ -44,6 +45,17 @@ public class CompoundShape : IShape
     private float _cachedWidth;
     private float _cachedHeight;
 
+    // Cache for transformed vertices
+    private Vector2[]? _cachedTransformedVertices;
+    private Vector2 _cachedCenter;
+    private float _cachedAngle;
+
+    // Cache for child world transforms
+    private (Vector2 center, float angle)?[] _cachedChildTransforms = new (Vector2 center, float angle)?[0];
+    private (Vector2 center, float angle)?[] _emptyChildTransforms = new (Vector2 center, float angle)?[0];
+    private Vector2 _cachedCompoundCenter;
+    private float _cachedCompoundAngle;
+
     public CompoundShape()
     {
     }
@@ -55,10 +67,14 @@ public class CompoundShape : IShape
     {
         var child = new ChildShape(shape, localOffset, localAngle, mass);
         Children.Add(child);
-        
+
         _totalMass += mass;
         // Parallel axis theorem: I_total = I_child + m * d^2
         _totalInertia += child.Inertia + mass * Vector2.Dot(localOffset, localOffset);
+
+        // Invalidate child transform cache since children changed
+        _cachedChildTransforms = new (Vector2, float)?[Children.Count];
+        _emptyChildTransforms = new (Vector2, float)?[Children.Count];
 
         RecalculateBounds();
     }
@@ -165,8 +181,13 @@ public class CompoundShape : IShape
     /// <summary>
     /// Gets all transformed vertices from all child shapes.
     /// </summary>
-    public Vector2[] GetTransformedVertices(Vector2 center, float angle)
+        public Vector2[] GetTransformedVertices(Vector2 center, float angle)
     {
+        if (_cachedTransformedVertices != null && _cachedCenter == center && _cachedAngle == angle)
+        {
+            return _cachedTransformedVertices;
+        }
+
         var allVerts = new List<Vector2>();
         float cos = (float)Math.Cos(angle);
         float sin = (float)Math.Sin(angle);
@@ -184,14 +205,36 @@ public class CompoundShape : IShape
             allVerts.AddRange(childVerts);
         }
 
-        return allVerts.ToArray();
+        _cachedTransformedVertices = allVerts.ToArray();
+        _cachedCenter = center;
+        _cachedAngle = angle;
+
+        return _cachedTransformedVertices;
     }
+
 
     /// <summary>
     /// Gets the world-space center and angle for a specific child shape.
     /// </summary>
     public (Vector2 center, float angle) GetChildWorldTransform(int childIndex, Vector2 compoundCenter, float compoundAngle)
     {
+        // Invalidate cache if compound transform changed
+        if (_cachedCompoundCenter != compoundCenter || _cachedCompoundAngle != compoundAngle)
+        {
+            // Copy empty array to reset all cached child transforms
+            // block copy is faster than new allocation
+            Array.Copy(_emptyChildTransforms, _cachedChildTransforms, _emptyChildTransforms.Length);
+            _cachedCompoundCenter = compoundCenter;
+            _cachedCompoundAngle = compoundAngle;
+        }
+
+        // Check if this specific child is already cached
+        else if (_cachedChildTransforms[childIndex].HasValue)
+        {
+            return _cachedChildTransforms[childIndex].Value;
+        }
+
+        // Compute and cache only the requested child
         var child = Children[childIndex];
         float cos = (float)Math.Cos(compoundAngle);
         float sin = (float)Math.Sin(compoundAngle);
@@ -201,6 +244,9 @@ public class CompoundShape : IShape
             child.LocalOffset.X * sin + child.LocalOffset.Y * cos
         );
 
-        return (compoundCenter + rotatedOffset, compoundAngle + child.LocalAngle);
+        var result = (compoundCenter + rotatedOffset, compoundAngle + child.LocalAngle);
+        _cachedChildTransforms![childIndex] = result;
+
+        return result;
     }
 }

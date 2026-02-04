@@ -12,6 +12,11 @@ namespace SharpPhysics.Engine.Shapes
         public float Height { get; }
         public List<Vector2> LocalVertices { get; set; } = new List<Vector2>();
 
+        // Cache for transformed vertices
+        private Vector2[]? _cachedTransformedVertices;
+        private Vector2 _cachedCenter;
+        private float _cachedAngle;
+
         public BoxPhysShape(float width, float height)
         {
             Width = width;
@@ -101,6 +106,35 @@ namespace SharpPhysics.Engine.Shapes
         public float GetHeight()
         {
             return Height;
+        }
+
+        public Vector2[] GetTransformedVertices(Vector2 center, float angle)
+        {
+            if (_cachedTransformedVertices != null && _cachedCenter == center && _cachedAngle == angle)
+            {
+                return _cachedTransformedVertices;
+            }
+
+            var transformed = new Vector2[LocalVertices.Count];
+
+            float cos = (float)Math.Cos(angle);
+            float sin = (float)Math.Sin(angle);
+
+            for (int i = 0; i < LocalVertices.Count; i++)
+            {
+                var local = LocalVertices[i];
+                float rx = local.X * cos - local.Y * sin;
+                float ry = local.X * sin + local.Y * cos;
+                float worldX = center.X + rx;
+                float worldY = center.Y + ry;
+                transformed[i] = new Vector2(worldX, worldY);
+            }
+
+            _cachedTransformedVertices = transformed;
+            _cachedCenter = center;
+            _cachedAngle = angle;
+
+            return transformed;
         }
     }
 }

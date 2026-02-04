@@ -18,6 +18,7 @@ public class SFMLCompoundShader : SFMLShader
     private VertexArray contactLines = new VertexArray(PrimitiveType.Lines);
     private readonly Color _fillColor;
     private readonly Color _outlineColor;
+    private static readonly CircleShape Circle = new CircleShape();
 
     public SFMLCompoundShader(Color? fillColor = null, Color? outlineColor = null)
     {
@@ -79,15 +80,14 @@ public class SFMLCompoundShader : SFMLShader
 
     private void DrawCircle(Vector2 center, float radius, RenderTarget target)
     {
-        var circle = new CircleShape(radius)
-        {
-            Origin = new Vector2f(radius, radius),
-            Position = center.ToSfml(),
-            OutlineThickness = 1f,
-            OutlineColor = _outlineColor,
-            FillColor = _fillColor
-        };
-        target.Draw(circle);
+        Circle.Radius = radius;
+        Circle.Origin = new Vector2f(radius, radius);
+        Circle.Position = center.ToSfml();
+        Circle.OutlineThickness = 1f;
+        Circle.OutlineColor = _outlineColor;
+        Circle.FillColor = _fillColor;
+        
+        target.Draw(Circle);
     }
 
     public override void PostDraw(PhysicsObject obj, RenderTarget target)
@@ -99,15 +99,15 @@ public class SFMLCompoundShader : SFMLShader
 
         // Draw center of mass marker
         float radius = 3f;
-        var centerMarker = new CircleShape(radius)
-        {
-            Origin = new Vector2f(radius, radius),
-            Position = compound.Center.ToSfml(),
-            OutlineThickness = 1f,
-            OutlineColor = compound.Sleeping ? Color.Blue : Color.Red,
-            FillColor = Color.Transparent
-        };
-        target.Draw(centerMarker);
+
+        Circle.Radius = radius;
+        Circle.Origin = new Vector2f(radius, radius);
+        Circle.Position = compound.Center.ToSfml();
+        Circle.OutlineThickness = 1f;
+        Circle.OutlineColor = compound.Sleeping ? Color.Blue : Color.Red;
+        Circle.FillColor = Color.Transparent;
+        
+        target.Draw(Circle);
 
         // 3) Draw a line from each contact point along its normal.
         contactLines.Clear();

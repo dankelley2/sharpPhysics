@@ -22,7 +22,7 @@ namespace SharpPhysics.Engine.Objects
         public bool Locked { get; set; }
         public SFMLShader Shader { get; set; }
         public bool CanRotate { get; internal set; } = false;
-        public List<PhysicsObject> ConnectedObjects { get; private set; } = new List<PhysicsObject>();
+        public HashSet<PhysicsObject> ConnectedObjects { get; private set; } = new HashSet<PhysicsObject>();
         public List<Constraint> Constraints {get ; private set; } = new List<Constraint>();
         public float AngularVelocity { get; set; }
         public float Inertia { get; protected set; }

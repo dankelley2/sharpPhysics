@@ -24,10 +24,8 @@ namespace SharpPhysics.Engine.Constraints
             A = a;
             B = b;
             // Mark the objects as connected so that collisions between them are ignored.
-            if (!A.ConnectedObjects.Contains(B))
-                A.ConnectedObjects.Add(B);
-            if (!B.ConnectedObjects.Contains(A))
-                B.ConnectedObjects.Add(A);
+            A.ConnectedObjects.Add(B);
+            B.ConnectedObjects.Add(A);
 
             // Add constraints for tracking
             A.Constraints.Add(this);

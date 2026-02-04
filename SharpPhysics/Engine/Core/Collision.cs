@@ -358,9 +358,9 @@ namespace SharpPhysics.Engine.Core
 
             // For each object, if it's rotational, get its angular velocity and inverse inertia; otherwise, treat as zero.
             float angularVelA = A.CanRotate ? A.AngularVelocity : 0F;
-            float iInertiaA =   A.CanRotate ? A.IInertia        : 0F;
+            float iInertiaA = A.CanRotate ? A.IInertia : 0F;
             float angularVelB = B.CanRotate ? B.AngularVelocity : 0F;
-            float iInertiaB =   B.CanRotate ? B.IInertia        : 0F;
+            float iInertiaB = B.CanRotate ? B.IInertia : 0F;
 
             // Compute vectors from centers to contact point.
             Vector2 rA = m.ContactPoint - A.Center;
@@ -582,12 +582,15 @@ namespace SharpPhysics.Engine.Core
             // Test each child shape against the other (non-compound) object
             for (int i = 0; i < compoundShape.Children.Count; i++)
             {
-                var child = compoundShape.Children[i];
+                ChildShape child = compoundShape.Children[i];
                 var (childCenter, childAngle) = compoundShape.GetChildWorldTransform(i, compound.Center, compound.Angle);
+
+                // skip on no aabb collision
+                if (!AABBvsAABB(child.Shape.GetAABB(childCenter, childAngle), other.Aabb))
+                    continue;
 
                 Manifold childManifold = new Manifold();
                 bool childCollision = false;
-
                 if (child.Shape.ShapeType == ShapeTypeEnum.Circle)
                 {
                     if (other.Shape.ShapeType == ShapeTypeEnum.Circle)
@@ -697,13 +700,13 @@ namespace SharpPhysics.Engine.Core
                 return true;
             }
 
-            if (shapeA.ShapeType == ShapeTypeEnum.Circle && 
+            if (shapeA.ShapeType == ShapeTypeEnum.Circle &&
                 (shapeB.ShapeType == ShapeTypeEnum.Box || shapeB.ShapeType == ShapeTypeEnum.Polygon))
             {
                 return TestChildCircleVsChildPolygon(shapeA, centerA, shapeB, centerB, angleB, ref m);
             }
 
-            if ((shapeA.ShapeType == ShapeTypeEnum.Box || shapeA.ShapeType == ShapeTypeEnum.Polygon) && 
+            if ((shapeA.ShapeType == ShapeTypeEnum.Box || shapeA.ShapeType == ShapeTypeEnum.Polygon) &&
                 shapeB.ShapeType == ShapeTypeEnum.Circle)
             {
                 bool result = TestChildCircleVsChildPolygon(shapeB, centerB, shapeA, centerA, angleA, ref m);

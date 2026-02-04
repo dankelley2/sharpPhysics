@@ -92,10 +92,10 @@ public class DemoGame : IGame
         _playerController = new PlayerController(player);
 
         _demoCar = _sceneBuilder.CreateCar();
-        _sceneBuilder.CreateBridge(new Vector2(150, 150));
-        _sceneBuilder.CreateChain(new Vector2(150, 300));
-        _sceneBuilder.CreateSprocket(new Vector2(800, 300));
-        _sceneBuilder.CreateConcavePolygonDemo(new Vector2(600, 100));
+        //_sceneBuilder.CreateBridge(new Vector2(150, 150));
+        //_sceneBuilder.CreateChain(new Vector2(150, 300));
+        //_sceneBuilder.CreateSprocket(new Vector2(800, 300));
+        //_sceneBuilder.CreateConcavePolygonDemo(new Vector2(600, 100));
         _sceneBuilder.CreateBlanket(new Vector2(700, 400));
     }
 

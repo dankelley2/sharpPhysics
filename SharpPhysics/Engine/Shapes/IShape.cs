@@ -51,28 +51,6 @@ namespace SharpPhysics.Engine.Shapes
         /// Returns a list of the shape's vertices transformed into world space,
         /// using the provided center and angle.
         /// </summary>
-        public virtual Vector2[] GetTransformedVertices(Vector2 center, float angle)
-        {
-            var transformed = new Vector2[LocalVertices.Count];
-
-            float cos = (float)System.Math.Cos(angle);
-            float sin = (float)System.Math.Sin(angle);
-
-            for(int i = 0; i < LocalVertices.Count; i++)
-            {
-                var local = LocalVertices[i];
-                // Rotate the local vertex
-                float rx = local.X * cos - local.Y * sin;
-                float ry = local.X * sin + local.Y * cos;
-
-                // Then translate by the object's center
-                float worldX = center.X + rx;
-                float worldY = center.Y + ry;
-
-                transformed[i] = new Vector2(worldX, worldY);
-            }
-
-            return transformed;
-        }
+        Vector2[] GetTransformedVertices(Vector2 center, float angle);
     }
 }
