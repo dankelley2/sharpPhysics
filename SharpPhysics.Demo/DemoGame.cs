@@ -88,15 +88,15 @@ public class DemoGame : IGame
     {
         _sceneBuilder.CreateWalls(worldWidth, worldHeight);
 
-        //var player = _objectTemplates.CreatePolygonCapsule(new Vector2(50, 20));
-        //_playerController = new PlayerController(player);
+        var player = _objectTemplates.CreatePolygonCapsule(new Vector2(50, 20));
+        _playerController = new PlayerController(player);
 
-        //_demoCar = _sceneBuilder.CreateCar();
+        _demoCar = _sceneBuilder.CreateCar();
         _sceneBuilder.CreateBridge(new Vector2(150, 150));
-        //_sceneBuilder.CreateChain(new Vector2(150, 300));
-        //_sceneBuilder.CreateSprocket(new Vector2(800, 300));
+        _sceneBuilder.CreateChain(new Vector2(150, 300));
+        _sceneBuilder.CreateSprocket(new Vector2(800, 300));
         _sceneBuilder.CreateConcavePolygonDemo(new Vector2(600, 100));
-        //_sceneBuilder.CreateBlanket(new Vector2(700, 400));
+        _sceneBuilder.CreateBlanket(new Vector2(700, 400));
     }
 
     private void InitializePersonDetection(uint worldWidth, uint worldHeight)
@@ -150,7 +150,7 @@ public class DemoGame : IGame
         HandleScrollZoom(inputManager);
         HandleSandboxInput(deltaTime, inputManager);
 
-        //_playerController.Update(deltaTime, inputManager);
+        _playerController.Update(deltaTime, inputManager);
         _personColliderBridge?.ProcessPendingUpdates();
         _demoCar?.Update(deltaTime, inputManager);
         _background.Update(deltaTime);

@@ -74,7 +74,7 @@ public class DemoSceneBuilder
         var rearBumper = _templates.CreateBox(new Vector2(carX - bumperWidth, carY + 5f), (int)bumperWidth, (int)bumperHeight);
         _engine.AddWeldConstraint(carBody, rearBumper, new Vector2(-bodyWidth / 2f, 0f), new Vector2(bumperWidth / 2f, 0f));
 
-        return new DemoGameCar(carBody, frontWheel, rearWheel, frontBumper, rearBumper, true);
+        return new DemoGameCar(carBody, frontWheel, rearWheel, frontBumper, rearBumper, false);
     }
 
     public void CreateSprocket(Vector2 center, int numBalls = 22, float radius = 80f)
