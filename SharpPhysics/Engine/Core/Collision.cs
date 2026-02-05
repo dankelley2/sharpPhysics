@@ -24,7 +24,7 @@ namespace SharpPhysics.Engine.Core
         public static bool PolygonVsPolygon(ref Manifold m)
         {
             /*
-            * 1) Get the shapes (both assumed to be “polygons” here).
+            * 1) Get the shapes (both assumed to be ï¿½polygonsï¿½ here).
             *    - If a shape is BoxPhysShape, you can generate the 4 corners via CollisionHelpers.GetRectangleCorners.
             *    - If a shape is PolygonPhysShape, create a method GetTransformedVertices(PhysicsObject) that returns
             *      all vertices in world space.
@@ -898,7 +898,7 @@ namespace SharpPhysics.Engine.Core
             if (inside)
             {
                 m.Penetration = radius + dist;
-                m.Normal = dist > 0.0001f ? -(childCenter - closestPoint) / dist : new Vector2(1, 0);
+                m.Normal = dist > 0.0001f ? (childCenter - closestPoint) / dist : new Vector2(1, 0);
                 m.ContactPoint = closestPoint;
                 return true;
             }
