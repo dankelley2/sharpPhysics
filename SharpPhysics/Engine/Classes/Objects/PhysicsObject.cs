@@ -11,6 +11,7 @@ namespace SharpPhysics.Engine.Objects
 {
     public class PhysicsObject
     {
+        public readonly uint CollisionMask;
         private static float SupportObjectNormalThreshold = 0.2f;
         public IShape Shape { get; protected set; }
         public AABB Aabb { get; protected set; }
@@ -66,7 +67,7 @@ namespace SharpPhysics.Engine.Objects
         // Is in the process of being destroyed, will not collide
         internal bool IsDestroyed = false;
 
-        public PhysicsObject(IShape shape, Vector2 center, float restitution, bool locked, SFMLShader shader, float mass = 0, bool canRotate = false)
+        public PhysicsObject(IShape shape, Vector2 center, float restitution, bool locked, SFMLShader shader, float mass = 0, bool canRotate = false, uint collisionMask = 0xFFFFFFFF)
         {
             Shape = shape;
             Center = center;
@@ -83,6 +84,7 @@ namespace SharpPhysics.Engine.Objects
             Inertia = Shape.GetMomentOfInertia(Mass);
             IInertia = (Inertia != 0) ? 1 / Inertia : 0;
             CanRotate = canRotate;
+            CollisionMask = collisionMask;
         }
 
         /// <summary>

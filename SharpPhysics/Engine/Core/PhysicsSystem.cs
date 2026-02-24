@@ -78,27 +78,27 @@ namespace SharpPhysics.Engine.Core
 
         #region Public Methods
 
-        public PhysicsObject CreateStaticCircle(Vector2 loc, int radius, float restitution, bool locked, SFMLShader shader)
+        public PhysicsObject CreateStaticCircle(Vector2 loc, int radius, float restitution, bool locked, SFMLShader shader, uint collisionMask = 0xFFFFFFFF)
         {
             // Create the circle shape using the given radius.
             IShape shape = new CirclePhysShape(radius);
             // For a circle, the center is the provided location.
-            var obj = new PhysicsObject(shape, loc, restitution, locked, shader, canRotate: true);
+            var obj = new PhysicsObject(shape, loc, restitution, locked, shader, canRotate: true, collisionMask: collisionMask);
             ListStaticObjects.Add(obj);
             return obj;
         }
 
-        public PhysicsObject CreateStaticCircle(Vector2 loc, int radius, float restitution, bool locked, SFMLShader shader, float mass)
+        public PhysicsObject CreateStaticCircle(Vector2 loc, int radius, float restitution, bool locked, SFMLShader shader, float mass, uint collisionMask = 0xFFFFFFFF)
         {
             // Create the circle shape using the given radius.
             IShape shape = new CirclePhysShape(radius);
             // For a circle, the center is the provided location.
-            var obj = new PhysicsObject(shape, loc, restitution, locked, shader, mass, canRotate: true);
+            var obj = new PhysicsObject(shape, loc, restitution, locked, shader, mass, canRotate: true, collisionMask: collisionMask);
             ListStaticObjects.Add(obj);
             return obj;
         }
 
-        public PhysicsObject CreateStaticBox(Vector2 start, Vector2 end, bool locked, SFMLShader shader, float mass)
+        public PhysicsObject CreateStaticBox(Vector2 start, Vector2 end, bool locked, SFMLShader shader, float mass, uint collisionMask = 0xFFFFFFFF)
         {
             // Ensure start and end define the correct bounds.
             var min = new Vector2(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y));
@@ -112,7 +112,7 @@ namespace SharpPhysics.Engine.Core
 
             // Create a box shape with the computed dimensions.
             IShape shape = new BoxPhysShape(width, height);
-            var obj = new PhysicsObject(shape, center, 0.2f, locked, shader, mass);
+            var obj = new PhysicsObject(shape, center, 0.2f, locked, shader, mass, collisionMask: collisionMask);
             ListStaticObjects.Add(obj);
             return obj;
         }
@@ -136,11 +136,11 @@ namespace SharpPhysics.Engine.Core
             return obj;
         }
 
-        public PhysicsObject CreatePolygon(Vector2 origin, Vector2[] points, SFMLShader shader, bool locked = false, bool canRotate = true)
+        public PhysicsObject CreatePolygon(Vector2 origin, Vector2[] points, SFMLShader shader, bool locked = false, bool canRotate = true, uint collisionMask = 0xFFFF_FFFF)
         {
             // Create the polygon shape.
             IShape shape = new PolygonPhysShape(points);
-            var obj = new PhysicsObject(shape, origin, 0.2f, locked, shader, canRotate: canRotate);
+            var obj = new PhysicsObject(shape, origin, 0.2f, locked, shader, canRotate: canRotate, collisionMask: collisionMask);
             ListStaticObjects.Add(obj);
             return obj;
         }
@@ -641,6 +641,9 @@ namespace SharpPhysics.Engine.Core
                         {
                             PhysicsObject objA = cell[i];
                             PhysicsObject objB = cell[j];
+
+                            if ((objA.CollisionMask & objB.CollisionMask) == 0)
+                                continue;
 
                             // Skip pairs where both objects are sleeping.
                             if (objA.Sleeping && objB.Sleeping)

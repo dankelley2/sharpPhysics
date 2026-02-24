@@ -54,7 +54,7 @@ namespace SharpPhysics.Engine.Classes.ObjectTemplates
             // Using a diameter of 5.
             int diameter = 5;
             SFMLShader shader = GetShader<SFMLPolyRainbowShader>(diameter);
-            return _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.8F, false, shader);
+            return _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.8F, false, shader, collisionMask: 0x0000_000F);
         }
 
         public PhysicsObject CreateSmallBall(float originX, float originY, float mass)
@@ -62,21 +62,21 @@ namespace SharpPhysics.Engine.Classes.ObjectTemplates
             // Using a diameter of 5.
             int diameter = 5;
             SFMLShader shader = GetShader<SFMLPolyRainbowShader>(diameter);
-            return _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.8F, false, shader);
+            return _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.8F, false, shader, mass, collisionMask: 0x0000_000F);
         }
 
         public PhysicsObject CreateMedBall(float originX, float originY)
         {
             int diameter = 10;
             SFMLShader shader = GetShader<SFMLPolyRainbowShader>(diameter);
-            return _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.8F, false, shader);
+            return _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.8F, false, shader, collisionMask: 0x0000_000F);
         }
 
         public PhysicsObject CreateLargeBall(float originX, float originY)
         {
             int diameter = 20;
             SFMLShader shader = GetShader<SFMLPolyShader>(diameter);
-            return _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.8F, false, shader);
+            return _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.8F, false, shader, collisionMask: 0x0000_000F);
         }
 
         /// <summary>
@@ -98,7 +98,7 @@ namespace SharpPhysics.Engine.Classes.ObjectTemplates
             int diameter = 10;
             // Use a different shader type for attractors.
             SFMLShader shader = GetShader<SFMLPolyShader>(diameter);
-            var oPhysicsObject = _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.95F, true, shader, 50000f);
+            var oPhysicsObject = _physicsSystem.CreateStaticCircle(new Vector2(originX, originY), diameter, 0.95F, true, shader, 50000f, collisionMask: 0x0000_000F);
             oPhysicsObject.ContactPointAdded += (obj, pointNormal) =>
             {
                 // remove object once touching
@@ -112,7 +112,7 @@ namespace SharpPhysics.Engine.Classes.ObjectTemplates
         {
             SFMLShader shader = GetShader<SFMLWallShader>(width);
             Vector2 max = origin + new Vector2(width, height);
-            return _physicsSystem.CreateStaticBox(origin, max, true, shader, 1000000);
+            return _physicsSystem.CreateStaticBox(origin, max, true, shader, 1000000, collisionMask: 0xFFFF_FFFF);
         }
 
         public PhysicsObject CreateBox(Vector2 origin, int width, int height)
@@ -139,7 +139,7 @@ namespace SharpPhysics.Engine.Classes.ObjectTemplates
         public PhysicsObject CreatePolygonCapsule(Vector2 origin)
         {
             SFMLShader shader = GetShader<SFMLPolyShader>(0);
-            return _physicsSystem.CreatePolygon(origin, PolygonShapeHelper.CreateCapsuleVertices(32, 20, 50).ToArray(), shader, canRotate: false);
+            return _physicsSystem.CreatePolygon(origin, PolygonShapeHelper.CreateCapsuleVertices(32, 20, 50).ToArray(), shader, canRotate: false, collisionMask: 0x0000_000F);
         }
 
         /// <summary>
