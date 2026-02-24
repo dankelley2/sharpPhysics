@@ -99,7 +99,7 @@ public class CompoundBody : PhysicsObject
         float restitution = 0.2f)
     {
         List<object> trashHeap = new List<object>();
-
+        bool lockedBody = false;
         var compoundShape = new CompoundShape();
         var mergedObjects = new HashSet<PhysicsObject>(physicsObjects);
 
@@ -111,6 +111,8 @@ public class CompoundBody : PhysicsObject
 
         foreach (var piece in physicsObjects)
         {
+            if (piece.Locked)
+                lockedBody = true;
             // Check if this piece is a CompoundBody with children to merge
             if (piece is CompoundBody compoundBody && compoundBody.Shape.Children.Count > 0)
             {
@@ -156,7 +158,7 @@ public class CompoundBody : PhysicsObject
             }
         }
 
-        var compound = new CompoundBody(compoundShape, worldCenter, restitution, false, shader, canRotate);
+        var compound = new CompoundBody(compoundShape, worldCenter, restitution, lockedBody, shader, canRotate);
 
         // Transfer external constraints to the new compound body
         foreach (var (constraint, oldObject, isObjectA) in constraintsToTransfer)

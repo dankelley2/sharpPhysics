@@ -13,7 +13,7 @@ namespace SharpPhysics.Rendering.Shaders;
 /// </summary>
 public class SFMLCompoundShader : SFMLShader
 {
-    private readonly VertexArray _vertices = new(PrimitiveType.LineStrip);
+    private readonly VertexArray _vertices = new(PrimitiveType.TriangleFan);
     // Preallocated VertexArray for drawing contact normals.
     private VertexArray contactLines = new VertexArray(PrimitiveType.Lines);
     private readonly Color _fillColor;
