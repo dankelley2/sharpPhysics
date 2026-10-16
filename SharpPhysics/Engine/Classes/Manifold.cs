@@ -1,23 +1,30 @@
-﻿using SharpPhysics.Engine.Objects;
+#nullable enable
 using System.Numerics;
+using SharpPhysics.Engine.Objects;
 
-namespace SharpPhysics.Engine.Classes
+namespace SharpPhysics.Engine.Classes;
+
+public class Manifold
 {
-    public class Manifold
-    {
-        public PhysicsObject A;
-        public PhysicsObject B;
-        public float Penetration;
-        public Vector2 Normal;
-        public Vector2 ContactPoint;
+    public const int MaxContactPoints = 8;
 
-        public void Reset()
-        {
-            A = null;
-            B = null;
-            Penetration = 0;
-            Normal = new Vector2(0, 0);
-            ContactPoint = new Vector2(0, 0);
-        }
+    public PhysicsObject A = null!;
+    public PhysicsObject B = null!;
+    public float Penetration;
+    /// <summary>Unit collision normal pointing from A to B.</summary>
+    public Vector3 Normal;
+    /// <summary>Average of <see cref="ContactPoints"/>.</summary>
+    public Vector3 ContactPoint;
+    public readonly Vector3[] ContactPoints = new Vector3[MaxContactPoints];
+    public int ContactCount;
+
+    public void Reset()
+    {
+        A = null!;
+        B = null!;
+        Penetration = 0;
+        Normal = Vector3.Zero;
+        ContactPoint = Vector3.Zero;
+        ContactCount = 0;
     }
 }

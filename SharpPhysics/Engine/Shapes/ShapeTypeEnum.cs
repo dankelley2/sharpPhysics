@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+#nullable enable
+namespace SharpPhysics.Engine.Shapes;
 
-namespace SharpPhysics.Engine.Shapes
+public enum ShapeTypeEnum
 {
-    public enum ShapeTypeEnum
-    {
-        Circle,
-        Box,
-        Polygon,
-        Compound
-    }
+    Sphere,
+    Box,
+    Polyhedron,
+    Compound
 }

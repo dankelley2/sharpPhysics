@@ -10,7 +10,7 @@ using SharpPhysics.Engine.Core;
 namespace SharpPhysics.Rendering;
 
 /// <summary>
-/// Manages SFML rendering with separate views for background, game world, and UI layers.
+/// Manages rendering: SFML for background/UI layers and a depth-tested OpenGL pass for the 3D scene.
 /// </summary>
 public class Renderer : IDisposable
 {
@@ -30,9 +30,14 @@ public class Renderer : IDisposable
     public View BackgroundView { get; }
     public Font DefaultFont => _defaultFont;
 
+    /// <summary>Projects 3D world coordinates into GameView coordinates for physics rendering.</summary>
+    public Camera3D Camera { get; }
+
+    public SceneRenderer Scene { get; }
+
     public Renderer(uint windowWidth, uint windowHeight, string windowTitle, PhysicsSystem physicsSystem)
     {
-        var settings = new ContextSettings { AntialiasingLevel = 8 };
+        var settings = new ContextSettings { AntialiasingLevel = 8, DepthBits = 24 };
         Window = new RenderWindow(new VideoMode(windowWidth, windowHeight), windowTitle, Styles.Close, settings);
         Window.Closed += (s, e) => Window.Close();
         Window.SetFramerateLimit(144);
@@ -40,6 +45,9 @@ public class Renderer : IDisposable
         GameView = new View(new FloatRect(0, 0, windowWidth, windowHeight));
         UiView = new View(new FloatRect(0, 0, windowWidth, windowHeight));
         BackgroundView = new View(new FloatRect(0, 0, windowWidth, windowHeight));
+        Camera = new Camera3D(new Vector3(windowWidth / 2f, windowHeight / 2f, 0f));
+        Window.SetActive(true);
+        Scene = new SceneRenderer(Camera);
 
         _physicsSystem = physicsSystem;
         _defaultFont = new Font("Resources/good_timing_bd.otf");
@@ -55,30 +63,30 @@ public class Renderer : IDisposable
     }
 
     /// <summary>
-    /// Renders physics objects and constraints. Call between game background and foreground rendering.
+    /// Renders physics objects and constraints in the depth-tested OpenGL pass.
+    /// Call between game background and foreground rendering.
     /// </summary>
     public void RenderPhysicsObjects()
     {
-        Window.SetView(GameView);
+        Window.SetActive(true);
+        Scene.Begin(
+            new Vector2(GameView.Center.X, GameView.Center.Y),
+            new Vector2(GameView.Size.X, GameView.Size.Y),
+            Window.Size.X, Window.Size.Y);
 
         foreach (var obj in _physicsSystem.ListStaticObjects)
         {
-            var sfmlShader = obj.Shader;
-            if (sfmlShader != null)
-            {
-                sfmlShader.PreDraw(obj, Window);
-                sfmlShader.Draw(obj, Window);
-                sfmlShader.PostDraw(obj, Window);
-            }
+            obj.Shader?.Draw(obj, Scene);
         }
 
-        foreach (var obj in _physicsSystem.Constraints)
+        foreach (var constraint in _physicsSystem.Constraints)
         {
-            var a = obj.A.Center + PhysMath.RotateVector(obj.AnchorA, obj.A.Angle);
-            var b = obj.B.Center + PhysMath.RotateVector(obj.AnchorB, obj.B.Angle);
-            DrawLine(obj.A.Center, a, _constraintAColor);
-            DrawLine(obj.B.Center, b, _constraintBColor);
+            Scene.DrawLine(constraint.A.Center, constraint.A.LocalToWorld(constraint.AnchorA), _constraintAColor);
+            Scene.DrawLine(constraint.B.Center, constraint.B.LocalToWorld(constraint.AnchorB), _constraintBColor);
         }
+
+        Scene.End();
+        Window.ResetGLStates();
     }
 
     public void Display()
@@ -139,6 +147,8 @@ public class Renderer : IDisposable
     public void ResetView(uint windowWidth, uint windowHeight)
     {
         GameView.Reset(new FloatRect(0, 0, windowWidth, windowHeight));
+        Camera.Reset(new Vector3(windowWidth / 2f, windowHeight / 2f, 0f));
+        Scene.ReleaseShapeMeshes();
     }
 
     #endregion
@@ -160,6 +170,14 @@ public class Renderer : IDisposable
         Window.SetView(GameView);
         _lineRenderer[0] = new Vertex(new Vector2f(start.X, start.Y), color);
         _lineRenderer[1] = new Vertex(new Vector2f(end.X, end.Y), color);
+        Window.Draw(_lineRenderer);
+    }
+
+    public void DrawLine(Vector3 start, Vector3 end, Color color)
+    {
+        Window.SetView(GameView);
+        _lineRenderer[0] = new Vertex(Camera.Project(start).ToSfml(), color);
+        _lineRenderer[1] = new Vertex(Camera.Project(end).ToSfml(), color);
         Window.Draw(_lineRenderer);
     }
 
@@ -202,6 +220,7 @@ public class Renderer : IDisposable
 
         if (disposing)
         {
+            Scene.Dispose();
             _reusableText.Dispose();
             _defaultFont.Dispose();
             _lineRenderer.Dispose();

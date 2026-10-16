@@ -1,252 +1,105 @@
 #nullable enable
-using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Runtime.InteropServices;
+using SharpPhysics.Engine.Helpers;
 using SharpPhysics.Engine.Structs;
 
 namespace SharpPhysics.Engine.Shapes;
 
 /// <summary>
-/// Represents a child shape within a compound body, storing its local transform relative to the compound's center of mass.
+/// A child shape within a compound, positioned relative to the compound's center of mass.
 /// </summary>
 public readonly struct ChildShape
 {
     public IShape Shape { get; }
-    public Vector2 LocalOffset { get; }
-    public float LocalAngle { get; }
+    public Vector3 LocalOffset { get; }
+    public Quaternion LocalOrientation { get; }
     public float Mass { get; }
-    public float Inertia { get; }
+    /// <summary>Inertia tensor in the child's own local frame.</summary>
+    public Mat3 Inertia { get; }
 
-    public ChildShape(IShape shape, Vector2 localOffset, float localAngle, float mass)
+    public ChildShape(IShape shape, Vector3 localOffset, Quaternion localOrientation, float mass)
     {
         Shape = shape;
         LocalOffset = localOffset;
-        LocalAngle = localAngle;
+        LocalOrientation = localOrientation;
         Mass = mass;
-        Inertia = shape.GetMomentOfInertia(mass);
+        Inertia = shape.GetInertiaTensor(mass);
     }
 }
 
 /// <summary>
-/// A compound shape made up of multiple convex child shapes.
-/// Used for concave polygon decomposition where all pieces move as one rigid body.
+/// Multiple child shapes that move as one rigid body.
+/// Child offsets must be relative to the compound's center of mass.
 /// </summary>
 public class CompoundShape : IShape
 {
+    private readonly List<ChildShape> _children = new();
+    private Mat3 _totalInertia;
+
     public ShapeTypeEnum ShapeType => ShapeTypeEnum.Compound;
 
-    public List<Vector2> LocalVertices { get; set; } = new();
+    public IReadOnlyList<ChildShape> Children => _children;
 
-    public List<ChildShape> Children { get; } = new();
+    public float TotalMass { get; private set; }
 
-    private float _totalMass;
-    private float _totalInertia;
-    private float _cachedWidth;
-    private float _cachedHeight;
-
-    // Cache for transformed vertices
-    private Vector2[]? _cachedTransformedVertices;
-    private Vector2 _cachedCenter;
-    private float _cachedAngle;
-
-    // Cache for child world transforms
-    private (Vector2 center, float angle)?[] _cachedChildTransforms = new (Vector2 center, float angle)?[0];
-    private (Vector2 center, float angle)?[] _emptyChildTransforms = new (Vector2 center, float angle)?[0];
-    private Vector2 _cachedCompoundCenter;
-    private float _cachedCompoundAngle;
-
-    public CompoundShape()
+    public void AddChild(IShape shape, Vector3 localOffset, Quaternion localOrientation, float mass)
     {
+        var child = new ChildShape(shape, localOffset, localOrientation, mass);
+        _children.Add(child);
+
+        var rotation = Mat3.FromQuaternion(localOrientation);
+        var inertiaInCompoundFrame = rotation * child.Inertia * rotation.Transpose();
+
+        TotalMass += mass;
+        _totalInertia += PhysMath.ParallelAxis(inertiaInCompoundFrame, mass, localOffset);
     }
 
-    /// <summary>
-    /// Adds a child shape to the compound. The localOffset is relative to the compound's center of mass.
-    /// </summary>
-    public void AddChild(IShape shape, Vector2 localOffset, float localAngle, float mass)
+    public AABB GetAABB(Vector3 center, Quaternion orientation)
     {
-        var child = new ChildShape(shape, localOffset, localAngle, mass);
-        Children.Add(child);
+        var min = new Vector3(float.MaxValue);
+        var max = new Vector3(float.MinValue);
 
-        _totalMass += mass;
-        // Parallel axis theorem: I_total = I_child + m * d^2
-        _totalInertia += child.Inertia + mass * Vector2.Dot(localOffset, localOffset);
-
-        // Invalidate child transform cache since children changed
-        _cachedChildTransforms = new (Vector2, float)?[Children.Count];
-        _emptyChildTransforms = new (Vector2, float)?[Children.Count];
-
-        RecalculateBounds();
-    }
-
-    /// <summary>
-    /// Recalculates the cached bounds after adding children.
-    /// </summary>
-    private void RecalculateBounds()
-    {
-        float minX = float.MaxValue, maxX = float.MinValue;
-        float minY = float.MaxValue, maxY = float.MinValue;
-
-        LocalVertices.Clear();
-
-        foreach (var child in Children)
+        for (int i = 0; i < _children.Count; i++)
         {
-            // Get the child's AABB at its local position within the compound
-            var childAabb = child.Shape.GetAABB(child.LocalOffset, child.LocalAngle);
-            
-            if (childAabb.Min.X < minX) minX = childAabb.Min.X;
-            if (childAabb.Max.X > maxX) maxX = childAabb.Max.X;
-            if (childAabb.Min.Y < minY) minY = childAabb.Min.Y;
-            if (childAabb.Max.Y > maxY) maxY = childAabb.Max.Y;
-
-            // Collect all vertices for collision purposes
-            var childVerts = child.Shape.GetTransformedVertices(child.LocalOffset, child.LocalAngle);
-            foreach (var v in childVerts)
-            {
-                LocalVertices.Add(v);
-            }
+            var (childCenter, childOrientation) = GetChildWorldTransform(i, center, orientation);
+            var childAabb = _children[i].Shape.GetAABB(childCenter, childOrientation);
+            min = Vector3.Min(min, childAabb.Min);
+            max = Vector3.Max(max, childAabb.Max);
         }
 
-        _cachedWidth = maxX - minX;
-        _cachedHeight = maxY - minY;
+        return new AABB { Min = min, Max = max };
     }
 
-    public AABB GetAABB(Vector2 center, float angle)
-    {
-        float cos = (float)Math.Cos(angle);
-        float sin = (float)Math.Sin(angle);
-
-        float minX = float.MaxValue, maxX = float.MinValue;
-        float minY = float.MaxValue, maxY = float.MinValue;
-
-        foreach (var child in Children)
-        {
-            // Rotate child's local offset by compound's angle
-            Vector2 rotatedOffset = new(
-                child.LocalOffset.X * cos - child.LocalOffset.Y * sin,
-                child.LocalOffset.X * sin + child.LocalOffset.Y * cos
-            );
-            Vector2 childWorldCenter = center + rotatedOffset;
-            float childWorldAngle = angle + child.LocalAngle;
-
-            var childAabb = child.Shape.GetAABB(childWorldCenter, childWorldAngle);
-
-            if (childAabb.Min.X < minX) minX = childAabb.Min.X;
-            if (childAabb.Max.X > maxX) maxX = childAabb.Max.X;
-            if (childAabb.Min.Y < minY) minY = childAabb.Min.Y;
-            if (childAabb.Max.Y > maxY) maxY = childAabb.Max.Y;
-        }
-
-        return new AABB { Min = new Vector2(minX, minY), Max = new Vector2(maxX, maxY) };
-    }
-
-    public float GetArea()
+    public float GetVolume()
     {
         float total = 0f;
-        foreach (var child in Children)
-            total += child.Shape.GetArea();
+        foreach (var child in _children)
+            total += child.Shape.GetVolume();
         return total;
     }
 
-    public float GetWidth() => _cachedWidth;
-    public float GetHeight() => _cachedHeight;
+    /// <summary>
+    /// Returns the aggregated inertia of all children; <paramref name="mass"/> is ignored.
+    /// </summary>
+    public Mat3 GetInertiaTensor(float mass) => _totalInertia;
 
-    public float GetMomentOfInertia(float mass)
+    public bool Contains(Vector3 point, Vector3 center, Quaternion orientation)
     {
-        // Return the pre-calculated total inertia using parallel axis theorem
-        return _totalInertia;
-    }
-
-    public bool Contains(Vector2 point, Vector2 center, float angle)
-    {
-        float cos = (float)Math.Cos(angle);
-        float sin = (float)Math.Sin(angle);
-
-        foreach (var child in Children)
+        for (int i = 0; i < _children.Count; i++)
         {
-            // Transform to child's world position
-            Vector2 rotatedOffset = new(
-                child.LocalOffset.X * cos - child.LocalOffset.Y * sin,
-                child.LocalOffset.X * sin + child.LocalOffset.Y * cos
-            );
-            Vector2 childWorldCenter = center + rotatedOffset;
-            float childWorldAngle = angle + child.LocalAngle;
-
-            if (child.Shape.Contains(point, childWorldCenter, childWorldAngle))
+            var (childCenter, childOrientation) = GetChildWorldTransform(i, center, orientation);
+            if (_children[i].Shape.Contains(point, childCenter, childOrientation))
                 return true;
         }
         return false;
     }
 
-    /// <summary>
-    /// Gets all transformed vertices from all child shapes.
-    /// </summary>
-        public Vector2[] GetTransformedVertices(Vector2 center, float angle)
+    public (Vector3 center, Quaternion orientation) GetChildWorldTransform(int childIndex, Vector3 compoundCenter, Quaternion compoundOrientation)
     {
-        if (_cachedTransformedVertices != null && _cachedCenter == center && _cachedAngle == angle)
-        {
-            return _cachedTransformedVertices;
-        }
-
-        var allVerts = new List<Vector2>();
-        float cos = (float)Math.Cos(angle);
-        float sin = (float)Math.Sin(angle);
-
-        foreach (var child in Children)
-        {
-            Vector2 rotatedOffset = new(
-                child.LocalOffset.X * cos - child.LocalOffset.Y * sin,
-                child.LocalOffset.X * sin + child.LocalOffset.Y * cos
-            );
-            Vector2 childWorldCenter = center + rotatedOffset;
-            float childWorldAngle = angle + child.LocalAngle;
-
-            var childVerts = child.Shape.GetTransformedVertices(childWorldCenter, childWorldAngle);
-            allVerts.AddRange(childVerts);
-        }
-
-        _cachedTransformedVertices = allVerts.ToArray();
-        _cachedCenter = center;
-        _cachedAngle = angle;
-
-        return _cachedTransformedVertices;
-    }
-
-
-    /// <summary>
-    /// Gets the world-space center and angle for a specific child shape.
-    /// </summary>
-    public (Vector2 center, float angle) GetChildWorldTransform(int childIndex, Vector2 compoundCenter, float compoundAngle)
-    {
-        // Invalidate cache if compound transform changed
-        if (_cachedCompoundCenter != compoundCenter || _cachedCompoundAngle != compoundAngle)
-        {
-            // Copy empty array to reset all cached child transforms
-            // block copy is faster than new allocation
-            Array.Copy(_emptyChildTransforms, _cachedChildTransforms, _emptyChildTransforms.Length);
-            _cachedCompoundCenter = compoundCenter;
-            _cachedCompoundAngle = compoundAngle;
-        }
-
-        // Check if this specific child is already cached
-        else if (_cachedChildTransforms[childIndex].HasValue)
-        {
-            return _cachedChildTransforms[childIndex]!.Value;
-        }
-
-        // Compute and cache only the requested child
-        var child = Children[childIndex];
-        float cos = (float)Math.Cos(compoundAngle);
-        float sin = (float)Math.Sin(compoundAngle);
-
-        Vector2 rotatedOffset = new(
-            child.LocalOffset.X * cos - child.LocalOffset.Y * sin,
-            child.LocalOffset.X * sin + child.LocalOffset.Y * cos
-        );
-
-        var result = (compoundCenter + rotatedOffset, compoundAngle + child.LocalAngle);
-        _cachedChildTransforms![childIndex] = result;
-
-        return result;
+        var child = _children[childIndex];
+        return (
+            compoundCenter + PhysMath.Rotate(child.LocalOffset, compoundOrientation),
+            Quaternion.Concatenate(child.LocalOrientation, compoundOrientation));
     }
 }

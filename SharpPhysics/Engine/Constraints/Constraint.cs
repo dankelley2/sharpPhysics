@@ -1,50 +1,89 @@
+#nullable enable
 using System.Numerics;
+using SharpPhysics.Engine.Helpers;
 using SharpPhysics.Engine.Objects;
 
-namespace SharpPhysics.Engine.Constraints
+namespace SharpPhysics.Engine.Constraints;
+
+/// <summary>
+/// Base constraint type. Constraints link two PhysicsObjects.
+/// </summary>
+public abstract class Constraint
 {
+    public PhysicsObject A { get; set; }
+    public PhysicsObject B { get; set; }
+
+    // Anchor points in local space of each object
+    public Vector3 AnchorA { get; set; }
+    public Vector3 AnchorB { get; set; }
+
     /// <summary>
-    /// Base constraint type. Constraints link two PhysicsObjects.
+    /// B's orientation relative to A at creation time (conj(A) * B).
     /// </summary>
-    public abstract class Constraint
+    public Quaternion InitialRelativeOrientation { get; set; }
+
+    // Arbitrary break point when the constraint is pushed past its limits
+    public bool CanBreak { get; set; } = false;
+    public bool IsBroken { get; protected set; } = false;
+
+    protected Constraint(PhysicsObject a, PhysicsObject b)
     {
-        public PhysicsObject A { get; set; }
-        public PhysicsObject B { get; set; }
+        A = a;
+        B = b;
 
-        // Anchor points in local space of each object
-        public Vector2 AnchorA { get; set; }
-        public Vector2 AnchorB { get; set; }
+        InitialRelativeOrientation = Quaternion.Conjugate(a.Orientation) * b.Orientation;
 
-        // Initial relative angle between the two objects (B.Angle - A.Angle at creation time)
-        public float InitialRelativeAngle { get; set; }
+        // Mark the objects as connected so that collisions between them are ignored.
+        A.ConnectedObjects.Add(B);
+        B.ConnectedObjects.Add(A);
 
-        // Arbitrary break point when the constraint is pushed past its limits
-        public bool CanBreak { get; set; } = false;
-        public bool IsBroken { get; protected set; } = false;
+        A.Constraints.Add(this);
+        B.Constraints.Add(this);
+    }
 
-        protected Constraint(PhysicsObject a, PhysicsObject b)
-        {
-            A = a;
-            B = b;
+    public abstract void ApplyConstraint(float dt);
 
-            // Store the initial relative angle
-            InitialRelativeAngle = b.Angle - a.Angle;
+    protected Vector3 RelativeVelocity(Vector3 rA, Vector3 rB)
+    {
+        Vector3 vA = A.Velocity + Vector3.Cross(A.AngularVelocity, rA);
+        Vector3 vB = B.Velocity + Vector3.Cross(B.AngularVelocity, rB);
+        return vB - vA;
+    }
 
-            // Mark the objects as connected so that collisions between them are ignored.
-            A.ConnectedObjects.Add(B);
-            B.ConnectedObjects.Add(A);
+    protected float InverseMassAlong(Vector3 axis, Vector3 rA, Vector3 rB)
+    {
+        return A.InverseMassAlong(rA, axis) + B.InverseMassAlong(rB, axis);
+    }
 
-            // Add constraints for tracking
-            A.Constraints.Add(this);
-            B.Constraints.Add(this);
+    protected float AngularInverseMassAlong(Vector3 axis)
+    {
+        return Vector3.Dot(axis, A.ApplyInverseInertia(axis)) + Vector3.Dot(axis, B.ApplyInverseInertia(axis));
+    }
 
-            A.CanSleep = false;
-            B.CanSleep = false;
-        }
+    /// <summary>
+    /// Applies <paramref name="impulse"/> to B and its opposite to A.
+    /// </summary>
+    protected void ApplyLinearImpulse(Vector3 impulse, Vector3 rA, Vector3 rB)
+    {
+        A.ApplyImpulse(-impulse, rA);
+        B.ApplyImpulse(impulse, rB);
+    }
 
-        /// <summary>
-        /// Applies the constraint correction (via impulses or position/angle adjustments).
-        /// </summary>
-        public abstract void ApplyConstraint(float dt);
+    /// <summary>
+    /// Applies <paramref name="impulse"/> to B and its opposite to A.
+    /// </summary>
+    protected void ApplyAngularImpulse(Vector3 impulse)
+    {
+        A.ApplyAngularImpulse(-impulse);
+        B.ApplyAngularImpulse(impulse);
+    }
+
+    /// <summary>
+    /// World-space rotation vector (axis * angle) from B's target orientation to its current orientation.
+    /// </summary>
+    protected Vector3 RelativeOrientationError()
+    {
+        Quaternion target = A.Orientation * InitialRelativeOrientation;
+        return PhysMath.ToRotationVector(B.Orientation * Quaternion.Conjugate(target));
     }
 }

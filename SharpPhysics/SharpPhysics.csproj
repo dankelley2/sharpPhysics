@@ -10,9 +10,11 @@
     <Platforms>AnyCPU</Platforms>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="SFML.Net" />
+    <PackageReference Include="Silk.NET.OpenGL" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Resources/good_timing_bd.otf">

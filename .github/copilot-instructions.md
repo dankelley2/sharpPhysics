@@ -2,24 +2,31 @@
 
 ## Project Overview
 
-SharpPhysics is a 2D physics engine built with C# (.NET 9) and SFML.NET for rendering. It includes:
+SharpPhysics is a 3D physics engine built with C# (.NET 9). SFML.NET provides the window, input, text and 2D UI; physics objects are drawn in a depth-tested OpenGL pass (Silk.NET.OpenGL on SFML's context) by `SceneRenderer`, viewed through `Renderer.Camera` (`Camera3D`, a perspective orbit camera). Each `PhysicsObject` has an `ObjectShader` (`SolidShader`, `WireframeShader`, `NoneShader`) that submits draws to the `SceneRenderer`. It includes:
 
-- **physics/** (`SharpPhysics.csproj`) - Core physics engine library
-- **SharpPhysics.Demo/** - Demo games showcasing the engine
-- **PoseIntegrator.Vision/** - YOLO-based pose detection for body tracking
-- **PoseIntegrator.Demo/** - Standalone pose detection demo
+- **SharpPhysics/** (`SharpPhysics.csproj`) - Core physics engine library
+- **SharpPhysics3d.Demo/** - Slim 3D test harness (menu + top-down pool table scene)
+- **SharpPhysics.Demo/** - Demo games (not yet ported to 3D; does not build)
+- **SharpPhysics.Tests/** - Unit tests (not yet ported to 3D; does not build)
+
+## Units and Scale
+
+World units are **pixels**, and objects commonly range from 10 px to 500+ px. Mass defaults to volume (px³), so masses reach 1e8+ and inverse inertia ~1e-12.
+
+- Never use absolute tolerances tuned for meter-scale engines; scale them with body size (e.g. `PolyhedronPhysShape.BoundingRadius`).
+- Don't use mass cutoffs to mean "immovable"; use `Locked`.
+- Use `PhysMath.Rotate`/`InverseRotate`, not `Vector3.Transform(Vector3, Quaternion)`, which loses precision for tiny vectors.
 
 ## Architecture Principles
 
 ### Engine vs Game Separation
 
-The `physics/` project is the **core engine** and should contain only:
+The `SharpPhysics/` project is the **core engine** and should contain only:
 - Physics simulation (`PhysicsSystem`, collision detection, constraints)
 - Core rendering infrastructure (`Renderer`, primitive drawing)
 - Input handling (`InputManager`)
 - Game loop (`GameEngine`, `IGame` interface)
 - Reusable UI components (`UiManager`, `UiButton`, `UiSlider`, etc.)
-- Object templates for creating physics objects
 
 **DO NOT** put game-specific code in the engine:
 - Debug UIs specific to one game → put in Demo project
@@ -61,16 +68,17 @@ The engine calls them in order: Background → Physics Objects → Foreground
 ## Project Structure
 
 ```
-physics/Engine/
-├── Core/           # GameEngine, IGame interface
-├── Rendering/      # Renderer, UI components
+SharpPhysics/Engine/
+├── Core/           # GameEngine, IGame, PhysicsSystem, Collision
 ├── Input/          # InputManager
-├── Objects/        # PhysicsObject
-├── Shapes/         # CirclePhysShape, PolygonPhysShape, etc.
-├── Shaders/        # SFML shader implementations
+├── Classes/        # PhysicsObject, CompoundBody, Manifold, collision pairs
+├── Shapes/         # SpherePhysShape, BoxPhysShape, PolyhedronPhysShape, CompoundShape
 ├── Constraints/    # Physics constraints (Weld, Axis, Spring)
-├── Helpers/        # Math utilities, extensions
-└── Classes/        # Templates, collision data
+├── Helpers/        # PhysMath, Mat3, extensions
+└── Structs/        # AABB
+SharpPhysics/Rendering/
+├── Shaders/        # ObjectShader implementations (per-object 3D drawing)
+└── UI/             # UI components
 
 SharpPhysics.Demo/
 ├── DemoProps/      # Demo-specific components (SandboxDebugUI, DemoSceneBuilder)
@@ -126,12 +134,12 @@ public class MyGameDebugUI
 
 ### Physics Object Creation
 
-Use `ObjectTemplates` for creating physics objects:
+Construct objects directly and add them to the physics system:
 
 ```csharp
-var templates = new ObjectTemplates(engine.PhysicsSystem);
-var ball = templates.CreateSmallBall(x, y);
-var box = templates.CreateBox(position, width, height);
+var box = new PhysicsObject(new BoxPhysShape(40, 40, 40), new Vector3(x, y, z), restitution: 0.2f,
+    locked: false, shader, canRotate: true);
+engine.PhysicsSystem.ListStaticObjects.Add(box);
 ```
 
 ### Constraints
@@ -144,11 +152,10 @@ engine.AddSpringConstraint(bodyA, bodyB);                  // Spring
 
 ## Dependencies
 
-- **SFML.NET** - Windowing and rendering
-- **System.Numerics** - Vector math (use `Vector2` from this, not SFML's)
-- **OpenCvSharp4** - Camera capture (PoseIntegrator.Vision)
-- **Microsoft.ML.OnnxRuntime** - YOLO inference (PoseIntegrator.Vision)
+- **SFML.NET** - Windowing, input, text and 2D UI
+- **Silk.NET.OpenGL** - Depth-tested 3D scene rendering on SFML's GL context
+- **System.Numerics** - Vector math (`Vector3`, `Quaternion`; `Mat3` in Helpers for inertia tensors)
 
 ## Testing
 
-Run `dotnet build` to verify changes compile. The solution includes `SharpPhysics.Tests` for unit tests.
+Run `dotnet build` in `SharpPhysics/` to verify engine changes compile. The Demo and Tests projects still target the old 2D API.

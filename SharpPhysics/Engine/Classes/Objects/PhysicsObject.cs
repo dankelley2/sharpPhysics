@@ -1,386 +1,298 @@
-using SharpPhysics.Engine.Structs;
-using SharpPhysics.Engine.Shapes;
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using SharpPhysics.Engine.Core;
-using SharpPhysics.Rendering.Shaders;
 using SharpPhysics.Engine.Constraints;
+using SharpPhysics.Engine.Helpers;
+using SharpPhysics.Engine.Shapes;
+using SharpPhysics.Engine.Structs;
+using SharpPhysics.Rendering.Shaders;
 
-namespace SharpPhysics.Engine.Objects
+namespace SharpPhysics.Engine.Objects;
+
+public class PhysicsObject
 {
-    public class PhysicsObject
+    public readonly uint CollisionMask;
+    public IShape Shape { get; protected set; }
+    public AABB Aabb { get; protected set; }
+    public Vector3 Center { get; protected set; }
+    public Vector3 Velocity { get; set; }
+    public Quaternion Orientation { get; set; } = Quaternion.Identity;
+    /// <summary>World-space angular velocity (axis * radians per second).</summary>
+    public Vector3 AngularVelocity { get; set; }
+    public float Restitution { get; set; }
+    public float Mass { get; protected set; }
+    public float IMass { get; protected set; }
+    /// <summary>Local-space inertia tensor about the center of mass.</summary>
+    public Mat3 Inertia { get; protected set; }
+    public Mat3 IInertia { get; protected set; }
+    public bool Locked { get; set; }
+    public ObjectShader Shader { get; set; }
+    public bool CanRotate { get; internal set; }
+    public float Friction { get; set; } = 0.5f;
+    public HashSet<PhysicsObject> ConnectedObjects { get; } = new();
+    public List<Constraint> Constraints { get; } = new();
+
+    public event Action<PhysicsObject, (Vector3, Vector3)>? ContactPointAdded;
+    public event Action<PhysicsObject, (Vector3, Vector3)>? ContactPointRemoved;
+
+    // Keyed by the other object; value is (point, normal).
+    private readonly Dictionary<PhysicsObject, (Vector3, Vector3)> _contactPoints = new();
+    private readonly Dictionary<PhysicsObject, (Vector3, Vector3)> _previousContactPoints = new();
+
+    // Is in the process of being destroyed, will not collide
+    internal bool IsDestroyed;
+
+    internal float EffectiveIMass => Locked ? 0f : IMass;
+
+    // TODO(3D): sleep/wake and support tracking are disabled until 3D contact handling is stable.
+    // Re-enable by restoring these members and the calls in Update/AddContact/FinalizeContacts and PhysicsSystem.
+    /*
+    private static float SupportObjectNormalThreshold = 0.2f;
+    public bool CanSleep = true;
+    public bool Sleeping { get; private set; } = false;
+    private float _sleepTimer = 0f;
+    private Vector3 _prevCenter;
+    private readonly HashSet<PhysicsObject> _supportingObjects = new();
+    private readonly HashSet<PhysicsObject> _supportedObjects = new();
+    private readonly Dictionary<PhysicsObject, (Vector3, Vector3)> _sleepingContactPoints = new();
+    private bool _validateSupportsNextFrame = false;
+
+    public void UpdateSleepState(float dt)
     {
-        public readonly uint CollisionMask;
-        private static float SupportObjectNormalThreshold = 0.2f;
-        public IShape Shape { get; protected set; }
-        public AABB Aabb { get; protected set; }
-        public Vector2 Center { get; protected set; }
-        public Vector2 Velocity { get; set; }
-        public float Restitution { get; set; }
-        public float Mass { get; protected set; }
-        public float IMass { get; protected set; }
-        public bool Locked { get; set; }
-        public SFMLShader Shader { get; set; }
-        public bool CanRotate { get; internal set; } = false;
-        public HashSet<PhysicsObject> ConnectedObjects { get; private set; } = new HashSet<PhysicsObject>();
-        public List<Constraint> Constraints {get ; private set; } = new List<Constraint>();
-        public float AngularVelocity { get; set; }
-        public float Inertia { get; protected set; }
-        public float IInertia { get; protected set; }
-
-        // Friction, in newtons
-        public float Friction { get; set; }= 0.5f;
-
-        /// <summary>
-        /// Orientation in radians.
-        /// </summary>
-        public float Angle { get; set; }
-
-        // --- New caching and events ---
-        // Event fired when a new contact point is added.
-        public event Action<PhysicsObject, (Vector2, Vector2)>? ContactPointAdded;
-        // Event fired when a contact point is removed.
-        public event Action<PhysicsObject, (Vector2, Vector2)>? ContactPointRemoved;
-        // Current contact points. The key is the object, and the value is a tuple of (point, normal).
-        private readonly Dictionary<PhysicsObject, (Vector2, Vector2)> _contactPoints = new Dictionary<PhysicsObject, (Vector2, Vector2)>();
-        // Cached contacts from the previous update.
-        private readonly Dictionary<PhysicsObject, (Vector2, Vector2)> _previousContactPoints = new Dictionary<PhysicsObject, (Vector2, Vector2)>();
-
-        // --- Sleep/Wake state management ---
-        public bool CanSleep = true;
-        public bool Sleeping { get; private set; } = false;
-        private float sleepTimer = 0f;
-
-        // Store the previous center to compute displacement.
-        private Vector2 _prevCenter;
-
-        // Support network tracking - objects that this object is resting on
-        private readonly HashSet<PhysicsObject> _supportingObjects = new HashSet<PhysicsObject>();
-        // Objects that are being supported by this object
-        private readonly HashSet<PhysicsObject> _supportedObjects = new HashSet<PhysicsObject>();
-        // Persistent contact points for sleeping objects
-        private readonly Dictionary<PhysicsObject, (Vector2, Vector2)> _sleepingContactPoints = new Dictionary<PhysicsObject, (Vector2, Vector2)>();
-        // Whether to validate supports next frame
-        private bool _validateSupportsNextFrame = false;
-
-        // Is in the process of being destroyed, will not collide
-        internal bool IsDestroyed = false;
-
-        public PhysicsObject(IShape shape, Vector2 center, float restitution, bool locked, SFMLShader shader, float mass = 0, bool canRotate = false, uint collisionMask = 0xFFFFFFFF)
+        if (Locked)
         {
-            Shape = shape;
-            Center = center;
-            _prevCenter = center; // initialize previous center.
-            Angle = 0;
-            Velocity = new Vector2(0, 0);
-            Restitution = restitution;
-            Locked = locked;
-            Shader = shader;
-            Mass = (mass == 0) ? shape.GetArea() : mass;
-            IMass = 1 / Mass;
-            Aabb = Shape.GetAABB(Center, Angle);
-            AngularVelocity = 0;
-            Inertia = Shape.GetMomentOfInertia(Mass);
-            IInertia = (Inertia != 0) ? 1 / Inertia : 0;
-            CanRotate = canRotate;
-            CollisionMask = collisionMask;
+            _sleepTimer = 0f;
+            return;
         }
 
-        /// <summary>
-        /// Runs the object's update logic.
-        /// </summary>
-        public void Update(float dt)
+        float displacement = (Center - _prevCenter).Length();
+        if (displacement < PhysicsSystem.LinearSleepThreshold &&
+            AngularVelocity.Length() < PhysicsSystem.AngularSleepThreshold)
         {
-            if (IsDestroyed)
-                return;
-
-            if (!Sleeping)
-            {
-                Move(dt);
-                UpdateRotation(dt);
-                
-                // Notify any objects we're supporting if we moved significantly
-                if (_supportedObjects.Count > 0 && (Center - _prevCenter).Length() > 0.01f)
-                {
-                    foreach (var supported in _supportedObjects)
-                    {
-                        supported._validateSupportsNextFrame = true;
-                    }
-                }
-            }
-            else if (_validateSupportsNextFrame)
-            {
-                // Check if supports are still valid
-                ValidateSupports();
-                _validateSupportsNextFrame = false;
-            }
-            
-            // Update sleep state based on actual displacement (movement) rather than instantaneous velocity.
-            UpdateSleepState(dt);
-            // Update the previous center for next frame comparison.
-            _prevCenter = Center;
+            _sleepTimer += dt;
+            if (_sleepTimer >= PhysicsSystem.SleepTimeThreshold)
+                Sleep();
         }
-
-        /// <summary>
-        /// Checks whether the object has moved less than the threshold between updates.
-        /// If so, accumulates a timer. Once the timer exceeds a set threshold, the object is put to sleep.
-        /// If movement exceeds the threshold, the timer is reset.
-        /// </summary>
-        public void UpdateSleepState(float dt)
+        else
         {
-            if (Locked)
-            {
-                sleepTimer = 0f;
-                return;
-            }
-
-            // Compute displacement as the distance between the current center and previous center.
-            float displacement = (Center - _prevCenter).Length();
-
-            // Compare displacement against the threshold and also check angular movement.
-            if (displacement < PhysicsSystem.LinearSleepThreshold &&
-                Math.Abs(AngularVelocity) < PhysicsSystem.AngularSleepThreshold)
-            {
-                sleepTimer += dt;
-                if (sleepTimer >= PhysicsSystem.SleepTimeThreshold)
-                {
-                    Sleep();
-                }
-            }
-            else
-            {
-                sleepTimer = 0f;
-                if (Sleeping)
-                    Wake();
-            }
-        }
-
-        /// <summary>
-        /// Validates if supports are still in place. If not, wakes the object.
-        /// </summary>
-        private void ValidateSupports()
-        {
-            if (!Sleeping)
-                return;
-
-            bool shouldWake = false;
-            
-            // If we have no supports, we should wake up
-            if (_supportingObjects.Count == 0)
-            {
-                shouldWake = true;
-            }
-            else
-            {
-                // Check if any supporting object has moved away
-                foreach (var supportingObj in _supportingObjects)
-                {
-                    if (_sleepingContactPoints.TryGetValue(supportingObj, out var contactData))
-                    {
-                        Vector2 contactPoint = contactData.Item1;
-                        Vector2 normal = contactData.Item2;
-                        
-                        // Simple check: is the point still contained within the supporting object?
-                        // A more robust check would recompute the actual contact point
-                        if (!supportingObj.Contains(contactPoint))
-                        {
-                            shouldWake = true;
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        // No contact data for a supporting object is suspicious, wake up
-                        shouldWake = true;
-                        break;
-                    }
-                }
-            }
-
-            if (shouldWake)
-            {
+            _sleepTimer = 0f;
+            if (Sleeping)
                 Wake();
-            }
-        }
-
-        /// <summary>
-        /// Puts the object to sleep: sets Sleeping to true, and zeroes out velocity and angular velocity.
-        /// </summary>
-        public void Sleep()
-        {
-            if (Sleeping) return;
-            if (!CanSleep) return;
-            Sleeping = true;
-            Velocity = new Vector2(0, 0);
-            AngularVelocity = 0;
-            
-            // Preserve current contacts for sleeping state
-            _sleepingContactPoints.Clear();
-            foreach (var contact in _previousContactPoints)
-            {
-                _sleepingContactPoints[contact.Key] = contact.Value;
-            }
-        }
-
-        /// <summary>
-        /// Wakes the object from sleep.
-        /// </summary>
-        public void Wake()
-        {
-            if (!Sleeping) return;
-            Sleeping = false;
-            sleepTimer = 0f;
-            
-            // Clear the sleeping contacts
-            _sleepingContactPoints.Clear();
-            
-            // Recursively wake objects resting on us
-            foreach (var supported in _supportedObjects)
-            {
-                if (supported.Sleeping)
-                {
-                    supported.Wake();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Safe method to add a contact point to the dictionary.
-        /// </summary>
-        /// <param name="obj"></param>
-        /// <param name="point"></param>
-        /// <param name="normal"></param>
-        public void AddContact(PhysicsObject obj, Vector2 point, Vector2 normal)
-        {
-            if (_contactPoints.TryAdd(obj, (point, normal)))
-            {
-                // If normal points upward, this object might be supporting us
-                if (normal.Y > SupportObjectNormalThreshold) // Y is negative when pointing up in many engines
-                {
-                    _supportingObjects.Add(obj);
-                    obj._supportedObjects.Add(this);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Retrieve the most recent contact points.
-        /// </summary>
-        /// <returns></returns>
-        public Dictionary<PhysicsObject, (Vector2, Vector2)> GetContacts(){
-            return _previousContactPoints;
-        }
-
-        /// <summary>
-        /// Compares the current contact points to the previous frame�s contact points,
-        /// fires events for added and removed contacts, updates the cache, and then clears the current list.
-        /// This method is written to be allocation-efficient.
-        /// </summary>
-        public void FinalizeContacts()
-        {
-            // If both the current and previous contacts are empty, there's nothing to do.
-            if (_contactPoints.Count == 0 && _previousContactPoints.Count == 0)
-                return;
-
-            // Cache the event delegates locally to avoid repeated null checks.
-            var addedHandler = ContactPointAdded;
-            var removedHandler = ContactPointRemoved;
-
-            // Fire events for newly added contacts.
-            foreach (KeyValuePair<PhysicsObject, (Vector2, Vector2)> kv in _contactPoints)
-            {
-                if (!_previousContactPoints.ContainsKey(kv.Key))
-                {
-                    addedHandler?.Invoke(kv.Key, kv.Value);
-                }
-            }
-
-            // Fire events for contacts that were removed.
-            foreach (KeyValuePair<PhysicsObject, (Vector2, Vector2)> kv in _previousContactPoints)
-            {
-                if (!_contactPoints.ContainsKey(kv.Key))
-                {
-                    removedHandler?.Invoke(kv.Key, kv.Value);
-
-                    // Preserve support relationships while both objects are sleeping
-                    // (sleeping pairs don't generate contacts, but are still physically stacked)
-                    if ((!Sleeping || !kv.Key.Sleeping) && _supportingObjects.Remove(kv.Key))
-                    {
-                        kv.Key._supportedObjects.Remove(this);
-                    }
-                }
-            }
-
-            // Update the cached contacts
-            _previousContactPoints.Clear();
-            foreach (KeyValuePair<PhysicsObject, (Vector2, Vector2)> kv in _contactPoints)
-            {
-                _previousContactPoints.Add(kv.Key, kv.Value);
-            }
-
-            // Clear the current contact points for the next update cycle.
-            _contactPoints.Clear();
-        }
-
-        /// <summary>
-        /// Moves the object based on its velocity and updates its AABB.
-        /// </summary>
-        public virtual void Move(float dt)
-        {
-            if (Locked)
-                return;
-
-            RoundSpeedToZero();
-            Center += Velocity * dt;
-            // Update AABB including current rotation.
-            Aabb = Shape.GetAABB(Center, Angle);
-        }
-
-        protected void RoundSpeedToZero()
-        {
-            if (Math.Abs(Velocity.X) + Math.Abs(Velocity.Y) < 0.01f)
-            {
-                Velocity = new Vector2(0, 0);
-            }
-        }
-
-        /// <summary>
-        /// Directly translates the object by a given vector.
-        /// </summary>
-        public virtual void Move(Vector2 dVector)
-        {
-            if (Locked)
-                return;
-            
-            Center += dVector;
-            // Update AABB including current rotation.
-            Aabb = Shape.GetAABB(Center, Angle);
-        }
-
-        /// <summary>
-        /// Updates rotation. By default, does nothing.
-        /// </summary>
-        public virtual void UpdateRotation(float dt)
-        {
-            if (!CanRotate || Locked)
-                return;
-
-            Angle += AngularVelocity * dt;
-            AngularVelocity *= 0.999f; // Apply angular damping.
-            if (Math.Abs(AngularVelocity) < 0.001f)
-                AngularVelocity = 0;
-
-            Aabb = Shape.GetAABB(Center, Angle);
-        }
-
-        /// <summary>
-        /// Determines whether a given point (in world coordinates) lies within the object.
-        /// This method delegates to the shape's own containment logic using the object's center and rotation.
-        /// </summary>
-        public bool Contains(Vector2 point)
-        {
-            return Shape.Contains(point, Center, Angle);
         }
     }
+
+    private void ValidateSupports()
+    {
+        if (!Sleeping)
+            return;
+
+        bool shouldWake = _supportingObjects.Count == 0;
+        foreach (var supportingObj in _supportingObjects)
+        {
+            if (!_sleepingContactPoints.TryGetValue(supportingObj, out var contactData) ||
+                !supportingObj.Contains(contactData.Item1))
+            {
+                shouldWake = true;
+                break;
+            }
+        }
+
+        if (shouldWake)
+            Wake();
+    }
+
+    public void Sleep()
+    {
+        if (Sleeping || !CanSleep) return;
+        Sleeping = true;
+        Velocity = Vector3.Zero;
+        AngularVelocity = Vector3.Zero;
+
+        _sleepingContactPoints.Clear();
+        foreach (var contact in _previousContactPoints)
+            _sleepingContactPoints[contact.Key] = contact.Value;
+    }
+
+    public void Wake()
+    {
+        if (!Sleeping) return;
+        Sleeping = false;
+        _sleepTimer = 0f;
+        _sleepingContactPoints.Clear();
+
+        foreach (var supported in _supportedObjects)
+        {
+            if (supported.Sleeping)
+                supported.Wake();
+        }
+    }
+    */
+
+    public PhysicsObject(IShape shape, Vector3 center, float restitution, bool locked, ObjectShader shader, float mass = 0, bool canRotate = false, uint collisionMask = 0xFFFFFFFF)
+    {
+        Shape = shape;
+        Center = center;
+        Restitution = restitution;
+        Locked = locked;
+        Shader = shader;
+        Mass = (mass == 0) ? shape.GetVolume() : mass;
+        IMass = 1 / Mass;
+        Inertia = shape.GetInertiaTensor(Mass);
+        IInertia = Inertia.Inverse();
+        CanRotate = canRotate;
+        CollisionMask = collisionMask;
+        Aabb = Shape.GetAABB(Center, Orientation);
+    }
+
+    public void Update(float dt)
+    {
+        if (IsDestroyed)
+            return;
+
+        Move(dt);
+        UpdateRotation(dt);
+    }
+
+    /// <summary>
+    /// Applies the world-space inverse inertia tensor. Returns zero for locked or non-rotating objects.
+    /// </summary>
+    public Vector3 ApplyInverseInertia(Vector3 worldVector)
+    {
+        if (Locked || !CanRotate)
+            return Vector3.Zero;
+
+        return PhysMath.Rotate(IInertia * PhysMath.InverseRotate(worldVector, Orientation), Orientation);
+    }
+
+    /// <summary>
+    /// Inverse effective mass seen by an impulse along <paramref name="direction"/> applied at lever arm <paramref name="r"/>.
+    /// </summary>
+    internal float InverseMassAlong(Vector3 r, Vector3 direction)
+    {
+        Vector3 rxn = Vector3.Cross(r, direction);
+        return EffectiveIMass + Vector3.Dot(rxn, ApplyInverseInertia(rxn));
+    }
+
+    public Vector3 GetVelocityAtPoint(Vector3 worldPoint)
+    {
+        return CanRotate
+            ? Velocity + Vector3.Cross(AngularVelocity, worldPoint - Center)
+            : Velocity;
+    }
+
+    public Vector3 LocalToWorld(Vector3 localPoint) => Center + PhysMath.Rotate(localPoint, Orientation);
+
+    /// <summary>
+    /// Applies an impulse at lever arm <paramref name="r"/> (world-space offset from the center).
+    /// </summary>
+    public void ApplyImpulse(Vector3 impulse, Vector3 r)
+    {
+        if (Locked)
+            return;
+
+        Velocity += impulse * IMass;
+        AngularVelocity += ApplyInverseInertia(Vector3.Cross(r, impulse));
+    }
+
+    public void ApplyImpulseAtPoint(Vector3 impulse, Vector3 worldPoint) => ApplyImpulse(impulse, worldPoint - Center);
+
+    public void ApplyAngularImpulse(Vector3 angularImpulse)
+    {
+        AngularVelocity += ApplyInverseInertia(angularImpulse);
+    }
+
+    public void AddContact(PhysicsObject obj, Vector3 point, Vector3 normal)
+    {
+        _contactPoints.TryAdd(obj, (point, normal));
+    }
+
+    /// <summary>
+    /// Retrieve the most recent contact points.
+    /// </summary>
+    public Dictionary<PhysicsObject, (Vector3, Vector3)> GetContacts() => _previousContactPoints;
+
+    /// <summary>
+    /// Fires added/removed events against the previous frame's contacts, then rolls the cache forward.
+    /// </summary>
+    public void FinalizeContacts()
+    {
+        if (_contactPoints.Count == 0 && _previousContactPoints.Count == 0)
+            return;
+
+        var addedHandler = ContactPointAdded;
+        var removedHandler = ContactPointRemoved;
+
+        foreach (var kv in _contactPoints)
+        {
+            if (!_previousContactPoints.ContainsKey(kv.Key))
+                addedHandler?.Invoke(kv.Key, kv.Value);
+        }
+
+        foreach (var kv in _previousContactPoints)
+        {
+            if (!_contactPoints.ContainsKey(kv.Key))
+                removedHandler?.Invoke(kv.Key, kv.Value);
+        }
+
+        _previousContactPoints.Clear();
+        foreach (var kv in _contactPoints)
+            _previousContactPoints.Add(kv.Key, kv.Value);
+
+        _contactPoints.Clear();
+    }
+
+    public virtual void Move(float dt)
+    {
+        if (Locked)
+            return;
+
+        RoundSpeedToZero();
+        Center += Velocity * dt;
+        Aabb = Shape.GetAABB(Center, Orientation);
+    }
+
+    protected void RoundSpeedToZero()
+    {
+        if (Math.Abs(Velocity.X) + Math.Abs(Velocity.Y) + Math.Abs(Velocity.Z) < 0.01f)
+            Velocity = Vector3.Zero;
+    }
+
+    /// <summary>
+    /// Directly translates the object by a given vector.
+    /// </summary>
+    public virtual void Move(Vector3 dVector)
+    {
+        if (Locked)
+            return;
+
+        Center += dVector;
+        Aabb = Shape.GetAABB(Center, Orientation);
+    }
+
+    /// <summary>
+    /// Applies a world-space rotation on top of the current orientation.
+    /// </summary>
+    public void RotateBy(Quaternion rotation)
+    {
+        if (Locked || !CanRotate)
+            return;
+
+        Orientation = Quaternion.Normalize(Quaternion.Concatenate(Orientation, rotation));
+    }
+
+    public virtual void UpdateRotation(float dt)
+    {
+        if (!CanRotate || Locked)
+            return;
+
+        Orientation = PhysMath.IntegrateOrientation(Orientation, AngularVelocity, dt);
+        AngularVelocity *= 0.999f;
+        if (AngularVelocity.LengthSquared() < 1e-6f)
+            AngularVelocity = Vector3.Zero;
+
+        Aabb = Shape.GetAABB(Center, Orientation);
+    }
+
+    public bool Contains(Vector3 point) => Shape.Contains(point, Center, Orientation);
 }

@@ -1,691 +1,407 @@
-﻿using System;
+#nullable enable
+using System;
 using System.Collections.Generic;
-using SharpPhysics.Engine.Classes;
-using SharpPhysics.Engine.Objects;
-using SharpPhysics.Engine.Helpers;
-using SharpPhysics.Engine.Shapes;
-using SharpPhysics.Engine.Constraints;
-using System.Numerics;
 using System.Linq;
-using SharpPhysics.Rendering.Shaders;
+using System.Numerics;
+using SharpPhysics.Engine.Classes;
+using SharpPhysics.Engine.Constraints;
+using SharpPhysics.Engine.Helpers;
+using SharpPhysics.Engine.Objects;
 
-namespace SharpPhysics.Engine.Core
+namespace SharpPhysics.Engine.Core;
+
+public class PhysicsSystem
 {
-    public class PhysicsSystem
+    #region Public Properties
+
+    public float GravityScale = 30F;
+    public Vector3 Gravity { get; set; } = new Vector3(0, 9.8f, 0);
+    public float TimeScale { get; set; } = 1.0f;
+    public bool IsPaused { get; set; } = false;
+
+    /// <summary>Fixed physics steps run by the most recent <see cref="Tick"/>.</summary>
+    public int LastTickSteps { get; private set; }
+
+    // Set this to roughly your average AABB size – adjust as needed.
+    public float SpatialHashCellSize { get; set; } = 50F;
+
+    // TODO(3D): sleep thresholds, used by the disabled sleep code in PhysicsObject.
+    /*
+    public static float WakeImpulseThreshold { get; private set; } = 4.0f;
+    public static float LinearSleepThreshold { get; set; } = 0.06f;
+    public static float AngularSleepThreshold { get; set; } = 0.11f;
+    public static float SleepTimeThreshold { get; set; } = 0.9f;
+    */
+
+    #endregion
+
+    #region Local Declarations
+
+    public const float FPS = 144;
+    private const float _dt = 1 / FPS;
+    private const int PHYSICS_ITERATIONS = 8;
+    private double _accumulator = 0;
+
+    public PhysicsObject? ActiveObject;
+    public readonly List<PhysicsObject> ListStaticObjects = new();
+    public readonly List<Constraint> Constraints = new();
+    public readonly List<PhysicsObject> ListGravityObjects = new();
+
+    private readonly List<CollisionPair> _collisionPairs = new();
+    private readonly ManifoldPool _manifoldPool = new();
+    private readonly CollisionPairPool _collisionPairPool = new();
+    private readonly Queue<Constraint> _constraintRemovalQueue = new();
+    private readonly Queue<object> _removalQueue = new();
+
+    internal IEnumerable<PhysicsObject> GetMoveableObjects()
     {
-        #region Public Properties
-
-        public float GravityScale = 30F;
-        public Vector2 Gravity { get; set; } = new Vector2(0, 9.8f);
-        public float TimeScale { get; set; } = 1.0f;
-        public bool IsPaused { get; set; } = false;
-
-        // Set this to roughly your average AABB size – adjust as needed.
-        public float SpatialHashCellSize { get; set; } = 10F;
-
-        // Sleep / Wake thresholds
-        public static float WakeImpulseThreshold { get; private set; } = 4.0f;
-        public static float LinearSleepThreshold { get; set; } = 0.06f;
-        public static float AngularSleepThreshold { get; set; } = 0.11f;
-        public static float SleepTimeThreshold { get; set; } = 0.9f;
-
-        #endregion
-
-        #region Local Declarations
-        public const float FPS = 144;
-        private const float _dt = 1 / FPS;
-        private const int PHYSICS_ITERATIONS = 8;
-        private double accumulator = 0;
-
-        public PhysicsObject? ActiveObject;
-        public readonly List<PhysicsObject> ListStaticObjects = new List<PhysicsObject>();
-        public readonly List<Constraint> Constraints = new List<Constraint>();
-        public readonly List<PhysicsObject> ListGravityObjects = new List<PhysicsObject>();
-
-        private readonly List<CollisionPair> ListCollisionPairs = new List<CollisionPair>();
-        private readonly ManifoldPool _manifoldPool = new ManifoldPool();
-        private readonly CollisionPairPool _collisionPairPool = new CollisionPairPool();
-        private readonly Queue<Constraint> _constraintRemovalQueue = new Queue<Constraint>();
-        private readonly Queue<Object> RemovalQueue = new Queue<Object>();
-
-        internal IEnumerable<PhysicsObject> GetMoveableObjects()
+        for (int i = ListStaticObjects.Count - 1; i >= 0; i--)
         {
-            for (int i = ListStaticObjects.Count - 1; i >= 0; i--)
+            var obj = ListStaticObjects[i];
+            if (!obj.Locked)
             {
-                var obj = ListStaticObjects[i];
-                if (!obj.Locked && obj.Mass < 1000000)
+                yield return obj;
+            }
+        }
+    }
+
+    internal static void SetVelocity(PhysicsObject physicsObject, Vector3 velocity)
+    {
+        physicsObject.Velocity = velocity;
+    }
+
+    #endregion
+
+    #region Reusable Broadphase Fields
+
+    private readonly Dictionary<(int, int, int), List<PhysicsObject>> _spatialHash = new();
+    private readonly HashSet<(PhysicsObject, PhysicsObject)> _pairSet = new(new PhysicsObjectPairComparer());
+
+    #endregion
+
+    #region Public Methods
+
+    public bool ActivateAtPoint(Vector3 p)
+    {
+        ActiveObject = ListStaticObjects.FirstOrDefault(physicsObject => physicsObject.Contains(p));
+        return ActiveObject != null;
+    }
+
+    public void AddVelocityToActive(Vector3 velocityDelta)
+    {
+        if (ActiveObject == null || ActiveObject.Locked)
+            return;
+
+        ActiveObject.Velocity += velocityDelta;
+    }
+
+    public void SetVelocityOfActive(Vector3 velocity)
+    {
+        if (ActiveObject == null || ActiveObject.Locked)
+            return;
+
+        ActiveObject.Velocity = velocity;
+    }
+
+    public void FreezeStaticObjects()
+    {
+        foreach (var physicsObject in ListStaticObjects)
+        {
+            physicsObject.Velocity = Vector3.Zero;
+        }
+    }
+
+    public Vector3 GetActiveObjectCenter()
+    {
+        return ActiveObject?.Center ?? Vector3.Zero;
+    }
+
+    public void MoveActiveTowardsPoint(Vector3 point)
+    {
+        if (ActiveObject == null)
+            return;
+
+        var delta = ActiveObject.Center - point;
+        AddVelocityToActive(-delta / 10000);
+    }
+
+    public void HoldActiveAtPoint(Vector3 point)
+    {
+        if (ActiveObject == null)
+            return;
+
+        var delta = ActiveObject.Center - point;
+        SetVelocityOfActive(-delta * 10);
+    }
+
+    public void ReleaseActiveObject()
+    {
+        ActiveObject = null;
+    }
+
+    public void DestroyObject(object obj)
+    {
+        if (obj is PhysicsObject po)
+        {
+            po.IsDestroyed = true;
+        }
+        _removalQueue.Enqueue(obj);
+    }
+
+    public void RemoveActiveObject()
+    {
+        if (ActiveObject != null)
+            _removalQueue.Enqueue(ActiveObject);
+        ActiveObject = null;
+    }
+
+    public void RemoveAllMoveableObjects()
+    {
+        foreach (PhysicsObject obj in GetMoveableObjects())
+        {
+            _removalQueue.Enqueue(obj);
+        }
+    }
+
+    public void Tick(double elapsedTime)
+    {
+        LastTickSteps = 0;
+        if (IsPaused)
+            return;
+
+        _accumulator += elapsedTime;
+
+        // Avoid accumulator spiral of death by clamping
+        if (_accumulator > 0.1f)
+            _accumulator = 0.1f;
+
+        while (_accumulator > _dt)
+        {
+            BroadPhase_GeneratePairs();
+            UpdatePhysics(_dt * TimeScale);
+            ProcessRemovalQueue();
+            _accumulator -= _dt;
+            LastTickSteps++;
+        }
+    }
+
+    public void ProcessRemovalQueue()
+    {
+        while (_removalQueue.Count > 0)
+        {
+            var obj = _removalQueue.Dequeue();
+            if (obj is PhysicsObject physicsObject)
+            {
+                foreach (var constraint in physicsObject.Constraints)
                 {
-                    yield return obj;
+                    _constraintRemovalQueue.Enqueue(constraint);
                 }
+
+                ListStaticObjects.Remove(physicsObject);
+                ListGravityObjects.Remove(physicsObject);
             }
-        }
-
-        internal static void SetVelocity(PhysicsObject physicsObject, Vector2 velocity)
-        {
-            physicsObject.Velocity = velocity;
-        }
-
-        #endregion
-
-        #region Reusable Broadphase Fields
-
-        // These fields are now allocated once and reused every tick.
-        private readonly Dictionary<(int, int), List<PhysicsObject>> _spatialHash = new Dictionary<(int, int), List<PhysicsObject>>();
-        private readonly HashSet<(PhysicsObject, PhysicsObject)> _pairSet =
-            new HashSet<(PhysicsObject, PhysicsObject)>(new PhysicsObjectPairComparer());
-
-        #endregion
-
-        #region Public Methods
-
-        public PhysicsObject CreateStaticCircle(Vector2 loc, int radius, float restitution, bool locked, SFMLShader shader, uint collisionMask = 0xFFFFFFFF)
-        {
-            // Create the circle shape using the given radius.
-            IShape shape = new CirclePhysShape(radius);
-            // For a circle, the center is the provided location.
-            var obj = new PhysicsObject(shape, loc, restitution, locked, shader, canRotate: true, collisionMask: collisionMask);
-            ListStaticObjects.Add(obj);
-            return obj;
-        }
-
-        public PhysicsObject CreateStaticCircle(Vector2 loc, int radius, float restitution, bool locked, SFMLShader shader, float mass, uint collisionMask = 0xFFFFFFFF)
-        {
-            // Create the circle shape using the given radius.
-            IShape shape = new CirclePhysShape(radius);
-            // For a circle, the center is the provided location.
-            var obj = new PhysicsObject(shape, loc, restitution, locked, shader, mass, canRotate: true, collisionMask: collisionMask);
-            ListStaticObjects.Add(obj);
-            return obj;
-        }
-
-        public PhysicsObject CreateStaticBox(Vector2 start, Vector2 end, bool locked, SFMLShader shader, float mass, uint collisionMask = 0xFFFFFFFF)
-        {
-            // Ensure start and end define the correct bounds.
-            var min = new Vector2(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y));
-            var max = new Vector2(Math.Max(start.X, end.X), Math.Max(start.Y, end.Y));
-
-            // Compute width and height.
-            float width = max.X - min.X;
-            float height = max.Y - min.Y;
-            // Calculate the center from the corrected bounds.
-            var center = new Vector2((min.X + max.X) / 2f, (min.Y + max.Y) / 2f);
-
-            // Create a box shape with the computed dimensions.
-            IShape shape = new BoxPhysShape(width, height);
-            var obj = new PhysicsObject(shape, center, 0.2f, locked, shader, mass, collisionMask: collisionMask);
-            ListStaticObjects.Add(obj);
-            return obj;
-        }
-
-        public PhysicsObject CreateStaticBox2(Vector2 start, Vector2 end, bool locked, SFMLShader shader, float mass)
-        {
-            // Compute the corrected bounding box.
-            var min = new Vector2(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y));
-            var max = new Vector2(Math.Max(start.X, end.X), Math.Max(start.Y, end.Y));
-
-            // Compute width and height.
-            float width = max.X - min.X;
-            float height = max.Y - min.Y;
-            // Compute the center.
-            var center = new Vector2((min.X + max.X) / 2f, (min.Y + max.Y) / 2f);
-
-            // Create the box shape.
-            IShape shape = new BoxPhysShape(width, height);
-            var obj = new PhysicsObject(shape, center, 0.2f, locked, shader, mass, canRotate: true);
-            ListStaticObjects.Add(obj);
-            return obj;
-        }
-
-        public PhysicsObject CreatePolygon(Vector2 origin, Vector2[] points, SFMLShader shader, bool locked = false, bool canRotate = true, uint collisionMask = 0xFFFF_FFFF)
-        {
-            // Create the polygon shape.
-            IShape shape = new PolygonPhysShape(points);
-            var obj = new PhysicsObject(shape, origin, 0.2f, locked, shader, canRotate: canRotate, collisionMask: collisionMask);
-            ListStaticObjects.Add(obj);
-            return obj;
-        }
-
-        /// <summary>
-        /// Creates a compound body from a potentially concave polygon by decomposing it
-        /// into convex pieces. The compound body moves as a single rigid body with
-        /// aggregated mass and inertia - no internal constraints needed.
-        /// </summary>
-        /// <param name="origin">World position for the compound body.</param>
-        /// <param name="vertices">Local-space vertices of the (possibly concave) polygon.</param>
-        /// <param name="shader">Shader to use for rendering.</param>
-        /// <param name="canRotate">Whether the compound body can rotate.</param>
-        /// <returns>A CompoundBody that derives from PhysicsObject.</returns>
-        public CompoundBody CreateConcavePolygon(Vector2 origin, Vector2[] vertices, SFMLShader shader, bool canRotate = true)
-        {
-            // Decompose the concave polygon into convex pieces
-            var convexPieces = PolygonDecomposition.DecomposeToConvex(vertices);
-
-            if (convexPieces.Count == 0)
+            else if (obj is Constraint constraint)
             {
-                // Fallback: treat as convex (single piece)
-                convexPieces = new List<Vector2[]> { vertices };
+                _constraintRemovalQueue.Enqueue(constraint);
             }
-
-            // Create compound body from the convex pieces
-            var compound = CompoundBody.FromConvexPieces(origin, convexPieces, shader, canRotate);
-
-            // Add to physics system
-            ListStaticObjects.Add(compound);
-
-            return compound;
         }
 
-        /// <summary>
-        /// Creates a compound body from pre-decomposed convex pieces.
-        /// Use this if you've already decomposed your polygon or want manual control.
-        /// </summary>
-        public CompoundBody CreateCompoundBody(Vector2 origin, List<Vector2[]> convexPieces, SFMLShader shader, bool canRotate = true)
+        while (_constraintRemovalQueue.Count > 0)
         {
-            var compound = CompoundBody.FromConvexPieces(origin, convexPieces, shader, canRotate);
-            ListStaticObjects.Add(compound);
-            return compound;
-        }
+            var constraint = _constraintRemovalQueue.Dequeue();
 
-        public CompoundBody CreateCompoundBody(Vector2 origin, List<PhysicsObject> physicsObjects, SFMLShader shader, bool canRotate = true)
+            constraint.A.ConnectedObjects.Remove(constraint.B);
+            constraint.B.ConnectedObjects.Remove(constraint.A);
+            Constraints.Remove(constraint);
+        }
+    }
+
+    public void HandleConstraints(float dt)
+    {
+        foreach (var constraint in Constraints)
         {
-            var (compound, trashHeap) = CompoundBody.FromPhysicsObjects(origin, physicsObjects, shader, canRotate);
-            ListStaticObjects.Add(compound);
-            // Remove from static objects list since now part of compound
-            foreach (var obj in trashHeap)
+            constraint.ApplyConstraint(dt);
+
+            if (constraint.CanBreak && constraint.IsBroken)
             {
-                RemovalQueue.Enqueue(obj);
-            }
-            return compound;
-        }
-
-        /// <summary>
-        /// Creates a compound body from multiple physics objects, preserving their exact world positions.
-        /// The compound's center is placed at the mass-weighted centroid of all input objects.
-        /// </summary>
-        public CompoundBody CreateCompoundBody(List<PhysicsObject> physicsObjects, SFMLShader shader, bool canRotate = true)
-        {
-            var (compound, trashHeap) = CompoundBody.FromPhysicsObjects(physicsObjects, shader, canRotate);
-            ListStaticObjects.Add(compound);
-            foreach (var obj in trashHeap)
-            {
-                RemovalQueue.Enqueue(obj);
-            }
-            return compound;
-        }
-
-
-        public bool ActivateAtPoint(Vector2 p)
-        {
-            ActiveObject = CheckObjectAtPoint(p);
-
-            if (ActiveObject == null)
-            {
-                ActiveObject = null;
-                return false;
-            }
-
-            if (ActiveObject.Sleeping)
-            {
-                ActiveObject.Wake();
-            }
-
-            return true;
-        }
-
-        public void AddVelocityToActive(Vector2 velocityDelta)
-        {
-            if (ActiveObject == null || ActiveObject.Mass >= 1000000)
-            {
-                return;
-            }
-
-            ActiveObject.Velocity += velocityDelta;
-        }
-
-        public void SetVelocityOfActive(Vector2 velocityDelta)
-        {
-            if (ActiveObject == null || ActiveObject.Mass >= 1000000)
-            {
-                return;
-            }
-
-            ActiveObject.Velocity = velocityDelta;
-        }
-
-        public void FreezeStaticObjects()
-        {
-            foreach (var physicsObject in ListStaticObjects)
-            {
-                physicsObject.Velocity = new Vector2 { X = 0, Y = 0 };
+                _constraintRemovalQueue.Enqueue(constraint);
             }
         }
+    }
 
-        public Vector2 GetActiveObjectCenter()
-        {
-            if (ActiveObject == null)
-            {
-                return new Vector2();
-            }
+    #endregion
 
-            return ActiveObject.Center;
-        }
+    #region Private Methods
 
-        public void MoveActiveTowardsPoint(Vector2 point)
-        {
-            if (ActiveObject == null)
-            {
-                return;
-            }
+    private void ApplyConstants(PhysicsObject obj, float dt)
+    {
+        if (obj.Locked)
+            return;
 
-            var delta = ActiveObject.Center - point;
-            AddVelocityToActive(-delta / 10000);
-        }
+        obj.Velocity += GetGravityVector(obj) * dt;
+    }
 
-        public void HoldActiveAtPoint(Vector2 point)
-        {
-            if (ActiveObject == null)
-            {
-                return;
-            }
-            var delta = ActiveObject.Center - point;
-            SetVelocityOfActive(-delta * 10);
-        }
+    private Vector3 CalculatePointGravity(PhysicsObject obj)
+    {
+        var forces = Vector3.Zero;
 
-        public void ReleaseActiveObject()
-        {
-            ActiveObject = null;
-        }
-
-        public void DestroyObject(object obj)
-        {
-            if (obj is PhysicsObject po)
-            {
-                po.IsDestroyed = true;
-            }
-            RemovalQueue.Enqueue(obj);
-        }
-
-        public void RemoveActiveObject()
-        {
-            // Add to removal queue for proper removal
-            RemovalQueue.Enqueue(ActiveObject);
-            ActiveObject = null;
-        }
-
-        public void RemoveAllMoveableObjects()
-        {
-            foreach (PhysicsObject obj in GetMoveableObjects())
-            {
-                RemovalQueue.Enqueue(obj);
-            }
-        }
-
-        public void Tick(double elapsedTime)
-        {
-            // If the system is paused, don't advance the physics simulation
-            if (IsPaused)
-                return;
-
-            accumulator += elapsedTime;
-
-            // Avoid accumulator spiral of death by clamping
-            if (accumulator > 0.1f)
-                accumulator = 0.1f;
-
-            while (accumulator > _dt)
-            {
-                BroadPhase_GeneratePairs();
-                UpdatePhysics(_dt * TimeScale);
-                ProcessRemovalQueue();
-                accumulator -= _dt;
-            }
-        }
-
-        #endregion
-
-        #region Private Methods
-
-        private void AddGravity(PhysicsObject obj, float dt)
-        {
-            obj.Velocity += GetGravityVector(obj) * dt;
-        }
-
-        private void ApplyConstants(PhysicsObject obj, float dt)
-        {
-            if (obj.Locked || obj.Sleeping)
-            {
-                return;
-            }
-
-            AddGravity(obj, dt);
-
-            if (obj.Center.Y > 2000 || obj.Center.Y < -2000 || obj.Center.X > 2000 || obj.Center.X < -2000)
-            {
-                RemovalQueue.Enqueue(obj);
-            }
-        }
-
-
-        private Vector2 CalculatePointGravity(PhysicsObject obj)
-        {
-            var forces = new Vector2(0, 0);
-
-            if (obj.Locked)
-            {
-                return forces;
-            }
-
-            foreach (var gpt in ListGravityObjects)
-            {
-                var diff = gpt.Center - obj.Center;
-                PhysMath.RoundToZero(ref diff, 5F);
-
-                // Apply inverse square law
-                var falloffMultiplier = gpt.Mass / diff.LengthSquared();
-
-                diff.X = (int)diff.X == 0 ? 0 : diff.X * falloffMultiplier;
-                diff.Y = (int)diff.Y == 0 ? 0 : diff.Y * falloffMultiplier;
-
-                if (diff.Length() > .005F)
-                    forces += diff;
-
-            }
-
+        if (obj.Locked)
             return forces;
+
+        foreach (var gpt in ListGravityObjects)
+        {
+            var diff = gpt.Center - obj.Center;
+            PhysMath.RoundToZero(ref diff, 5F);
+
+            // Apply inverse square law
+            var falloffMultiplier = gpt.Mass / diff.LengthSquared();
+
+            diff.X = (int)diff.X == 0 ? 0 : diff.X * falloffMultiplier;
+            diff.Y = (int)diff.Y == 0 ? 0 : diff.Y * falloffMultiplier;
+            diff.Z = (int)diff.Z == 0 ? 0 : diff.Z * falloffMultiplier;
+
+            if (diff.Length() > .005F)
+                forces += diff;
         }
 
-        private PhysicsObject? CheckObjectAtPoint(Vector2 p)
-        {
-            return ListStaticObjects.FirstOrDefault(physicsObject => physicsObject.Contains(p));
-        }
+        return forces;
+    }
 
-        private Vector2 GetGravityVector(PhysicsObject obj)
-        {
-            return CalculatePointGravity(obj) + Gravity * GravityScale;
-        }
+    private Vector3 GetGravityVector(PhysicsObject obj)
+    {
+        return CalculatePointGravity(obj) + Gravity * GravityScale;
+    }
 
-        public void ProcessRemovalQueue()
+    private void UpdatePhysics(float dt)
+    {
+        float dtSubstep = dt / PHYSICS_ITERATIONS;
+
+        for (int iter = 0; iter < PHYSICS_ITERATIONS; iter++)
         {
-            while (RemovalQueue.Count > 0)
+            for (int i = 0; i < _collisionPairs.Count; i++)
             {
-                var obj = RemovalQueue.Dequeue();
-                if (obj is PhysicsObject physicsObject)
-                {
-                    if (physicsObject.Constraints.Count != 0)
-                    {
-                        physicsObject.Constraints.ForEach(constraint => _constraintRemovalQueue.Enqueue(constraint));
-                    }
+                var pair = _collisionPairs[i];
+                Manifold m = _manifoldPool.Get();
+                m.A = pair.A;
+                m.B = pair.B;
 
-                    ListStaticObjects.Remove(physicsObject);
-                    ListGravityObjects.Remove(physicsObject);
-                }
-                else if (obj is Constraint constraint)
+                if (Collision.Detect(m))
                 {
-                    _constraintRemovalQueue.Enqueue(constraint);
+                    // Accumulate contacts during substeps (finalized once per tick)
+                    m.A.AddContact(m.B, m.ContactPoint, m.Normal);
+                    m.B.AddContact(m.A, m.ContactPoint, -m.Normal);
+
+                    Collision.ResolveCollision(m);
+                    Collision.PositionalCorrection(m);
+                    Collision.AngularPositionalCorrection(m);
                 }
+
+                _manifoldPool.Return(m);
             }
 
-            while (_constraintRemovalQueue.Count > 0)
-            {
-                var constraint = _constraintRemovalQueue.Dequeue();
+            HandleConstraints(dtSubstep);
 
-                constraint.A.ConnectedObjects.Remove(constraint.B);
-                constraint.B.ConnectedObjects.Remove(constraint.A);
-
-                if (!constraint.A.ConnectedObjects.Any())
-                {
-                    constraint.A.CanSleep = true;
-                }
-                if (!constraint.B.ConnectedObjects.Any())
-                {
-                    constraint.B.CanSleep = true;
-                }
-                Constraints.Remove(constraint);
-            }
-        }
-
-        public void HandleConstraints(float dt)
-        {
-            foreach (var constraint in Constraints)
-            {
-                constraint.ApplyConstraint(dt);
-
-                // Handle broken constraints, queue for removal
-                if (constraint.CanBreak && constraint.IsBroken)
-                {
-                    _constraintRemovalQueue.Enqueue(constraint);
-                }
-            }
-        }
-
-        private void UpdatePhysics(float dt)
-        {
-
-            // divide dt into substeps
-            float dt_substep = dt / PHYSICS_ITERATIONS;
-
-            // Loop over physics iterations.
-            for (int iter = 0; iter < PHYSICS_ITERATIONS; iter++)
-            {
-                // Use a for-loop to iterate over collision pairs.
-                for (int i = 0; i < ListCollisionPairs.Count; i++)
-                {
-                    var pair = ListCollisionPairs[i];
-                    var objA = pair.A;
-                    var objB = pair.B;
-
-                    // Skip narrow phase if both objects are sleeping.
-                    if (objA.Sleeping && objB.Sleeping)
-                        continue;
-
-                    // Cache shape references.
-                    var shapeA = objA.Shape;
-                    var shapeB = objB.Shape;
-
-                    // Retrieve a manifold from the pool.
-                    Manifold m = _manifoldPool.Get();
-                    bool collision = false;
-
-                    // Set ordering: if objA is a circle and objB is a box, swap them.
-                    if (shapeA.ShapeType == ShapeTypeEnum.Circle && (shapeB.ShapeType == ShapeTypeEnum.Box || shapeB.ShapeType == ShapeTypeEnum.Polygon))
-                    {
-                        m.A = objB;
-                        m.B = objA;
-                    }
-                    else
-                    {
-                        m.A = objA;
-                        m.B = objB;
-                    }
-
-                    // Cache again for m.A and m.B.
-                    var shapeA2 = m.A.Shape;
-                    var shapeB2 = m.B.Shape;
-
-                    // Determine collision detection method based on shape types.
-                    // Handle compound shapes first
-                    if (shapeA2.ShapeType == ShapeTypeEnum.Compound)
-                    {
-                        collision = Collision.CompoundVsOther(ref m, (CompoundShape)shapeA2, compoundIsA: true);
-                    }
-                    else if (shapeB2.ShapeType == ShapeTypeEnum.Compound)
-                    {
-                        collision = Collision.CompoundVsOther(ref m, (CompoundShape)shapeB2, compoundIsA: false);
-                    }
-                    else if (shapeA2.ShapeType == ShapeTypeEnum.Box || shapeA2.ShapeType == ShapeTypeEnum.Polygon)
-                    {
-                        if (shapeB2.ShapeType == ShapeTypeEnum.Box || shapeB2.ShapeType == ShapeTypeEnum.Polygon)
-                        {
-                            collision = Collision.PolygonVsPolygon(ref m);
-                        }
-                        else if (shapeB2.ShapeType == ShapeTypeEnum.Circle)
-                        {
-                            collision = Collision.PolygonVsCircle(ref m);
-                        }
-                    }
-                    else if (shapeA2.ShapeType == ShapeTypeEnum.Circle && shapeB2.ShapeType == ShapeTypeEnum.Circle)
-                    {
-                        collision = Collision.CirclevsCircle(ref m);
-                    }
-
-                    // Resolve collision if detected.
-                    if (collision)
-                    {
-
-                        // Here, instead of immediately waking sleeping objects, we compute a rough impulse magnitude.
-                        // (For example, you might approximate impulse as the penetration depth times relative velocity along the normal.)
-                        float relativeVel = Math.Abs(Vector2.Dot(m.B.Velocity - m.A.Velocity, m.Normal));
-                        float impulseApprox = m.Penetration * relativeVel;
-
-                        // Only wake if a significant impulse is delivered.
-                        if (impulseApprox > WakeImpulseThreshold)
-                        {
-                            if (objA.Sleeping && !objA.Locked)
-                                objA.Wake();
-                            if (objB.Sleeping && !objB.Locked)
-                                objB.Wake();
-                        }
-
-                        // Accumulate contacts during substeps (finalized once per tick)
-                        m.A.AddContact(m.B, m.ContactPoint, m.Normal);
-                        m.B.AddContact(m.A, m.ContactPoint, -m.Normal);
-
-                        // Resolve Collision
-                        Collision.ResolveCollisionRotational(ref m);
-                        Collision.PositionalCorrection(ref m);
-                        Collision.AngularPositionalCorrection(ref m);
-                    }
-                    else
-                    {
-                        // Return manifold to pool if no collision.
-                        _manifoldPool.Return(m);
-                    }
-                }
-
-                // Apply constraints after collision resolution (uses substep dt)
-                HandleConstraints(dt_substep);
-
-                // Process static objects.
-                // Apply a portion of DT to static objects.
-                for (int i = 0; i < ListStaticObjects.Count; i++)
-                {
-                    var staticObj = ListStaticObjects[i];
-                    ApplyConstants(staticObj, dt_substep);
-                    staticObj.Update(dt_substep);
-                }
-            }
-
-            // Finalize contacts once per tick (not per substep) to fire events
             for (int i = 0; i < ListStaticObjects.Count; i++)
             {
-                ListStaticObjects[i].FinalizeContacts();
+                var obj = ListStaticObjects[i];
+                ApplyConstants(obj, dtSubstep);
+                obj.Update(dtSubstep);
             }
         }
 
-
-
-        #endregion
-
-        #region Broad Phase Collision Detection
-
-        private void BroadPhase_GeneratePairs()
+        // Finalize contacts once per tick (not per substep) to fire events
+        for (int i = 0; i < ListStaticObjects.Count; i++)
         {
-            // Return all pairs to the pool before clearing
-            _collisionPairPool.ReturnAll(ListCollisionPairs);
-            ListCollisionPairs.Clear();
-
-            // Clear reusable structures to avoid allocations
-            _spatialHash.Clear();
-            _pairSet.Clear();
-
-            float cellSize = SpatialHashCellSize;
-
-            // Populate the spatial hash.
-            foreach (var obj in ListStaticObjects)
-            {
-                // Skip objects marked for destruction.
-                if (obj.IsDestroyed)
-                    continue;
-
-                // Get min / max extents, divide by cellSize for grid coordinates.
-                int minX = (int)Math.Floor(obj.Aabb.Min.X / cellSize);
-                int minY = (int)Math.Floor(obj.Aabb.Min.Y / cellSize);
-                int maxX = (int)Math.Floor(obj.Aabb.Max.X / cellSize);
-                int maxY = (int)Math.Floor(obj.Aabb.Max.Y / cellSize);
-
-
-                for (int x = minX; x <= maxX; x++)
-                {
-                    for (int y = minY; y <= maxY; y++)
-                    {
-                        var key = (x, y);
-                        if (!_spatialHash.TryGetValue(key, out List<PhysicsObject> cellList))
-                        {
-                            cellList = new List<PhysicsObject>();
-                            _spatialHash[key] = cellList;
-                        }
-                        cellList.Add(obj);
-                    }
-                }
-            }
-
-            // Use the reusable hash set to avoid duplicate pairs.
-            foreach (var cell in _spatialHash.Values)
-            {
-                int count = cell.Count;
-                if (count > 1)
-                {
-                    for (int i = 0; i < count - 1; i++)
-                    {
-                        for (int j = i + 1; j < count; j++)
-                        {
-                            PhysicsObject objA = cell[i];
-                            PhysicsObject objB = cell[j];
-
-                            if ((objA.CollisionMask & objB.CollisionMask) == 0)
-                                continue;
-
-                            // Skip pairs where both objects are sleeping.
-                            if (objA.Sleeping && objB.Sleeping)
-                                continue;
-
-                            // Skip connected objects (constraints link them, collisions should be ignored)
-                            if (objA.ConnectedObjects.Contains(objB))
-                                continue;
-
-                            // Add the pair if it has not already been processed.
-                            if (_pairSet.Add((objA, objB)))
-                            {
-                                ListCollisionPairs.Add(_collisionPairPool.Get(objA, objB));
-                            }
-                        }
-                    }
-                }
-            }
+            ListStaticObjects[i].FinalizeContacts();
         }
-
-        #endregion
-
-        #region Private Helper Classes
-
-        /// <summary>
-        /// Custom comparer for collision pair tuples so that the order of objects does not matter.
-        /// </summary>
-        private class PhysicsObjectPairComparer : IEqualityComparer<(PhysicsObject, PhysicsObject)>
-        {
-            public bool Equals((PhysicsObject, PhysicsObject) x, (PhysicsObject, PhysicsObject) y)
-            {
-                return (ReferenceEquals(x.Item1, y.Item1) && ReferenceEquals(x.Item2, y.Item2)) ||
-                       (ReferenceEquals(x.Item1, y.Item2) && ReferenceEquals(x.Item2, y.Item1));
-            }
-
-            public int GetHashCode((PhysicsObject, PhysicsObject) pair)
-            {
-                // XOR is order-independent.
-                return pair.Item1.GetHashCode() ^ pair.Item2.GetHashCode();
-            }
-        }
-
-        #endregion
     }
+
+    #endregion
+
+    #region Broad Phase Collision Detection
+
+    private void BroadPhase_GeneratePairs()
+    {
+        _collisionPairPool.ReturnAll(_collisionPairs);
+        _collisionPairs.Clear();
+
+        _spatialHash.Clear();
+        _pairSet.Clear();
+
+        float cellSize = SpatialHashCellSize;
+
+        foreach (var obj in ListStaticObjects)
+        {
+            if (obj.IsDestroyed)
+                continue;
+
+            int minX = (int)MathF.Floor(obj.Aabb.Min.X / cellSize);
+            int minY = (int)MathF.Floor(obj.Aabb.Min.Y / cellSize);
+            int minZ = (int)MathF.Floor(obj.Aabb.Min.Z / cellSize);
+            int maxX = (int)MathF.Floor(obj.Aabb.Max.X / cellSize);
+            int maxY = (int)MathF.Floor(obj.Aabb.Max.Y / cellSize);
+            int maxZ = (int)MathF.Floor(obj.Aabb.Max.Z / cellSize);
+
+            for (int x = minX; x <= maxX; x++)
+            for (int y = minY; y <= maxY; y++)
+            for (int z = minZ; z <= maxZ; z++)
+            {
+                var key = (x, y, z);
+                if (!_spatialHash.TryGetValue(key, out var cellList))
+                {
+                    cellList = new List<PhysicsObject>();
+                    _spatialHash[key] = cellList;
+                }
+                cellList.Add(obj);
+            }
+        }
+
+        foreach (var cell in _spatialHash.Values)
+        {
+            int count = cell.Count;
+            for (int i = 0; i < count - 1; i++)
+            {
+                for (int j = i + 1; j < count; j++)
+                {
+                    PhysicsObject objA = cell[i];
+                    PhysicsObject objB = cell[j];
+
+                    if ((objA.CollisionMask & objB.CollisionMask) == 0)
+                        continue;
+
+                    // Constrained objects don't collide with each other
+                    if (objA.ConnectedObjects.Contains(objB))
+                        continue;
+
+                    if (_pairSet.Add((objA, objB)))
+                    {
+                        _collisionPairs.Add(_collisionPairPool.Get(objA, objB));
+                    }
+                }
+            }
+        }
+    }
+
+    #endregion
+
+    #region Private Helper Classes
+
+    /// <summary>
+    /// Order-independent equality for collision pair tuples.
+    /// </summary>
+    private class PhysicsObjectPairComparer : IEqualityComparer<(PhysicsObject, PhysicsObject)>
+    {
+        public bool Equals((PhysicsObject, PhysicsObject) x, (PhysicsObject, PhysicsObject) y)
+        {
+            return (ReferenceEquals(x.Item1, y.Item1) && ReferenceEquals(x.Item2, y.Item2)) ||
+                   (ReferenceEquals(x.Item1, y.Item2) && ReferenceEquals(x.Item2, y.Item1));
+        }
+
+        public int GetHashCode((PhysicsObject, PhysicsObject) pair)
+        {
+            return pair.Item1.GetHashCode() ^ pair.Item2.GetHashCode();
+        }
+    }
+
+    #endregion
 }

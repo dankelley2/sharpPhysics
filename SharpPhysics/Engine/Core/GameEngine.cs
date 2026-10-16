@@ -27,9 +27,14 @@ namespace SharpPhysics.Engine.Core
         private const float MAX_DELTA_TIME = 0.033f;
 
         // Performance metrics (exposed for games/debugging).
-        public long MsFrameTime { get; private set; }
-        public long MsDrawTime { get; private set; }
-        public long MsPhysicsTime { get; private set; }
+        public long MsFrameTime => (long)Profiler.LastFrame.TotalMs;
+        public long MsDrawTime => (long)Profiler.LastFrame.RenderMs;
+        public long MsPhysicsTime => (long)Profiler.LastFrame.PhysicsMs;
+
+        /// <summary>
+        /// Per-phase frame timings and stutter detection.
+        /// </summary>
+        public FrameProfiler Profiler { get; } = new();
 
         /// <summary>
         /// Provides access to the physics system for creating and managing physics objects.
@@ -117,7 +122,7 @@ namespace SharpPhysics.Engine.Core
             _physicsSystem.ProcessRemovalQueue();
 
             // Reset physics properties
-            _physicsSystem.Gravity = new System.Numerics.Vector2(0, 9.8f);
+            _physicsSystem.Gravity = new System.Numerics.Vector3(0, 9.8f, 0);
             _physicsSystem.GravityScale = 30f;
             _physicsSystem.TimeScale = 1f;
             _physicsSystem.IsPaused = false;
@@ -133,6 +138,7 @@ namespace SharpPhysics.Engine.Core
             try
             {
                 _currentGame.Initialize(this);
+                Profiler.Reset();
                 Console.WriteLine("[GameEngine] Game switch complete");
             }
             catch (Exception ex)
@@ -163,9 +169,9 @@ namespace SharpPhysics.Engine.Core
                 }
 
                 // Handle window events
+                Profiler.BeginFrame();
                 _renderer.Window.DispatchEvents();
-
-                long frameStartTime = _stopwatch.ElapsedMilliseconds;
+                Profiler.MarkEvents();
 
                 // Get delta time using Stopwatch ticks for sub-ms precision
                 long currentTicks = _stopwatch.ElapsedTicks;
@@ -182,29 +188,21 @@ namespace SharpPhysics.Engine.Core
 
                 // End input frame (updates previous state for edge detection)
                 _inputManager.EndFrame();
+                Profiler.MarkUpdate();
 
-                // Physics update
-                long physicsStart = _stopwatch.ElapsedMilliseconds;
                 _physicsSystem.Tick(deltaTime);
-                MsPhysicsTime = _stopwatch.ElapsedMilliseconds - physicsStart;
+                Profiler.MarkPhysics();
 
                 // Rendering pipeline (layered)
-                long renderStart = _stopwatch.ElapsedMilliseconds;
-
                 _renderer.BeginFrame(Color.Black);
                 _currentGame.RenderBackground(_renderer);
                 _renderer.RenderPhysicsObjects();
                 _currentGame.Render(_renderer);
+                Profiler.MarkRender();
 
-                // Counting rendering as just the draw calls (excluding buffer swap)
-                // Else it will always be high due to VSync wait.
-                MsDrawTime = _stopwatch.ElapsedMilliseconds - renderStart;
-
-                // Flip buffers
+                // Display includes the framerate limiter / vsync wait
                 _renderer.Display();
-
-                // Total frame time
-                MsFrameTime = _stopwatch.ElapsedMilliseconds - frameStartTime;
+                Profiler.EndFrame(_physicsSystem.LastTickSteps);
             }
 
             // Cleanup

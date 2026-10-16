@@ -1,14 +1,14 @@
-﻿using System.Numerics;
+#nullable enable
+using System.Numerics;
 
-namespace SharpPhysics.Engine.Structs
+namespace SharpPhysics.Engine.Structs;
+
+/// <summary>
+/// Axis-aligned bounding box in world space.
+/// </summary>
+public struct AABB
 {
-    /// <summary>
-    /// Axis Aligned bounding box struct that represents the position of an object within a coordinate system.
-    /// </summary>
-    public struct AABB
-    {
-        public Vector2 Min;
-        public Vector2 Max;
-        public readonly float Area => (Max.X - Min.X) * (Max.Y - Min.Y);
-    }
+    public Vector3 Min;
+    public Vector3 Max;
+    public readonly float Volume => (Max.X - Min.X) * (Max.Y - Min.Y) * (Max.Z - Min.Z);
 }
