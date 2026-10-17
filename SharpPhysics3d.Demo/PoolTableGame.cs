@@ -247,6 +247,7 @@ public class PoolTableGame : IGame
     {
         HandleKeyboard(input);
         HandleCamera(deltaTime, input);
+        HandlePlayerMovement(deltaTime, input);
         HandleMouse(input);
 
         if (!_engine.PhysicsSystem.IsPaused)
@@ -262,6 +263,26 @@ public class PoolTableGame : IGame
         if (input.IsKeyPressed(Keyboard.Key.C)) DropCrate();
         if (input.IsKeyPressed(Keyboard.Key.Home)) ResetCamera();
         if (input.IsKeyPressed(Keyboard.Key.Escape)) _engine.SwitchGame(new MenuGame());
+    }
+
+    private void HandlePlayerMovement(float deltaTime, InputManager input)
+    {
+        float movespeed = 1500.0f;
+        float speedX = 0f;
+        float speedY = 0f;
+
+        if (input.IsKeyHeld(Keyboard.Key.W))
+            speedY -= movespeed * deltaTime;
+        if (input.IsKeyHeld(Keyboard.Key.S))
+            speedY += movespeed * deltaTime;
+        if (input.IsKeyHeld(Keyboard.Key.A))
+            speedX -= movespeed * deltaTime;
+        if (input.IsKeyHeld(Keyboard.Key.D))
+            speedX += movespeed * deltaTime;
+
+        // clamp and move
+        if (speedX != 0f || speedY != 0f)
+            _cueBall.Velocity += new Vector3(speedX, speedY, 0f);
     }
 
     private void HandleCamera(float deltaTime, InputManager input)
